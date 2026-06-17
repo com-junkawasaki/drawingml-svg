@@ -1667,6 +1667,7 @@ def _computed_style(
         "pathLength",
         "rotate",
         "shape-rendering",
+        "spreadMethod",
         "vector-effect",
         "text-rendering",
         "word-spacing",

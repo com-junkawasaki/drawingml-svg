@@ -44,7 +44,8 @@ SUPPORTED_ELEMENTS = {
     "tspan",
 }
 
-IGNORED_ELEMENTS = {"defs", "desc", "metadata", "title"}
+IGNORED_ELEMENTS = {"defs", "desc", "linearGradient", "metadata", "radialGradient", "stop", "title"}
+GRADIENT_ELEMENTS = {"linearGradient", "radialGradient", "stop"}
 
 UNSUPPORTED_ATTRIBUTES = {
     "clip-path",
@@ -66,6 +67,7 @@ UNSUPPORTED_ATTRIBUTES = {
     "pathLength",
     "rotate",
     "shape-rendering",
+    "spreadMethod",
     "stroke-dashoffset",
     "text-rendering",
     "textLength",
@@ -176,7 +178,7 @@ def _walk(
     if tag == "path":
         _inspect_path(element.get("d", ""), stats)
 
-    if tag == "defs" or hidden:
+    if hidden:
         return
     if tag == "switch":
         selected = _switch_selected_child(element)
@@ -185,6 +187,10 @@ def _walk(
         return
 
     for child in element:
+        if tag == "defs" and _local_name(child.tag) not in GRADIENT_ELEMENTS:
+            stats.total_elements += 1
+            stats.ignored_elements += 1
+            continue
         _walk(child, css, refs, style, matrix, stats, ancestors + (element,))
 
 
@@ -215,6 +221,9 @@ def _inspect_attributes(
             stats.add_unsupported_attribute("href")
     elif _local_name(element.tag) == "use":
         if not _use_href_is_supported(element, refs):
+            stats.add_unsupported_attribute("href")
+    elif _local_name(element.tag) in {"linearGradient", "radialGradient"} and href is not None:
+        if not href.startswith("#") or href[1:] not in refs:
             stats.add_unsupported_attribute("href")
     elif _local_name(element.tag) != "use" and href is not None:
         stats.add_unsupported_attribute("href")

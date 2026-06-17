@@ -540,6 +540,7 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
       <path d="M0 0 H10 V10 Z" fill-rule="evenodd"/>
       <text x="0" y="20" isolation="isolate">Hint</text>
       <image href="data:image/png;base64,abc" image-rendering="pixelated" color-rendering="optimizeQuality"/>
+      <defs><linearGradient id="spread" spreadMethod="reflect"><stop stop-color="#fff"/></linearGradient></defs>
     </svg>"""
 
     report = analyze_svg(svg)
@@ -554,6 +555,7 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
         "mix-blend-mode": 1,
         "paint-order": 1,
         "shape-rendering": 1,
+        "spreadMethod": 1,
         "text-rendering": 1,
         "vector-effect": 1,
     }
