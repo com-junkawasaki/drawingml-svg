@@ -44,7 +44,7 @@ SUPPORTED_ELEMENTS = {
     "tspan",
 }
 
-IGNORED_ELEMENTS = {"defs", "desc", "linearGradient", "metadata", "radialGradient", "stop", "title"}
+IGNORED_ELEMENTS = {"defs", "desc", "linearGradient", "metadata", "pattern", "radialGradient", "stop", "title"}
 GRADIENT_ELEMENTS = {"linearGradient", "radialGradient", "stop"}
 
 UNSUPPORTED_ATTRIBUTES = {
@@ -233,12 +233,12 @@ def _inspect_attributes(
         value = style.get(attr)
         if value:
             match = re.match(r"^url\((?:['\"])?#([^'\")]+)(?:['\"])?\)(.*)$", value.strip())
-            if (
-                match
-                and not match.group(2).strip()
-                and _local_name(refs.get(match.group(1), ET.Element("")).tag) not in {"linearGradient", "radialGradient"}
-            ):
-                stats.add_unsupported_attribute(f"{attr}:paint-server")
+            if match and not match.group(2).strip():
+                paint_server_tag = _local_name(refs.get(match.group(1), ET.Element("")).tag)
+                if paint_server_tag == "pattern":
+                    stats.add_unsupported_attribute(f"{attr}:pattern")
+                elif paint_server_tag not in {"linearGradient", "radialGradient"}:
+                    stats.add_unsupported_attribute(f"{attr}:paint-server")
 
 
 def _inspect_path(path_data: str, stats: _CoverageStats) -> None:

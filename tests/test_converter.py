@@ -777,6 +777,21 @@ def test_analyze_svg_reports_missing_paint_server() -> None:
     assert report.unsupported_attributes == {"fill:paint-server": 1}
 
 
+def test_analyze_svg_reports_pattern_paint_servers() -> None:
+    svg = """<svg>
+      <defs>
+        <pattern id="dots" width="4" height="4">
+          <circle cx="2" cy="2" r="1"/>
+        </pattern>
+      </defs>
+      <rect width="10" height="8" fill="url(#dots)" stroke="url(#dots)"/>
+    </svg>"""
+
+    report = analyze_svg(svg)
+
+    assert report.unsupported_attributes == {"fill:pattern": 1, "stroke:pattern": 1}
+
+
 def test_paint_server_fallback_color_is_used_when_server_is_missing() -> None:
     svg = '<svg><rect width="10" height="8" fill="url(#missing) #dc2626" stroke="url(#also-missing) rgb(22 163 74)"/></svg>'
     dml = svg_to_drawingml(svg)
