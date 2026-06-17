@@ -422,7 +422,7 @@ def _attribute_has_no_effect(attr: str, style: dict[str, str]) -> bool:
             "pixelated",
         }
     if attr == "vector-effect":
-        return normalized == "none"
+        return normalized in {"none", "non-scaling-stroke"}
     return False
 
 

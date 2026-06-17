@@ -195,7 +195,7 @@ def _svg_shape_from_element(
     refs = refs or {}
     css = css or []
     paint = _svg_paint(style, refs, default_fill=tag != "line", css=css)
-    scaled_paint = _scale_paint(paint, _matrix_scale(matrix))
+    scaled_paint = _scale_paint(paint, _stroke_transform_scale(style, matrix))
     plain_paint = _paint_without_markers(scaled_paint)
     if tag == "rect":
         x = _geometry_length(element, style, "x", 0, "x", viewport)
@@ -755,6 +755,12 @@ def _scale_dasharray(value: str | None, scale: float) -> str | None:
     if nums is None:
         return value
     return " ".join(_fmt(number * scale) for number in nums)
+
+
+def _stroke_transform_scale(style: dict[str, str], matrix: tuple[float, float, float, float, float, float]) -> float:
+    if " ".join(style.get("vector-effect", "").strip().lower().split()) == "non-scaling-stroke":
+        return 1.0
+    return _matrix_scale(matrix)
 
 
 def _svg_marker_value(value: str | None, refs: dict[str, ET.Element]) -> str | None:

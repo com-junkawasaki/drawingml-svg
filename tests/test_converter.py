@@ -410,6 +410,19 @@ def test_group_scale_applies_to_stroke_width_and_dasharray() -> None:
     assert 'stroke-dasharray="16 8"' in svg
 
 
+def test_non_scaling_stroke_keeps_stroke_width_and_dasharray_under_scale() -> None:
+    source = '<svg><g transform="scale(2)"><line x1="0" y1="0" x2="40" y2="0" stroke="#111111" stroke-width="2" stroke-dasharray="8 4" vector-effect="non-scaling-stroke"/></g></svg>'
+    dml = svg_to_drawingml(source)
+
+    assert 'w="19050"' in dml
+    assert '<a:ds d="400000" sp="200000"/>' in dml
+    assert analyze_svg(source).unsupported_attributes == {}
+
+    svg = drawingml_to_svg(dml)
+    assert 'stroke-width="2"' in svg
+    assert 'stroke-dasharray="8 4"' in svg
+
+
 def test_inline_style_important_values_are_normalized() -> None:
     dml = svg_to_drawingml(
         '<svg><rect width="10" height="8" style="fill: #ff0000 !IMPORTANT; stroke: #000000; stroke-width: 2 !important"/></svg>'
@@ -1070,7 +1083,6 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
         "mask": 1,
         "mix-blend-mode": 1,
         "paint-order": 1,
-        "vector-effect": 1,
     }
 
 
