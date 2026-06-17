@@ -243,7 +243,8 @@ def _svg_shape_from_element(
             font_size = _num(style.get("font-size"), 16) * _matrix_scale(matrix)
             x, y = _apply_matrix(matrix, _svg_text_position(element, viewport))
             text_length = _svg_text_length(style, text, viewport)
-            width = text_length or max(font_size * max(len(line) for line in text.split("\n")) * 0.9, font_size * 2)
+            natural_width = max(font_size * max(len(line) for line in text.split("\n")) * 0.9, font_size * 2)
+            width = text_length or natural_width + _svg_word_spacing_extra(style, text, viewport)
             anchor = style.get("text-anchor")
             if anchor == "middle":
                 x -= width / 2
@@ -273,8 +274,7 @@ def _svg_shape_from_element(
                 text_decoration=style.get("text-decoration"),
                 text_anchor=anchor,
                 text_baseline=baseline,
-                letter_spacing=_svg_letter_spacing(style, viewport)
-                or _svg_text_length_letter_spacing(style, text, font_size, viewport),
+                letter_spacing=_svg_text_effective_letter_spacing(style, text, font_size, viewport),
                 rotation=_svg_text_rotation(element, style),
             )
     if tag == "image":
@@ -1179,6 +1179,21 @@ def _svg_letter_spacing(style: dict[str, str], viewport: tuple[float, float]) ->
     return _optional_length(value, "x", viewport)
 
 
+def _svg_text_effective_letter_spacing(
+    style: dict[str, str],
+    text: str,
+    font_size: float,
+    viewport: tuple[float, float],
+) -> float | None:
+    letter_spacing = _svg_letter_spacing(style, viewport)
+    if letter_spacing is not None:
+        return letter_spacing
+    text_length_spacing = _svg_text_length_letter_spacing(style, text, font_size, viewport)
+    if text_length_spacing is not None:
+        return text_length_spacing
+    return _svg_word_spacing_letter_spacing(style, text, viewport)
+
+
 def _svg_text_length(style: dict[str, str], text: str, viewport: tuple[float, float]) -> float | None:
     if not _svg_text_length_spacing_is_supported(style, text, viewport):
         return None
@@ -1209,6 +1224,50 @@ def _svg_text_length_spacing_is_supported(style: dict[str, str], text: str, view
         return False
     line = text.strip()
     return "\n" not in text and len(line) > 1 and _optional_length(style.get("textLength"), "x", viewport) is not None
+
+
+def _svg_word_spacing_extra(style: dict[str, str], text: str, viewport: tuple[float, float]) -> float:
+    word_spacing = _svg_word_spacing(style, text, viewport)
+    return word_spacing * _svg_word_gap_count(text) if word_spacing is not None else 0.0
+
+
+def _svg_word_spacing_letter_spacing(
+    style: dict[str, str],
+    text: str,
+    viewport: tuple[float, float],
+) -> float | None:
+    if not _svg_word_spacing_is_supported(style, text, viewport):
+        return None
+    return _svg_word_spacing_extra(style, text, viewport) / (len(text.strip()) - 1)
+
+
+def _svg_word_spacing(style: dict[str, str], text: str, viewport: tuple[float, float]) -> float | None:
+    if not _svg_word_spacing_is_supported(style, text, viewport):
+        return None
+    return _optional_length(style.get("word-spacing"), "x", viewport)
+
+
+def _svg_word_spacing_is_supported(style: dict[str, str], text: str, viewport: tuple[float, float]) -> bool:
+    value = style.get("word-spacing")
+    if value is None:
+        return False
+    if value.strip().lower() == "normal":
+        return False
+    if style.get("letter-spacing") not in {None, "", "normal"}:
+        return False
+    if style.get("textLength") is not None:
+        return False
+    line = text.strip()
+    return (
+        "\n" not in text
+        and len(line) > 1
+        and _svg_word_gap_count(line) > 0
+        and _optional_length(value, "x", viewport) is not None
+    )
+
+
+def _svg_word_gap_count(text: str) -> int:
+    return len(re.findall(r"[ \t\f\v]+", text.strip()))
 
 
 def _font_variant(value: str | None) -> str | None:

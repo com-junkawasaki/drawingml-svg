@@ -420,6 +420,22 @@ def test_word_spacing_without_spaces_is_not_reported_as_unsupported() -> None:
     assert analyze_svg(source).unsupported_attributes == {}
 
 
+def test_word_spacing_maps_to_distributed_character_spacing() -> None:
+    source = '<svg><text x="10" y="20" word-spacing="6px" font-size="10" fill="#111">Hi all</text></svg>'
+    dml = svg_to_drawingml(source)
+
+    root = ET.fromstring(dml)
+    run_pr = root.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}rPr")
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert run_pr is not None
+    assert run_pr.get("spc") == "90"
+    assert shape_ext.get("cx") == "571500"
+    assert analyze_svg(source).unsupported_attributes == {}
+
+    svg = drawingml_to_svg(dml)
+    assert 'letter-spacing="1.2"' in svg
+
+
 def test_text_small_caps_maps_to_drawingml_caps() -> None:
     source = '<svg><text x="10" y="20" font-variant="small-caps" font-size="10" fill="#111">Caps</text></svg>'
     dml = svg_to_drawingml(source)

@@ -24,6 +24,7 @@ from .converter import (
     _supported_data_image,
     _svg_text_content,
     _svg_text_length_spacing_is_supported,
+    _svg_word_spacing_is_supported,
     _switch_selected_child,
 )
 
@@ -240,6 +241,8 @@ def _inspect_attributes(
             continue
         if attr == "word-spacing" and _word_spacing_has_no_effect(element, specified_style):
             continue
+        if attr == "word-spacing" and _word_spacing_is_supported(element, specified_style):
+            continue
         if specified_style.get(attr) is not None:
             stats.add_unsupported_attribute(attr)
     href = _href(element)
@@ -376,6 +379,12 @@ def _word_spacing_has_no_effect(element: ET.Element, style: dict[str, str]) -> b
     if _local_name(element.tag) == "tspan":
         return not re.search(r"[ \t\f\v]", "".join(element.itertext()))
     return False
+
+
+def _word_spacing_is_supported(element: ET.Element, style: dict[str, str]) -> bool:
+    if _local_name(element.tag) != "text":
+        return False
+    return _svg_word_spacing_is_supported(style, _svg_text_content(element), (0.0, 0.0))
 
 
 def _mix_blend_mode_has_no_effect(style: dict[str, str]) -> bool:
