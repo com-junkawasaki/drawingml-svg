@@ -16,6 +16,10 @@
       <stop offset="0%" stop-color="currentColor" stop-opacity=".95"/>
       <stop offset="100%" stop-color="rgb(187, 247, 208)" stop-opacity=".6"/>
     </linearGradient>
+    <radialGradient id="halo">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#92400e" stop-opacity=".6"/>
+    </radialGradient>
     <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 Z"/>
     </marker>
@@ -47,6 +51,7 @@
     <rect data-icon="coverage-probe" data-tags="warm signal" data-kind="meter-high" x="172" y="18" width="24" height="18"/>
     <rect x="78%" y="8%" width="8%" height="12%" fill="#e0f2fe" stroke="#0369a1"/>
     <circle cx="316" cy="36" r="8" fill="url(#missingPaint) #dc2626"/>
+    <circle cx="292" cy="18" r="7" fill="url(#halo)"/>
     <polygon points="40,54 66,42 92,54 82,86 50,86" fill="#f008" stroke="#991b1b" stroke-width="2"/>
     <polyline points="1.10e2,86 1.38e2,56 1.66e2,86 1.94e2,56" fill="none" stroke="#4338ca" stroke-width="3"/>
     <g class="badges" transform="translate(232 42) rotate(12)">

@@ -2030,6 +2030,8 @@ def _paint_server_value(element: ET.Element | None, refs: dict[str, ET.Element],
     colors = inherited_colors + _gradient_stops(element, current_color)
     if not colors:
         return None, None
+    if tag == "radialGradient":
+        return colors[-1]
     rgba = []
     for color, alpha in colors:
         rgb = _hex_to_rgb(color)

@@ -622,6 +622,24 @@ def test_css_color_functions_named_colors_and_gradient_fallback() -> None:
     assert analyze_svg(svg).unsupported_attributes == {}
 
 
+def test_radial_gradient_fallback_uses_outer_stop_color() -> None:
+    svg = """<svg>
+      <defs>
+        <radialGradient id="halo">
+          <stop offset="0%" stop-color="#fef3c7"/>
+          <stop offset="100%" stop-color="#92400e" stop-opacity=".6"/>
+        </radialGradient>
+      </defs>
+      <circle cx="10" cy="10" r="8" fill="url(#halo)"/>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    assert 'val="92400E"' in dml
+    assert 'val="60000"' in dml
+    assert 'val="FEF3C7"' not in dml
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_analyze_svg_reports_missing_paint_server() -> None:
     report = analyze_svg('<svg><rect width="10" height="8" fill="url(#missing)"/></svg>')
 
