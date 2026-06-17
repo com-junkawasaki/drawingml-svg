@@ -25,6 +25,7 @@ from .converter import (
     _svg_text_content,
     _svg_text_length_spacing_is_supported,
     _svg_word_spacing_is_supported,
+    _svg_dasharray_numbers,
     _switch_selected_child,
 )
 
@@ -402,6 +403,9 @@ def _stroke_dashoffset_has_no_effect(style: dict[str, str]) -> bool:
     dasharray = style.get("stroke-dasharray")
     if dasharray is None or dasharray.strip().lower() in {"", "none"}:
         return True
+    period = _dash_pattern_period(dasharray)
+    if period and _is_multiple_of(abs(parsed), period):
+        return True
     stroke = style.get("stroke")
     if stroke is None or stroke.strip().lower() in {"", "none", "transparent"}:
         return True
@@ -409,6 +413,19 @@ def _stroke_dashoffset_has_no_effect(style: dict[str, str]) -> bool:
     if stroke_width == 0:
         return True
     return _alpha_is_zero(style.get("opacity")) or _alpha_is_zero(style.get("stroke-opacity"))
+
+
+def _dash_pattern_period(value: str) -> float | None:
+    nums = _svg_dasharray_numbers(value)
+    if not nums:
+        return None
+    period = sum(nums) * (2 if len(nums) % 2 else 1)
+    return period if period > 0 else None
+
+
+def _is_multiple_of(value: float, period: float) -> bool:
+    remainder = value % period
+    return remainder < 1e-9 or abs(remainder - period) < 1e-9
 
 
 def _alpha_is_zero(value: str | None) -> bool:
