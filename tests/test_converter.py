@@ -37,7 +37,7 @@ def test_drawingml_to_svg_rect_round_trip() -> None:
 def test_svg_line_round_trip_keeps_direction_with_flips() -> None:
     svg = drawingml_to_svg(svg_to_drawingml('<svg><line x1="20" y1="30" x2="5" y2="10" stroke="#ff0000"/></svg>'))
 
-    assert '<line fill="none" stroke="#ff0000" stroke-linecap="butt" stroke-linejoin="miter" x1="20" y1="30" x2="5" y2="10"/>' in svg
+    assert '<line fill="none" stroke="#ff0000" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" x1="20" y1="30" x2="5" y2="10"/>' in svg
 
 
 def test_svg_default_paint_is_explicitly_converted() -> None:
@@ -62,9 +62,10 @@ def test_default_stroke_linecap_is_explicitly_flat() -> None:
 def test_default_stroke_linejoin_is_explicitly_miter() -> None:
     dml = svg_to_drawingml('<svg><polygon points="0,0 10,0 5,8" fill="none" stroke="#111111"/></svg>')
 
-    assert "<a:miter/>" in dml
+    assert '<a:miter lim="400000"/>' in dml
     svg = drawingml_to_svg(dml)
     assert 'stroke-linejoin="miter"' in svg
+    assert 'stroke-miterlimit="4"' in svg
 
 
 def test_converted_shapes_can_be_embedded_in_slide_xml() -> None:
