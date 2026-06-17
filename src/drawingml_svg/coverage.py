@@ -221,7 +221,11 @@ def _inspect_attributes(
             continue
         if attr == "letter-spacing" and _letter_spacing_is_supported(specified_style):
             continue
+        if attr == "mix-blend-mode" and _mix_blend_mode_has_no_effect(specified_style):
+            continue
         if attr == "rotate" and _text_rotate_is_supported(element, specified_style):
+            continue
+        if attr == "stroke-dashoffset" and _stroke_dashoffset_has_no_effect(specified_style):
             continue
         if attr == "word-spacing" and _word_spacing_has_no_effect(element, specified_style):
             continue
@@ -334,6 +338,19 @@ def _word_spacing_has_no_effect(element: ET.Element, style: dict[str, str]) -> b
     if _local_name(element.tag) == "tspan":
         return not re.search(r"[ \t\f\v]", "".join(element.itertext()))
     return False
+
+
+def _mix_blend_mode_has_no_effect(style: dict[str, str]) -> bool:
+    value = style.get("mix-blend-mode")
+    return value is not None and value.strip().lower() in {"", "normal"}
+
+
+def _stroke_dashoffset_has_no_effect(style: dict[str, str]) -> bool:
+    value = style.get("stroke-dashoffset")
+    if value is None:
+        return False
+    parsed = _optional_length(value, "x", (0.0, 0.0))
+    return parsed == 0
 
 
 def _font_variant_is_supported(style: dict[str, str]) -> bool:

@@ -606,6 +606,15 @@ def test_analyze_svg_deduplicates_isolation_when_blend_is_reported() -> None:
     assert analyze_svg(svg).unsupported_attributes == {"mix-blend-mode": 1}
 
 
+def test_analyze_svg_ignores_noop_blend_and_dash_offset() -> None:
+    svg = """<svg>
+      <rect width="10" height="8" mix-blend-mode="normal"/>
+      <path d="M0 0 L10 0" stroke="#111111" stroke-dasharray="4 2" stroke-dashoffset="0"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_analyze_svg_reports_gradient_attributes_without_color_fallback() -> None:
     svg = """<svg>
       <defs>
