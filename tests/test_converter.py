@@ -1244,13 +1244,16 @@ def test_analyze_svg_deduplicates_isolation_when_blend_is_reported() -> None:
 def test_analyze_svg_ignores_noop_blend_and_dash_offset() -> None:
     svg = """<svg>
       <rect width="10" height="8" mix-blend-mode="normal"/>
+      <rect width="10" height="8" fill="none" stroke="none" mix-blend-mode="multiply"/>
+      <rect width="10" height="8" fill="#111111" opacity="0" mix-blend-mode="multiply"/>
+      <image href="{PNG_DATA_URI}" x="0" y="0" width="10" height="8" opacity="0" mix-blend-mode="multiply"/>
       <path d="M0 0 L10 0" stroke="#111111" stroke-dasharray="4 2" stroke-dashoffset="0"/>
       <path d="M0 4 L10 4" stroke="#111111" stroke-dasharray="4 2" stroke-dashoffset="12"/>
       <path d="M0 8 L10 8" stroke="#111111" stroke-dasharray="2 1 3" stroke-dashoffset="-12"/>
       <path d="M0 12 L10 12" stroke="#111111" stroke-dashoffset="2"/>
       <path d="M0 16 L10 16" stroke="none" stroke-dasharray="4 2" stroke-dashoffset="2"/>
       <path d="M0 20 L10 20" stroke="#111111" stroke-opacity="0" stroke-dasharray="4 2" stroke-dashoffset="2"/>
-    </svg>"""
+    </svg>""".format(PNG_DATA_URI=PNG_DATA_URI)
 
     assert analyze_svg(svg).unsupported_attributes == {}
 

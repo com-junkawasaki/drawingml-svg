@@ -269,7 +269,7 @@ def _inspect_attributes(
             element, specified_style
         ):
             continue
-        if attr == "mix-blend-mode" and _mix_blend_mode_has_no_effect(specified_style):
+        if attr == "mix-blend-mode" and _mix_blend_mode_has_no_effect(element, specified_style, style, refs, css):
             continue
         if attr == "paint-order" and _paint_order_has_no_effect(element, style, refs, css):
             continue
@@ -476,9 +476,27 @@ def _word_spacing_is_supported(element: ET.Element, style: dict[str, str]) -> bo
     return _svg_word_spacing_is_supported(style, _svg_text_content(element), (0.0, 0.0))
 
 
-def _mix_blend_mode_has_no_effect(style: dict[str, str]) -> bool:
-    value = style.get("mix-blend-mode")
-    return value is not None and value.strip().lower() in {"", "normal"}
+def _mix_blend_mode_has_no_effect(
+    element: ET.Element,
+    specified_style: dict[str, str],
+    style: dict[str, str],
+    refs: dict[str, ET.Element],
+    css: list[CssRule],
+) -> bool:
+    value = specified_style.get("mix-blend-mode")
+    if value is None:
+        return False
+    if value.strip().lower() in {"", "normal"}:
+        return True
+    tag = _local_name(element.tag)
+    if tag == "image":
+        return _alpha_is_zero(style.get("opacity"))
+    if tag not in {"circle", "ellipse", "line", "path", "polygon", "polyline", "rect", "text", "tspan"}:
+        return False
+    paint = _svg_paint(style, refs, default_fill=tag != "line", css=css)
+    has_fill = paint.fill not in {None, "none"}
+    has_stroke = paint.stroke not in {None, "none"} and (paint.stroke_width or 0) > 0
+    return not (has_fill or has_stroke)
 
 
 def _paint_order_has_no_effect(
