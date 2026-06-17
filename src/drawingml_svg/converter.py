@@ -505,8 +505,8 @@ def _svg_text_y(shape: Shape) -> float:
 
 def _svg_paint(style: dict[str, str], refs: dict[str, ET.Element] | None = None) -> Paint:
     refs = refs or {}
-    fill, fill_color_alpha = _paint_value(style.get("fill"), refs)
-    stroke, stroke_color_alpha = _paint_value(style.get("stroke"), refs)
+    fill, fill_color_alpha = _paint_value(style.get("fill"), refs, style.get("color"))
+    stroke, stroke_color_alpha = _paint_value(style.get("stroke"), refs, style.get("color"))
     stroke_width = style.get("stroke-width")
     return Paint(
         fill=fill,
@@ -551,7 +551,7 @@ def _svg_marker_value(value: str | None, refs: dict[str, ET.Element]) -> str | N
 
 
 def _text_paint(style: dict[str, str], refs: dict[str, ET.Element]) -> Paint:
-    fill, color_alpha = _paint_value(style.get("fill"), refs)
+    fill, color_alpha = _paint_value(style.get("fill"), refs, style.get("color"))
     return Paint(fill=fill or "#000000", fill_alpha=_combined_alpha(_alpha(style, "fill"), color_alpha))
 
 
@@ -1816,17 +1816,17 @@ NAMED_COLORS = {
 }
 
 
-def _paint_value(value: str | None, refs: dict[str, ET.Element]) -> tuple[str | None, float | None]:
+def _paint_value(value: str | None, refs: dict[str, ET.Element], current_color: str | None = None) -> tuple[str | None, float | None]:
     if value is None:
         return None, None
     stripped = value.strip()
     match = re.fullmatch(r"url\((?:['\"])?#([^'\")]+)(?:['\"])?\)", stripped)
     if match:
-        return _paint_server_value(refs.get(match.group(1)), refs)
+        return _paint_server_value(refs.get(match.group(1)), refs, current_color)
     return _parse_color(stripped)
 
 
-def _paint_server_value(element: ET.Element | None, refs: dict[str, ET.Element]) -> tuple[str | None, float | None]:
+def _paint_server_value(element: ET.Element | None, refs: dict[str, ET.Element], current_color: str | None = None) -> tuple[str | None, float | None]:
     if element is None:
         return None, None
     tag = _local_name(element.tag)
@@ -1835,10 +1835,10 @@ def _paint_server_value(element: ET.Element | None, refs: dict[str, ET.Element])
     inherited_colors: list[tuple[str, float | None]] = []
     href = _href(element)
     if href and href.startswith("#"):
-        color, alpha = _paint_server_value(refs.get(href[1:]), refs)
+        color, alpha = _paint_server_value(refs.get(href[1:]), refs, current_color)
         if color:
             inherited_colors.append((color, alpha))
-    colors = inherited_colors + _gradient_stops(element)
+    colors = inherited_colors + _gradient_stops(element, current_color)
     if not colors:
         return None, None
     rgba = []
@@ -1854,13 +1854,16 @@ def _paint_server_value(element: ET.Element | None, refs: dict[str, ET.Element])
     return _rgb_to_hex(rgb_avg), alpha_avg if alpha_avg < 1 else None
 
 
-def _gradient_stops(element: ET.Element) -> list[tuple[str, float | None]]:
+def _gradient_stops(element: ET.Element, current_color: str | None = None) -> list[tuple[str, float | None]]:
     stops = []
     for stop in element:
         if _local_name(stop.tag) != "stop":
             continue
         style = _parse_style(stop.get("style", ""))
-        color, color_alpha = _parse_color(stop.get("stop-color", style.get("stop-color", "black")))
+        stop_color = stop.get("stop-color", style.get("stop-color", "black"))
+        if stop_color == "currentColor":
+            stop_color = style.get("color") or element.get("color") or current_color or "black"
+        color, color_alpha = _parse_color(stop_color)
         if color and color != "none":
             stop_alpha = _combined_alpha(_clamped_num(stop.get("stop-opacity", style.get("stop-opacity")), 1.0), color_alpha)
             stops.append((color, stop_alpha))
