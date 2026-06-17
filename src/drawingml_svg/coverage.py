@@ -372,6 +372,7 @@ def _inspect_attributes(
             continue
         if specified_style.get(attr) is not None:
             stats.add_unsupported_attribute(attr)
+    _inspect_tspan_run_attributes(element, specified_style, stats)
     href = _href(element)
     if _local_name(element.tag) == "image":
         if not href or not _supported_data_image(href):
@@ -398,6 +399,45 @@ def _inspect_attributes(
                         stats.add_unsupported_attribute(f"{attr}:paint-server")
                 else:
                     stats.add_unsupported_attribute(f"{attr}:paint-server")
+
+
+def _inspect_tspan_run_attributes(
+    element: ET.Element,
+    specified_style: dict[str, str],
+    stats: _CoverageStats,
+) -> None:
+    if _local_name(element.tag) != "tspan":
+        return
+    for attr in (
+        "fill",
+        "fill-opacity",
+        "font-family",
+        "font-size",
+        "font-style",
+        "font-weight",
+        "stroke",
+        "stroke-dasharray",
+        "stroke-miterlimit",
+        "stroke-opacity",
+        "stroke-width",
+        "text-anchor",
+        "text-decoration",
+        "text-decoration-line",
+    ):
+        if specified_style.get(attr) is not None:
+            if (
+                attr == "text-decoration"
+                and specified_style.get("text-decoration-line") is not None
+                and specified_style.get("text-decoration") == specified_style.get("text-decoration-line")
+            ):
+                continue
+            stats.add_unsupported_attribute(attr)
+    if _font_variant_is_supported(specified_style):
+        stats.add_unsupported_attribute("font-variant")
+    if _letter_spacing_is_supported(specified_style):
+        stats.add_unsupported_attribute("letter-spacing")
+    if _word_spacing_is_supported(element, specified_style):
+        stats.add_unsupported_attribute("word-spacing")
 
 
 def _inspect_path(path_data: str, stats: _CoverageStats) -> None:

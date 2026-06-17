@@ -3281,6 +3281,39 @@ def test_tspan_baseline_controls_are_reported_as_unconverted() -> None:
     }
 
 
+def test_tspan_run_level_styling_is_reported_as_unconverted() -> None:
+    svg = """<svg>
+      <text x="0" y="20" font-size="10" fill="#111111">
+        <tspan fill="#ff0000" fill-opacity=".5" font-family="Arial" font-size="24"
+          font-style="italic" font-weight="700" font-variant="small-caps"
+          stroke="#0000ff" stroke-width="2" stroke-opacity=".5" stroke-dasharray="4 2"
+          stroke-miterlimit="6" text-anchor="end" text-decoration-line="underline"
+          letter-spacing="1px" word-spacing="2px">Wide gap</tspan>
+        <tspan text-transform="uppercase">kept</tspan>
+      </text>
+      <text font-size="10" fill="#111111"><tspan x="20" y="40" dx="5" dy="7">Position</tspan></text>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {
+        "fill": 1,
+        "fill-opacity": 1,
+        "font-family": 1,
+        "font-size": 1,
+        "font-style": 1,
+        "font-variant": 1,
+        "font-weight": 1,
+        "letter-spacing": 1,
+        "stroke": 1,
+        "stroke-dasharray": 1,
+        "stroke-miterlimit": 1,
+        "stroke-opacity": 1,
+        "stroke-width": 1,
+        "text-anchor": 1,
+        "text-decoration-line": 1,
+        "word-spacing": 1,
+    }
+
+
 def test_font_weight_and_style_values_are_normalized() -> None:
     source = '<svg><text x="0" y="20" font-size="10" font-weight=" BOLD " font-style=" oblique 10deg " fill="#111111">Bold Italic</text></svg>'
     dml = svg_to_drawingml(source)
