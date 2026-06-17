@@ -1146,6 +1146,20 @@ def test_text_decoration_line_maps_to_drawingml_decoration() -> None:
     assert analyze_svg(svg).unsupported_attributes == {}
 
 
+def test_text_decoration_color_and_non_solid_style_are_reported_when_visible() -> None:
+    svg = """<svg>
+      <text x="0" y="20" text-decoration-line="underline" text-decoration-color="#dc2626">Color</text>
+      <text x="0" y="40" text-decoration="line-through" text-decoration-style="dashed">Style</text>
+      <text x="0" y="60" text-decoration-style="dotted">No decoration</text>
+      <text x="0" y="80" text-decoration-line="underline" text-decoration-style="solid">Solid</text>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {
+        "text-decoration-color": 1,
+        "text-decoration-style": 1,
+    }
+
+
 def test_xml_space_preserve_keeps_text_whitespace() -> None:
     dml = svg_to_drawingml(
         '<svg><text x="0" y="20" xml:space="preserve" fill="#111111">  padded  <tspan> kept </tspan></text></svg>'

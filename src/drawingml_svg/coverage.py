@@ -88,6 +88,8 @@ UNSUPPORTED_ATTRIBUTES = {
     "spreadMethod",
     "stroke-dashoffset",
     "textLength",
+    "text-decoration-color",
+    "text-decoration-style",
     "text-rendering",
     "text-transform",
     "transform-origin",
@@ -301,6 +303,10 @@ def _inspect_attributes(
             _stroke_dashoffset_has_no_effect(style, viewport) or _svg_dashoffset_is_supported(style, viewport)
         ):
             continue
+        if attr == "text-decoration-color" and _text_decoration_color_has_no_effect(specified_style):
+            continue
+        if attr == "text-decoration-style" and _text_decoration_style_is_supported_or_noop(specified_style):
+            continue
         if attr == "text-transform" and _text_transform_is_supported(element, specified_style):
             continue
         if attr == "transform-origin" and _transform_origin_is_supported(specified_style, viewport):
@@ -441,6 +447,27 @@ def _text_rotate_is_supported(element: ET.Element, style: dict[str, str]) -> boo
 def _text_transform_is_supported(element: ET.Element, style: dict[str, str]) -> bool:
     value = style.get("text-transform")
     return value is not None and value.strip().lower() in {"normal", "none", "uppercase", "lowercase", "capitalize"}
+
+
+def _text_decoration_color_has_no_effect(style: dict[str, str]) -> bool:
+    return not _has_visible_text_decoration(style)
+
+
+def _text_decoration_style_is_supported_or_noop(style: dict[str, str]) -> bool:
+    value = style.get("text-decoration-style")
+    if value is None:
+        return False
+    if not _has_visible_text_decoration(style):
+        return True
+    return value.strip().lower() in {"", "solid"}
+
+
+def _has_visible_text_decoration(style: dict[str, str]) -> bool:
+    value = style.get("text-decoration-line", style.get("text-decoration"))
+    if value is None:
+        return False
+    tokens = set(value.strip().lower().split())
+    return bool(tokens & {"underline", "line-through"})
 
 
 def _transform_origin_is_supported(style: dict[str, str], viewport: tuple[float, float]) -> bool:
