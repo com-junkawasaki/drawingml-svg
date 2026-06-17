@@ -1839,16 +1839,20 @@ def _font_variant(value: str | None) -> str | None:
 def _is_bold(value: str | None) -> bool:
     if value is None:
         return False
-    if value.lower() == "bold":
+    normalized = value.strip().lower()
+    if normalized == "bold":
         return True
     try:
-        return int(value) >= 600
+        return int(normalized) >= 600
     except ValueError:
         return False
 
 
 def _is_italic(value: str | None) -> bool:
-    return value is not None and value.lower() in {"italic", "oblique"}
+    if value is None:
+        return False
+    normalized = value.strip().lower()
+    return normalized == "italic" or normalized.startswith("oblique")
 
 
 def _has_text_decoration(value: str | None, decoration: str) -> bool:
