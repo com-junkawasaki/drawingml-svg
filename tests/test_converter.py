@@ -2013,6 +2013,28 @@ def test_line_markers_convert_to_drawingml_arrows_and_round_trip() -> None:
     assert 'marker-end="url(#drawingml-svg-arrow)"' in round_trip
 
 
+def test_marker_shorthand_converts_to_drawingml_arrows_when_no_mid_marker_is_needed() -> None:
+    svg = """<svg>
+      <defs><marker id="arrow" viewBox="0 0 10 10"><path d="M0 0 L10 5 L0 10 Z"/></marker></defs>
+      <line x1="0" y1="0" x2="40" y2="10" stroke="#111111" stroke-width="2" marker="url(#arrow)"/>
+      <polyline points="0,20 40,30" fill="none" stroke="#222222" stroke-width="2" marker="url(#arrow)"/>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    assert dml.count('<a:tailEnd type="triangle"/>') == 2
+    assert dml.count('<a:headEnd type="triangle"/>') == 2
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
+def test_marker_shorthand_with_midpoints_is_reported_as_unsupported() -> None:
+    svg = """<svg>
+      <defs><marker id="arrow" viewBox="0 0 10 10"><path d="M0 0 L10 5 L0 10 Z"/></marker></defs>
+      <polyline points="0,0 20,0 20,20" fill="none" stroke="#111111" marker="url(#arrow)"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {"marker": 1}
+
+
 def test_data_uri_image_converts_to_picture_and_round_trips() -> None:
     svg = f'<svg><image href="{PNG_DATA_URI}" x="10" y="12" width="20" height="16"/></svg>'
     dml = svg_to_drawingml(svg)

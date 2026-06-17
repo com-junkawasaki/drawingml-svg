@@ -69,6 +69,7 @@ UNSUPPORTED_ATTRIBUTES = {
     "isolation",
     "letter-spacing",
     "lengthAdjust",
+    "marker",
     "marker-end",
     "marker-mid",
     "marker-start",
@@ -233,6 +234,7 @@ def _inspect_attributes(
         "fill-rule",
         "filter",
         "image-rendering",
+        "marker",
         "marker-end",
         "marker-mid",
         "marker-start",
@@ -247,7 +249,7 @@ def _inspect_attributes(
             continue
         if attr == "clip-path" and _clip_path_is_supported(element, style, refs, matrix):
             continue
-        if attr in {"marker-start", "marker-end"} and _marker_is_supported(element, style, refs):
+        if attr in {"marker", "marker-start", "marker-end"} and _marker_is_supported(element, style, refs):
             continue
         if attr == "font-variant" and _font_variant_is_supported(specified_style):
             continue

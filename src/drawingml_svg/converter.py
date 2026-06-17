@@ -781,8 +781,8 @@ def _svg_paint(
         stroke_linejoin=stroke_linejoin,
         stroke_dasharray=_svg_effective_dasharray(style),
         stroke_miterlimit=stroke_miterlimit,
-        marker_start=_svg_marker_value(style.get("marker-start"), refs),
-        marker_end=_svg_marker_value(style.get("marker-end"), refs),
+        marker_start=_svg_marker_value(_svg_marker_style_value(style, "marker-start"), refs),
+        marker_end=_svg_marker_value(_svg_marker_style_value(style, "marker-end"), refs),
     )
 
 
@@ -844,6 +844,10 @@ def _svg_marker_value(value: str | None, refs: dict[str, ET.Element]) -> str | N
     if marker is None or _local_name(marker.tag) != "marker":
         return None
     return marker_id
+
+
+def _svg_marker_style_value(style: dict[str, str], attr: str) -> str | None:
+    return style[attr] if attr in style else style.get("marker")
 
 
 def _text_paint(
@@ -2338,6 +2342,7 @@ def _computed_style(
         "filter",
         "image-rendering",
         "isolation",
+        "marker",
         "marker-start",
         "marker-mid",
         "marker-end",
@@ -2507,17 +2512,22 @@ def _rect_clip_path_has_object_bbox_rect(style: dict[str, str], refs: dict[str, 
 
 
 def _marker_is_supported(element: ET.Element, style: dict[str, str], refs: dict[str, ET.Element]) -> bool:
-    marker_values = [style.get("marker-start"), style.get("marker-end")]
+    marker_values = [_svg_marker_style_value(style, "marker-start"), _svg_marker_style_value(style, "marker-end")]
     if not any(value and value != "none" for value in marker_values):
         return True
     tag = _local_name(element.tag)
     if tag == "line":
         return all(_svg_marker_value(value, refs) is not None for value in marker_values if value and value != "none")
     if tag == "polyline":
-        return all(_svg_marker_value(value, refs) is not None for value in marker_values if value and value != "none")
+        points = _parse_points(element.get("points", ""))
+        has_unsupported_mid_marker = style.get("marker") not in {None, "none"} and len(points) > 2 and style.get("marker-mid") is None
+        return not has_unsupported_mid_marker and all(_svg_marker_value(value, refs) is not None for value in marker_values if value and value != "none")
     if tag == "path":
         path = _parse_linear_path(element.get("d", ""))
-        return bool(path and not path[1]) and all(_svg_marker_value(value, refs) is not None for value in marker_values if value and value != "none")
+        has_unsupported_mid_marker = bool(path and style.get("marker") not in {None, "none"} and len(path[0]) > 2 and style.get("marker-mid") is None)
+        return bool(path and not path[1] and not has_unsupported_mid_marker) and all(
+            _svg_marker_value(value, refs) is not None for value in marker_values if value and value != "none"
+        )
     return False
 
 
