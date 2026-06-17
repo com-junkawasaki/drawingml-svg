@@ -60,6 +60,7 @@ class Shape:
     font_family: str | None = None
     text_decoration: str | None = None
     text_anchor: str | None = None
+    text_baseline: str | None = None
     rx: float | None = None
     ry: float | None = None
     image_href: str | None = None
@@ -216,12 +217,20 @@ def _svg_shape_from_element(
                 x -= width / 2
             elif anchor == "end":
                 x -= width
+            baseline = _dominant_baseline(style.get("dominant-baseline"))
+            height = font_size * 1.4 * len(text.split("\n"))
+            if baseline == "middle":
+                y -= height / 2
+            elif baseline == "text-after-edge":
+                y -= height
+            else:
+                y -= font_size
             return Shape(
                 "text",
                 x,
-                y - font_size,
+                y,
                 width,
-                font_size * 1.4 * len(text.split("\n")),
+                height,
                 _text_paint(style, refs),
                 text=text,
                 font_size=font_size,
@@ -230,6 +239,7 @@ def _svg_shape_from_element(
                 font_family=_font_family(style.get("font-family")),
                 text_decoration=style.get("text-decoration"),
                 text_anchor=anchor,
+                text_baseline=baseline,
             )
     if tag == "image":
         href = _href(element)
@@ -282,6 +292,7 @@ def _dml_shapes(root: ET.Element) -> Iterable[Shape]:
                 font_family=_dml_font_family(element),
                 text_decoration=_dml_text_decoration(element),
                 text_anchor=_dml_text_anchor(element),
+                text_baseline=_dml_text_baseline(element),
             )
             continue
         cust = sp_pr.find(qn(NS_A, "custGeom"))
@@ -388,7 +399,7 @@ def _shape_to_svg(shape: Shape) -> ET.Element:
         tag = "polygon" if shape.closed else "polyline"
         return ET.Element(qn(NS_SVG, tag), attrs)
     if shape.kind == "text":
-        attrs.update({"x": _fmt(_svg_text_x(shape)), "y": _fmt(shape.y + (shape.font_size or shape.height / 1.4))})
+        attrs.update({"x": _fmt(_svg_text_x(shape)), "y": _fmt(_svg_text_y(shape))})
         if shape.font_size:
             attrs["font-size"] = _fmt(shape.font_size)
         if shape.font_weight:
@@ -401,6 +412,8 @@ def _shape_to_svg(shape: Shape) -> ET.Element:
             attrs["text-decoration"] = shape.text_decoration
         if shape.text_anchor:
             attrs["text-anchor"] = shape.text_anchor
+        if shape.text_baseline:
+            attrs["dominant-baseline"] = shape.text_baseline
         element = ET.Element(qn(NS_SVG, "text"), attrs)
         lines = (shape.text or "").split("\n")
         element.text = lines[0] if lines else ""
@@ -480,6 +493,14 @@ def _svg_text_x(shape: Shape) -> float:
     if shape.text_anchor == "end":
         return shape.x + shape.width
     return shape.x
+
+
+def _svg_text_y(shape: Shape) -> float:
+    if shape.text_baseline == "middle":
+        return shape.y + shape.height / 2
+    if shape.text_baseline == "text-after-edge":
+        return shape.y + shape.height
+    return shape.y + (shape.font_size or shape.height / 1.4)
 
 
 def _svg_paint(style: dict[str, str], refs: dict[str, ET.Element] | None = None) -> Paint:
@@ -650,7 +671,11 @@ def _append_custom_geometry(parent: ET.Element, shape: Shape) -> None:
 
 def _append_text_body(parent: ET.Element, shape: Shape) -> None:
     tx_body = ET.SubElement(parent, qn(NS_P, "txBody"))
-    ET.SubElement(tx_body, qn(NS_A, "bodyPr"), {"wrap": "none", "lIns": "0", "rIns": "0", "tIns": "0", "bIns": "0"})
+    body_pr_attrs = {"wrap": "none", "lIns": "0", "rIns": "0", "tIns": "0", "bIns": "0"}
+    body_anchor = _text_baseline_to_dml(shape.text_baseline)
+    if body_anchor:
+        body_pr_attrs["anchor"] = body_anchor
+    ET.SubElement(tx_body, qn(NS_A, "bodyPr"), body_pr_attrs)
     ET.SubElement(tx_body, qn(NS_A, "lstStyle"))
     paragraph = ET.SubElement(tx_body, qn(NS_A, "p"))
     paragraph_align = _text_anchor_to_dml(shape.text_anchor)
@@ -896,6 +921,27 @@ def _dml_text_anchor(element: ET.Element) -> str | None:
 
 def _text_anchor_to_dml(value: str | None) -> str | None:
     return {"middle": "ctr", "end": "r", "start": "l"}.get(value or "")
+
+
+def _dml_text_baseline(element: ET.Element) -> str | None:
+    body_pr = element.find(f".//{qn(NS_A, 'bodyPr')}")
+    if body_pr is None:
+        return None
+    return {"ctr": "middle", "b": "text-after-edge", "t": "text-before-edge"}.get(body_pr.get("anchor", ""))
+
+
+def _text_baseline_to_dml(value: str | None) -> str | None:
+    return {"middle": "ctr", "central": "ctr", "text-after-edge": "b", "text-before-edge": "t", "hanging": "t"}.get(value or "")
+
+
+def _dominant_baseline(value: str | None) -> str | None:
+    if value in {"middle", "central"}:
+        return "middle"
+    if value in {"text-after-edge", "ideographic"}:
+        return "text-after-edge"
+    if value in {"text-before-edge", "hanging"}:
+        return "text-before-edge"
+    return None
 
 
 def _svg_text_content(element: ET.Element) -> str:
@@ -1398,6 +1444,7 @@ def _computed_style(
         "font-style",
         "text-decoration",
         "text-anchor",
+        "dominant-baseline",
         "color",
         "display",
         "visibility",
@@ -1456,6 +1503,7 @@ def _apply_rect_clip(
         font_family=shape.font_family,
         text_decoration=shape.text_decoration,
         text_anchor=shape.text_anchor,
+        text_baseline=shape.text_baseline,
         rx=min(shape.rx or 0, (x2 - x1) / 2) if shape.rx is not None else None,
         ry=min(shape.ry or 0, (y2 - y1) / 2) if shape.ry is not None else None,
     )

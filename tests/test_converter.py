@@ -458,10 +458,11 @@ def test_unsupported_marker_usage_is_reported() -> None:
 
 def test_tspan_text_anchor_and_bold_convert() -> None:
     dml = svg_to_drawingml(
-        '<svg><text x="100" y="40" text-anchor="middle" font-size="20" font-weight="700" font-style="italic" font-family="\'Aptos Display\', Arial, sans-serif" text-decoration="underline line-through" fill="#111111"><tspan>Hello</tspan><tspan x="100" dy="22">World</tspan></text></svg>'
+        '<svg><text x="100" y="40" text-anchor="middle" dominant-baseline="middle" font-size="20" font-weight="700" font-style="italic" font-family="\'Aptos Display\', Arial, sans-serif" text-decoration="underline line-through" fill="#111111"><tspan>Hello</tspan><tspan x="100" dy="22">World</tspan></text></svg>'
     )
 
     assert '<a:br/>' in dml
+    assert 'anchor="ctr"' in dml
     assert '<a:pPr algn="ctr"/>' in dml
     assert 'b="1"' in dml
     assert 'i="1"' in dml
@@ -480,4 +481,6 @@ def test_tspan_text_anchor_and_bold_convert() -> None:
     assert 'font-family="Aptos Display"' in svg
     assert 'text-decoration="underline line-through"' in svg
     assert 'text-anchor="middle"' in svg
+    assert 'dominant-baseline="middle"' in svg
     assert 'x="100"' in svg
+    assert 'y="40"' in svg
