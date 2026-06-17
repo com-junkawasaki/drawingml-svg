@@ -1106,8 +1106,11 @@ def _dml_scheme_color(element: ET.Element) -> str | None:
     return _apply_dml_luminance_modifiers(color, element)
 
 
-def _apply_dml_luminance_modifiers(color: str, element: ET.Element) -> str:
-    rgb = list(_hex_to_rgb(color))
+def _apply_dml_luminance_modifiers(color: str, element: ET.Element) -> str | None:
+    parsed = _hex_to_rgb(color)
+    if parsed is None:
+        return None
+    rgb = list(parsed)
     lum_mod = element.find(qn(NS_A, "lumMod"))
     lum_off = element.find(qn(NS_A, "lumOff"))
     if lum_mod is not None and lum_mod.get("val") is not None:

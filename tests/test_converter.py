@@ -1544,6 +1544,29 @@ def test_drawingml_invalid_numeric_paint_and_transform_values_do_not_crash() -> 
     assert "transform=" not in svg
 
 
+def test_drawingml_invalid_srgb_colors_do_not_crash() -> None:
+    dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="95250" cy="76200"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="not-a-color"><a:lumMod val="50000"/></a:srgbClr></a:solidFill>
+          <a:ln><a:solidFill><a:srgbClr val="bad"/></a:solidFill></a:ln>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>"""
+
+    svg = drawingml_to_svg(dml)
+
+    assert "<rect" in svg
+    assert "not-a-color" not in svg
+    assert "bad" not in svg
+    assert "fill=" not in svg
+    assert "stroke=" not in svg
+
+
 def test_drawingml_invalid_custom_geometry_points_do_not_crash() -> None:
     dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
