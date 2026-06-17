@@ -584,6 +584,16 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
     }
 
 
+def test_analyze_svg_deduplicates_isolation_when_blend_is_reported() -> None:
+    svg = """<svg>
+      <g isolation="isolate">
+        <rect width="10" height="8" mix-blend-mode="multiply"/>
+      </g>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {"mix-blend-mode": 1}
+
+
 def test_analyze_svg_reports_gradient_attributes_without_color_fallback() -> None:
     svg = """<svg>
       <defs>

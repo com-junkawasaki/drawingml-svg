@@ -175,7 +175,7 @@ def _walk(
         stats.add_unsupported_element(tag)
 
     matrix = _matrix_multiply(inherited_matrix, _parse_transform(element.get("transform", "")))
-    _inspect_attributes(element, style, specified_style, refs, css, matrix, stats)
+    _inspect_attributes(element, style, specified_style, refs, css, matrix, stats, ancestors)
 
     if tag == "path":
         _inspect_path(element.get("d", ""), stats)
@@ -204,6 +204,7 @@ def _inspect_attributes(
     css: list[CssRule],
     matrix: tuple[float, float, float, float, float, float],
     stats: _CoverageStats,
+    ancestors: tuple[ET.Element, ...],
 ) -> None:
     for attr in UNSUPPORTED_ATTRIBUTES:
         if attr == "clip-path" and _clip_path_is_supported(element, style, refs, matrix):
@@ -215,6 +216,8 @@ def _inspect_attributes(
         if attr in {"gradientTransform", "gradientUnits", "spreadMethod"} and _gradient_fallback_is_supported(
             element, refs, css
         ):
+            continue
+        if attr == "isolation" and _isolation_is_redundant_with_blend(element, css, style, ancestors):
             continue
         if attr == "letter-spacing" and _letter_spacing_is_supported(specified_style):
             continue
@@ -270,6 +273,33 @@ def _gradient_fallback_is_supported(element: ET.Element, refs: dict[str, ET.Elem
         return False
     color, _ = _paint_server_value(element, refs, element.get("color"), css)
     return bool(color)
+
+
+def _isolation_is_redundant_with_blend(
+    element: ET.Element,
+    css: list[CssRule],
+    inherited_style: dict[str, str],
+    ancestors: tuple[ET.Element, ...],
+) -> bool:
+    if _local_name(element.tag) not in {"g", "svg", "a"}:
+        return False
+    value = inherited_style.get("isolation")
+    if value is None or value.strip().lower() not in {"isolate", "auto"}:
+        return False
+    return any(_subtree_has_blend(child, css, inherited_style, ancestors + (element,)) for child in element)
+
+
+def _subtree_has_blend(
+    element: ET.Element,
+    css: list[CssRule],
+    inherited_style: dict[str, str],
+    ancestors: tuple[ET.Element, ...],
+) -> bool:
+    style = _computed_style(element, css, inherited_style, ancestors)
+    blend = style.get("mix-blend-mode")
+    if blend is not None and blend.strip().lower() not in {"", "normal"}:
+        return True
+    return any(_subtree_has_blend(child, css, style, ancestors + (element,)) for child in element)
 
 
 def _text_rotate_is_supported(element: ET.Element, style: dict[str, str]) -> bool:
