@@ -884,6 +884,19 @@ def test_rotated_rect_stays_as_editable_rect_with_rotation() -> None:
     assert 'transform="rotate(90 20 20)"' in round_trip
 
 
+def test_reflected_rect_stays_as_editable_rect() -> None:
+    svg = '<svg><rect x="10" y="12" width="20" height="16" fill="#f97316" transform="scale(-1 1)"/></svg>'
+    dml = svg_to_drawingml(svg)
+
+    root = ET.fromstring(dml)
+    xfrm = root.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}xfrm[@rot]")
+    assert xfrm is not None
+    assert xfrm.get("rot") == "10800000"
+    assert 'prst="rect"' in dml
+    assert "<a:custGeom>" not in dml
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_scaled_circle_and_ellipse_stay_as_editable_ellipses() -> None:
     dml = svg_to_drawingml(
         """<svg>
@@ -920,6 +933,19 @@ def test_rotated_ellipse_stays_as_editable_ellipse_with_rotation() -> None:
 
     round_trip = drawingml_to_svg(dml)
     assert 'transform="rotate(90 20 20)"' in round_trip
+
+
+def test_reflected_ellipse_stays_as_editable_ellipse() -> None:
+    svg = '<svg><ellipse cx="20" cy="20" rx="10" ry="6" fill="#3b82f6" transform="scale(-1 1)"/></svg>'
+    dml = svg_to_drawingml(svg)
+
+    root = ET.fromstring(dml)
+    xfrm = root.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}xfrm[@rot]")
+    assert xfrm is not None
+    assert xfrm.get("rot") == "10800000"
+    assert 'prst="ellipse"' in dml
+    assert "<a:custGeom>" not in dml
+    assert analyze_svg(svg).unsupported_attributes == {}
 
 
 def test_percent_lengths_resolve_against_root_viewport() -> None:

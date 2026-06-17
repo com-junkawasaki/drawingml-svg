@@ -1521,7 +1521,7 @@ def _transformed_rect_shape(
     dot = ux[0] * vy[0] + ux[1] * vy[1]
     determinant = ux[0] * vy[1] - ux[1] * vy[0]
     tolerance = max(transformed_width * transformed_height, 1.0) * 1e-9
-    if transformed_width <= 0 or transformed_height <= 0 or abs(dot) > tolerance or determinant <= 0:
+    if transformed_width <= 0 or transformed_height <= 0 or abs(dot) > tolerance or abs(determinant) <= tolerance:
         return None
     sx = transformed_width / width
     sy = transformed_height / height
@@ -1565,7 +1565,7 @@ def _transformed_ellipse_shape(
     dot = horizontal[0] * vertical[0] + horizontal[1] * vertical[1]
     determinant = horizontal[0] * vertical[1] - horizontal[1] * vertical[0]
     tolerance = max(transformed_width * transformed_height, 1.0) * 1e-9
-    if transformed_width <= 0 or transformed_height <= 0 or abs(dot) > tolerance or determinant <= 0:
+    if transformed_width <= 0 or transformed_height <= 0 or abs(dot) > tolerance or abs(determinant) <= tolerance:
         return None
     rotation = math.degrees(math.atan2(horizontal[1], horizontal[0])) % 360
     if abs(rotation) < 1e-9 or abs(rotation - 360) < 1e-9:
