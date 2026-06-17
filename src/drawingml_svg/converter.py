@@ -1645,14 +1645,18 @@ def _computed_style(
         "visibility",
         "clip-path",
         "clip-rule",
+        "color-rendering",
         "fill-rule",
+        "image-rendering",
         "marker-start",
         "marker-mid",
         "marker-end",
         "paint-order",
         "pathLength",
         "rotate",
+        "shape-rendering",
         "vector-effect",
+        "text-rendering",
         "word-spacing",
     ):
         if element.get(attr) is not None:

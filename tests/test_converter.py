@@ -534,9 +534,12 @@ def test_analyze_svg_reports_coverage_and_unsupported_features() -> None:
 def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
     svg = """<svg>
       <style>
-        path { clip-rule: evenodd; paint-order: stroke fill; vector-effect: non-scaling-stroke; }
+        path { clip-rule: evenodd; paint-order: stroke fill; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+        text { text-rendering: geometricPrecision; }
       </style>
       <path d="M0 0 H10 V10 Z" fill-rule="evenodd"/>
+      <text x="0" y="20">Hint</text>
+      <image href="data:image/png;base64,abc" image-rendering="pixelated" color-rendering="optimizeQuality"/>
     </svg>"""
 
     report = analyze_svg(svg)
@@ -544,8 +547,12 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
     assert report.unsupported_elements == {}
     assert report.unsupported_attributes == {
         "clip-rule": 1,
+        "color-rendering": 1,
         "fill-rule": 1,
+        "image-rendering": 1,
         "paint-order": 1,
+        "shape-rendering": 1,
+        "text-rendering": 1,
         "vector-effect": 1,
     }
 

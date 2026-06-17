@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 405" width="720" height="405">
   <style>
-    .accent-box { fill: #e0e7ff; stroke: #4338ca; stroke-width: 3; }
+    .accent-box { fill: #e0e7ff; stroke: #4338ca; stroke-width: 3; shape-rendering: crispEdges; }
     .soft-line { fill: none; stroke: #be123c; stroke-width: 4; }
     .ghosted { fill: #f0abfc; stroke: #86198f; stroke-width: 3; opacity: .55; }
-    text.label { fill: #0f172a; font-size: 18; font-variant: all-small-caps; letter-spacing: 1.5px; word-spacing: 3px; }
+    text.label { fill: #0f172a; font-size: 18; font-variant: all-small-caps; letter-spacing: 1.5px; word-spacing: 3px; text-rendering: geometricPrecision; }
   </style>
   <defs>
     <linearGradient id="panel-gradient">
