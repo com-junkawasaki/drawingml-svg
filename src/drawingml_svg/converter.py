@@ -11,10 +11,12 @@ EMU_PER_PX = 9525
 
 NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
+NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 NS_SVG = "http://www.w3.org/2000/svg"
 
 ET.register_namespace("a", NS_A)
 ET.register_namespace("p", NS_P)
+ET.register_namespace("r", NS_R)
 ET.register_namespace("", NS_SVG)
 
 NUMBER_RE = r"[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[eE][-+]?\d+)?"
@@ -56,6 +58,7 @@ class Shape:
     text_anchor: str | None = None
     rx: float | None = None
     ry: float | None = None
+    image_href: str | None = None
 
 
 def svg_to_drawingml(svg_text: str) -> str:
@@ -221,12 +224,30 @@ def _svg_shape_from_element(
                 font_weight=style.get("font-weight"),
                 text_anchor=anchor,
             )
+    if tag == "image":
+        href = _href(element)
+        if href and _supported_data_image(href):
+            x = _num(element.get("x"), 0)
+            y = _num(element.get("y"), 0)
+            width = _num(element.get("width"), 0)
+            height = _num(element.get("height"), 0)
+            points = _transform_points(_rect_points(x, y, width, height), matrix)
+            min_x = min(px for px, _ in points)
+            min_y = min(py for _, py in points)
+            max_x = max(px for px, _ in points)
+            max_y = max(py for _, py in points)
+            return Shape("image", min_x, min_y, max_x - min_x, max_y - min_y, Paint(), image_href=href)
     return None
 
 
 def _dml_shapes(root: ET.Element) -> Iterable[Shape]:
     for element in root.iter():
         tag = _local_name(element.tag)
+        if tag == "pic":
+            image = _dml_picture_shape(element)
+            if image is not None:
+                yield image
+            continue
         if tag not in {"sp", "cxnSp"}:
             continue
         sp_pr = element.find(qn(NS_P, "spPr"))
@@ -261,6 +282,8 @@ def _dml_shapes(root: ET.Element) -> Iterable[Shape]:
 
 
 def _shape_to_dml(shape: Shape, shape_id: int) -> ET.Element:
+    if shape.kind == "image":
+        return _image_to_dml(shape, shape_id)
     sp = ET.Element(qn(NS_P, "sp"))
     nv_sp_pr = ET.SubElement(sp, qn(NS_P, "nvSpPr"))
     ET.SubElement(nv_sp_pr, qn(NS_P, "cNvPr"), {"id": str(shape_id), "name": shape.kind})
@@ -297,6 +320,17 @@ def _shape_to_dml(shape: Shape, shape_id: int) -> ET.Element:
 
 def _shape_to_svg(shape: Shape) -> ET.Element:
     attrs = _svg_paint_attrs(shape.paint)
+    if shape.kind == "image":
+        return ET.Element(
+            qn(NS_SVG, "image"),
+            {
+                "href": shape.image_href or "",
+                "x": _fmt(shape.x),
+                "y": _fmt(shape.y),
+                "width": _fmt(shape.width),
+                "height": _fmt(shape.height),
+            },
+        )
     if shape.kind in {"rect", "roundRect"}:
         attrs.update(
             {
@@ -350,6 +384,37 @@ def _shape_to_svg(shape: Shape) -> ET.Element:
             tspan.text = line
         return element
     raise ValueError(f"unsupported shape kind: {shape.kind}")
+
+
+def _image_to_dml(shape: Shape, shape_id: int) -> ET.Element:
+    pic = ET.Element(qn(NS_P, "pic"))
+    nv_pic_pr = ET.SubElement(pic, qn(NS_P, "nvPicPr"))
+    ET.SubElement(nv_pic_pr, qn(NS_P, "cNvPr"), {"id": str(shape_id), "name": "image"})
+    ET.SubElement(nv_pic_pr, qn(NS_P, "cNvPicPr"))
+    ET.SubElement(nv_pic_pr, qn(NS_P, "nvPr"))
+    blip_fill = ET.SubElement(pic, qn(NS_P, "blipFill"))
+    ET.SubElement(blip_fill, qn(NS_A, "blip"), {qn(NS_R, "embed"): shape.image_href or ""})
+    stretch = ET.SubElement(blip_fill, qn(NS_A, "stretch"))
+    ET.SubElement(stretch, qn(NS_A, "fillRect"))
+    sp_pr = ET.SubElement(pic, qn(NS_P, "spPr"))
+    xfrm = ET.SubElement(sp_pr, qn(NS_A, "xfrm"))
+    ET.SubElement(xfrm, qn(NS_A, "off"), {"x": str(_emu(shape.x)), "y": str(_emu(shape.y))})
+    ET.SubElement(xfrm, qn(NS_A, "ext"), {"cx": str(_emu(shape.width)), "cy": str(_emu(shape.height))})
+    prst = ET.SubElement(sp_pr, qn(NS_A, "prstGeom"), {"prst": "rect"})
+    ET.SubElement(prst, qn(NS_A, "avLst"))
+    return pic
+
+
+def _dml_picture_shape(element: ET.Element) -> Shape | None:
+    sp_pr = element.find(qn(NS_P, "spPr"))
+    blip = element.find(f".//{qn(NS_A, 'blip')}")
+    if sp_pr is None or blip is None:
+        return None
+    href = blip.get(qn(NS_R, "embed"))
+    if not href:
+        return None
+    x, y, width, height, flip_h, flip_v = _dml_xfrm(sp_pr.find(qn(NS_A, "xfrm")))
+    return Shape("image", x, y, width, height, Paint(), flip_h, flip_v, image_href=href)
 
 
 def _append_svg_marker_defs(svg: ET.Element, shapes: list[Shape]) -> None:
@@ -1370,6 +1435,10 @@ def _simple_selector_matches(selector: str, element: ET.Element) -> bool:
 
 def _href(element: ET.Element) -> str | None:
     return element.get("href") or element.get("{http://www.w3.org/1999/xlink}href")
+
+
+def _supported_data_image(value: str) -> bool:
+    return bool(re.match(r"^data:image/(?:png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=\s]+$", value, flags=re.I))
 
 
 def _alpha(style: dict[str, str], channel: str) -> float | None:

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import re
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -23,7 +25,7 @@ def main() -> int:
     shapes = [
         child
         for child in sp_tree_fragment
-        if child.tag in {qn(NS_P, "sp"), qn(NS_P, "cxnSp")}
+        if child.tag in {qn(NS_P, "sp"), qn(NS_P, "cxnSp"), qn(NS_P, "pic")}
     ]
     if not shapes:
         raise SystemExit("input did not produce any DrawingML shapes")
@@ -62,6 +64,7 @@ def build_slide_xml(shapes: list[ET.Element]) -> bytes:
 
 
 def write_pptx(output: Path, slide_xml: bytes) -> None:
+    slide_xml, slide_rels, media = prepare_slide_media(slide_xml)
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as pptx:
         pptx.writestr("[Content_Types].xml", CONTENT_TYPES)
@@ -76,13 +79,53 @@ def write_pptx(output: Path, slide_xml: bytes) -> None:
         pptx.writestr("ppt/slideLayouts/_rels/slideLayout1.xml.rels", SLIDE_LAYOUT_RELS)
         pptx.writestr("ppt/theme/theme1.xml", THEME)
         pptx.writestr("ppt/slides/slide1.xml", slide_xml)
-        pptx.writestr("ppt/slides/_rels/slide1.xml.rels", SLIDE_RELS)
+        pptx.writestr("ppt/slides/_rels/slide1.xml.rels", slide_rels)
+        for path, data in media:
+            pptx.writestr(path, data)
+
+
+def prepare_slide_media(slide_xml: bytes) -> tuple[bytes, str, list[tuple[str, bytes]]]:
+    root = ET.fromstring(slide_xml)
+    media: list[tuple[str, bytes]] = []
+    rels = [SLIDE_LAYOUT_REL]
+    next_rel_id = 2
+    for index, blip in enumerate(root.findall(f".//{qn(NS_A, 'blip')}"), start=1):
+        embed = blip.get(qn(REL_NS, "embed"), "")
+        parsed = _parse_data_image(embed)
+        if parsed is None:
+            continue
+        extension, data = parsed
+        media_path = f"ppt/media/image{index}.{extension}"
+        rel_id = f"rId{next_rel_id}"
+        next_rel_id += 1
+        blip.set(qn(REL_NS, "embed"), rel_id)
+        rels.append(
+            f'  <Relationship Id="{rel_id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image{index}.{extension}"/>'
+        )
+        media.append((media_path, data))
+    rels_xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
+    rels_xml += "\n".join(rels)
+    rels_xml += "\n</Relationships>"
+    return ET.tostring(root, encoding="utf-8", xml_declaration=True), rels_xml, media
+
+
+def _parse_data_image(value: str) -> tuple[str, bytes] | None:
+    match = re.fullmatch(r"data:image/(png|jpeg|jpg|gif|webp);base64,([A-Za-z0-9+/=\s]+)", value, flags=re.I)
+    if not match:
+        return None
+    kind = match.group(1).lower()
+    extension = "jpg" if kind in {"jpeg", "jpg"} else kind
+    return extension, base64.b64decode(re.sub(r"\s+", "", match.group(2)))
 
 
 CONTENT_TYPES = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
+  <Default Extension="gif" ContentType="image/gif"/>
+  <Default Extension="webp" ContentType="image/webp"/>
   <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
   <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
@@ -135,9 +178,11 @@ PRESENTATION_RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
 </Relationships>"""
 
-SLIDE_RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+SLIDE_LAYOUT_REL = '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>'
+
+SLIDE_RELS = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+{SLIDE_LAYOUT_REL}
 </Relationships>"""
 
 SLIDE_MASTER_RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

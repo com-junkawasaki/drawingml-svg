@@ -1,7 +1,9 @@
 from xml.etree import ElementTree as ET
 
 from drawingml_svg import analyze_svg, drawingml_to_svg, svg_to_drawingml
-from examples.make_pptx import build_slide_xml
+from examples.make_pptx import build_slide_xml, prepare_slide_media
+
+PNG_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="
 
 
 def test_svg_rect_to_drawingml_preserves_geometry_and_paint() -> None:
@@ -54,6 +56,22 @@ def test_converted_shapes_can_be_embedded_in_slide_xml() -> None:
     assert slide_xml.count("<p:sp>") == 2
     assert 'prst="rect"' in slide_xml
     assert 'prst="ellipse"' in slide_xml
+
+
+def test_converted_data_uri_image_can_be_embedded_as_pptx_media() -> None:
+    fragment = ET.fromstring(svg_to_drawingml(f'<svg><image href="{PNG_DATA_URI}" x="1" y="2" width="3" height="4"/></svg>'))
+    pictures = [
+        child
+        for child in fragment
+        if child.tag == "{http://schemas.openxmlformats.org/presentationml/2006/main}pic"
+    ]
+    slide_xml = build_slide_xml(pictures)
+    prepared_slide, rels, media = prepare_slide_media(slide_xml)
+
+    assert len(media) == 1
+    assert media[0][0] == "ppt/media/image1.png"
+    assert b"data:image/png" not in prepared_slide
+    assert 'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"' in rels
 
 
 def test_polygon_polyline_linear_path_and_text_convert() -> None:
@@ -285,8 +303,8 @@ def test_analyze_svg_reports_coverage_and_unsupported_features() -> None:
 
     data = report.to_dict()
     assert data["total_elements"] == 4
-    assert data["convertible_elements"] == 2
-    assert data["unsupported_elements"] == {"image": 1, "path:unsupported-command": 1}
+    assert data["convertible_elements"] == 3
+    assert data["unsupported_elements"] == {"path:unsupported-command": 1}
     assert data["unsupported_attributes"] == {"href": 1}
     assert data["unsupported_path_commands"] == {"R": 1}
 
@@ -393,6 +411,21 @@ def test_line_markers_convert_to_drawingml_arrows_and_round_trip() -> None:
     assert '<marker id="drawingml-svg-arrow"' in round_trip
     assert 'marker-start="url(#drawingml-svg-arrow)"' in round_trip
     assert 'marker-end="url(#drawingml-svg-arrow)"' in round_trip
+
+
+def test_data_uri_image_converts_to_picture_and_round_trips() -> None:
+    svg = f'<svg><image href="{PNG_DATA_URI}" x="10" y="12" width="20" height="16"/></svg>'
+    dml = svg_to_drawingml(svg)
+
+    assert "<p:pic>" in dml
+    assert "<a:blip" in dml
+    assert PNG_DATA_URI in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+    round_trip = drawingml_to_svg(dml)
+    assert "<image" in round_trip
+    assert f'href="{PNG_DATA_URI}"' in round_trip
 
 
 def test_unsupported_marker_usage_is_reported() -> None:

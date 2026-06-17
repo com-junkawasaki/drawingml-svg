@@ -16,12 +16,14 @@ from .converter import (
     _parse_linear_path,
     _parse_transform,
     _root_viewbox_matrix,
+    _supported_data_image,
 )
 
 SUPPORTED_ELEMENTS = {
     "circle",
     "ellipse",
     "g",
+    "image",
     "line",
     "path",
     "polygon",
@@ -162,7 +164,11 @@ def _inspect_attributes(
             continue
         if element.get(attr) is not None or style.get(attr) is not None:
             stats.add_unsupported_attribute(attr)
-    if _local_name(element.tag) != "use" and (element.get("href") is not None or element.get("{http://www.w3.org/1999/xlink}href") is not None):
+    href = element.get("href") or element.get("{http://www.w3.org/1999/xlink}href")
+    if _local_name(element.tag) == "image":
+        if not href or not _supported_data_image(href):
+            stats.add_unsupported_attribute("href")
+    elif _local_name(element.tag) != "use" and href is not None:
         stats.add_unsupported_attribute("href")
     for attr in ("fill", "stroke"):
         value = style.get(attr)

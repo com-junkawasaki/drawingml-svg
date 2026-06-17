@@ -42,6 +42,7 @@
     </g>
     <rect x="204" y="18" width="82" height="54" rx="8" fill="#fef3c7" stroke="#92400e" stroke-width="2" clip-path="url(#badge-crop)"/>
     <rect x="116" y="104" width="98" height="44" rx="6" fill="#ede9fe" stroke="#6d28d9" stroke-width="2" clip-path="url(#object-crop)"/>
+    <image href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg==" x="286" y="36" width="28" height="28"/>
     <use href="#pin" x="276" y="78" width="40" height="40" color="#2563eb"/>
   </g>
 </svg>
