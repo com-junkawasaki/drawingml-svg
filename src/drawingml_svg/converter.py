@@ -1775,9 +1775,9 @@ def _svg_text_length_spacing_is_supported(style: dict[str, str], text: str, view
     text_length = style.get("textLength")
     if text_length is None or "%" in text_length:
         return False
-    if style.get("letter-spacing") not in {None, "", "normal"}:
+    if not _svg_spacing_is_unspecified_or_normal(style.get("letter-spacing")):
         return False
-    if (style.get("lengthAdjust") or "spacing").strip() not in {"spacing", "spacingAndGlyphs"}:
+    if (style.get("lengthAdjust") or "spacing").strip().lower() not in {"spacing", "spacingandglyphs"}:
         return False
     line = text.strip()
     return "\n" not in text and len(line) > 1 and _optional_length(style.get("textLength"), "x", viewport) is not None
@@ -1810,7 +1810,7 @@ def _svg_word_spacing_is_supported(style: dict[str, str], text: str, viewport: t
         return False
     if value.strip().lower() == "normal":
         return False
-    if style.get("letter-spacing") not in {None, "", "normal"}:
+    if not _svg_spacing_is_unspecified_or_normal(style.get("letter-spacing")):
         return False
     if style.get("textLength") is not None:
         return False
@@ -1821,6 +1821,10 @@ def _svg_word_spacing_is_supported(style: dict[str, str], text: str, viewport: t
         and _svg_word_gap_count(line) > 0
         and _optional_length(value, "x", viewport) is not None
     )
+
+
+def _svg_spacing_is_unspecified_or_normal(value: str | None) -> bool:
+    return value is None or value.strip().lower() in {"", "normal"}
 
 
 def _svg_word_gap_count(text: str) -> int:

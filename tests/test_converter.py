@@ -938,6 +938,22 @@ def test_text_length_spacing_and_glyphs_is_approximated_with_character_spacing()
     assert analyze_svg(source).unsupported_attributes == {}
 
 
+def test_text_length_spacing_values_are_normalized() -> None:
+    source = '<svg><text x="10" y="20" textLength="48" lengthAdjust=" SPACINGANDGLYPHS " letter-spacing=" NORMAL " font-size="10" fill="#111">Wide</text></svg>'
+    dml = svg_to_drawingml(source)
+
+    root = ET.fromstring(dml)
+    run_pr = root.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}rPr")
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert run_pr is not None
+    assert run_pr.get("spc") == "300"
+    assert shape_ext.get("cx") == "457200"
+    assert analyze_svg(source).unsupported_attributes == {}
+
+    svg = drawingml_to_svg(dml)
+    assert 'letter-spacing="4"' in svg
+
+
 def test_text_transform_uppercase_maps_to_literal_text() -> None:
     source = '<svg><text x="10" y="20" text-transform="uppercase" font-size="10" fill="#111">Mixed case</text></svg>'
     dml = svg_to_drawingml(source)
@@ -1017,6 +1033,19 @@ def test_word_spacing_maps_to_distributed_character_spacing() -> None:
 
     svg = drawingml_to_svg(dml)
     assert 'letter-spacing="1.2"' in svg
+
+
+def test_word_spacing_accepts_normal_letter_spacing_values() -> None:
+    source = '<svg><text x="10" y="20" word-spacing="6px" letter-spacing=" NORMAL " font-size="10" fill="#111">Hi all</text></svg>'
+    dml = svg_to_drawingml(source)
+
+    root = ET.fromstring(dml)
+    run_pr = root.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}rPr")
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert run_pr is not None
+    assert run_pr.get("spc") == "90"
+    assert shape_ext.get("cx") == "571500"
+    assert analyze_svg(source).unsupported_attributes == {}
 
 
 def test_text_small_caps_maps_to_drawingml_caps() -> None:
