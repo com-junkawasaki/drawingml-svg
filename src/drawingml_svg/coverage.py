@@ -51,6 +51,7 @@ UNSUPPORTED_ATTRIBUTES = {
     "clip-rule",
     "fill-rule",
     "filter",
+    "font-variant",
     "letter-spacing",
     "lengthAdjust",
     "marker-end",
@@ -193,6 +194,8 @@ def _inspect_attributes(
             continue
         if attr in {"marker-start", "marker-end"} and _marker_is_supported(element, style, refs):
             continue
+        if attr == "font-variant" and _font_variant_is_supported(specified_style):
+            continue
         if attr == "letter-spacing" and _letter_spacing_is_supported(specified_style):
             continue
         if attr == "rotate" and _text_rotate_is_supported(element, specified_style):
@@ -245,6 +248,13 @@ def _letter_spacing_is_supported(style: dict[str, str]) -> bool:
     if value.strip().lower() == "normal":
         return True
     return _optional_length(value, "x", (0.0, 0.0)) is not None
+
+
+def _font_variant_is_supported(style: dict[str, str]) -> bool:
+    value = style.get("font-variant")
+    if value is None:
+        return False
+    return value.strip().lower() in {"normal", "small-caps"}
 
 
 def _path_is_supported(path_data: str) -> bool:

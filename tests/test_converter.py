@@ -345,6 +345,20 @@ def test_text_letter_spacing_maps_to_character_spacing() -> None:
     assert 'letter-spacing="2"' in svg
 
 
+def test_text_small_caps_maps_to_drawingml_caps() -> None:
+    source = '<svg><text x="10" y="20" font-variant="small-caps" font-size="10" fill="#111">Caps</text></svg>'
+    dml = svg_to_drawingml(source)
+
+    root = ET.fromstring(dml)
+    run_pr = root.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}rPr")
+    assert run_pr is not None
+    assert run_pr.get("cap") == "small"
+    assert analyze_svg(source).unsupported_attributes == {}
+
+    svg = drawingml_to_svg(dml)
+    assert 'font-variant="small-caps"' in svg
+
+
 def test_xml_space_preserve_keeps_text_whitespace() -> None:
     dml = svg_to_drawingml(
         '<svg><text x="0" y="20" xml:space="preserve" fill="#111111">  padded  <tspan> kept </tspan></text></svg>'
@@ -539,7 +553,7 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
 def test_analyze_svg_reports_unconverted_layout_length_attributes() -> None:
     svg = """<svg>
       <path d="M0 0 L10 0" pathLength="100" stroke="#111111"/>
-      <text x="0" y="10" textLength="80" lengthAdjust="spacingAndGlyphs" word-spacing="4">
+      <text x="0" y="10" textLength="80" lengthAdjust="spacingAndGlyphs" font-variant="all-small-caps" word-spacing="4">
         <tspan rotate="15 0">Fit</tspan>
       </text>
     </svg>"""
@@ -549,6 +563,7 @@ def test_analyze_svg_reports_unconverted_layout_length_attributes() -> None:
     assert report.unsupported_elements == {}
     assert report.unsupported_attributes == {
         "lengthAdjust": 1,
+        "font-variant": 1,
         "pathLength": 1,
         "rotate": 1,
         "textLength": 1,
@@ -826,7 +841,7 @@ def test_unsupported_marker_usage_is_reported() -> None:
 
 def test_tspan_text_anchor_and_bold_convert() -> None:
     dml = svg_to_drawingml(
-        '<svg><text x="100" y="40" text-anchor="middle" dominant-baseline="middle" font-size="20" font-weight="700" font-style="italic" font-family="\'Aptos Display\', Arial, sans-serif" text-decoration="underline line-through" fill="#111111"><tspan>Hello</tspan><tspan x="100" dy="22">World</tspan></text></svg>'
+        '<svg><text x="100" y="40" text-anchor="middle" dominant-baseline="middle" font-size="20" font-weight="700" font-style="italic" font-variant="small-caps" font-family="\'Aptos Display\', Arial, sans-serif" text-decoration="underline line-through" fill="#111111"><tspan>Hello</tspan><tspan x="100" dy="22">World</tspan></text></svg>'
     )
 
     assert '<a:br/>' in dml
@@ -834,6 +849,7 @@ def test_tspan_text_anchor_and_bold_convert() -> None:
     assert '<a:pPr algn="ctr"/>' in dml
     assert 'b="1"' in dml
     assert 'i="1"' in dml
+    assert 'cap="small"' in dml
     assert 'u="sng"' in dml
     assert 'strike="sngStrike"' in dml
     assert 'typeface="Aptos Display"' in dml
@@ -846,6 +862,7 @@ def test_tspan_text_anchor_and_bold_convert() -> None:
     assert "<tspan" in svg
     assert 'font-weight="bold"' in svg
     assert 'font-style="italic"' in svg
+    assert 'font-variant="small-caps"' in svg
     assert 'font-family="Aptos Display"' in svg
     assert 'text-decoration="underline line-through"' in svg
     assert 'text-anchor="middle"' in svg

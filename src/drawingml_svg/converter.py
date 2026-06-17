@@ -58,6 +58,7 @@ class Shape:
     font_weight: str | None = None
     font_style: str | None = None
     font_family: str | None = None
+    font_variant: str | None = None
     text_decoration: str | None = None
     text_anchor: str | None = None
     text_baseline: str | None = None
@@ -265,6 +266,7 @@ def _svg_shape_from_element(
                 font_weight=style.get("font-weight"),
                 font_style=style.get("font-style"),
                 font_family=_font_family(style.get("font-family")),
+                font_variant=_font_variant(style.get("font-variant")),
                 text_decoration=style.get("text-decoration"),
                 text_anchor=anchor,
                 text_baseline=baseline,
@@ -320,6 +322,7 @@ def _dml_shapes(root: ET.Element) -> Iterable[Shape]:
                 font_weight=_dml_font_weight(element),
                 font_style=_dml_font_style(element),
                 font_family=_dml_font_family(element),
+                font_variant=_dml_font_variant(element),
                 text_decoration=_dml_text_decoration(element),
                 text_anchor=_dml_text_anchor(element),
                 text_baseline=_dml_text_baseline(element),
@@ -442,6 +445,8 @@ def _shape_to_svg(shape: Shape) -> ET.Element:
             attrs["font-style"] = shape.font_style
         if shape.font_family:
             attrs["font-family"] = shape.font_family
+        if shape.font_variant:
+            attrs["font-variant"] = shape.font_variant
         if shape.text_decoration:
             attrs["text-decoration"] = shape.text_decoration
         if shape.text_anchor:
@@ -754,6 +759,8 @@ def _append_text_body(parent: ET.Element, shape: Shape) -> None:
         r_pr_attrs["b"] = "1"
     if _is_italic(shape.font_style):
         r_pr_attrs["i"] = "1"
+    if shape.font_variant == "small-caps":
+        r_pr_attrs["cap"] = "small"
     if _has_text_decoration(shape.text_decoration, "underline"):
         r_pr_attrs["u"] = "sng"
     if _has_text_decoration(shape.text_decoration, "line-through"):
@@ -967,6 +974,13 @@ def _dml_font_family(element: ET.Element) -> str | None:
     return None
 
 
+def _dml_font_variant(element: ET.Element) -> str | None:
+    r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
+    if r_pr is not None and r_pr.get("cap") == "small":
+        return "small-caps"
+    return None
+
+
 def _dml_letter_spacing(element: ET.Element) -> float | None:
     r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
     if r_pr is None or r_pr.get("spc") is None:
@@ -1103,6 +1117,12 @@ def _svg_letter_spacing(style: dict[str, str], viewport: tuple[float, float]) ->
     if value is None or value.strip().lower() == "normal":
         return None
     return _optional_length(value, "x", viewport)
+
+
+def _font_variant(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return "small-caps" if value.strip().lower() == "small-caps" else None
 
 
 def _is_bold(value: str | None) -> bool:
@@ -1612,6 +1632,7 @@ def _computed_style(
         "font-family",
         "font-weight",
         "font-style",
+        "font-variant",
         "letter-spacing",
         "lengthAdjust",
         "text-decoration",
@@ -1689,6 +1710,7 @@ def _apply_rect_clip(
         font_weight=shape.font_weight,
         font_style=shape.font_style,
         font_family=shape.font_family,
+        font_variant=shape.font_variant,
         text_decoration=shape.text_decoration,
         text_anchor=shape.text_anchor,
         text_baseline=shape.text_baseline,
