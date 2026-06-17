@@ -2568,9 +2568,16 @@ def test_gradient_href_cycle_can_use_fallback_color() -> None:
 
 
 def test_analyze_svg_reports_missing_paint_server() -> None:
-    report = analyze_svg('<svg><rect width="10" height="8" fill="url(#missing)"/></svg>')
+    report = analyze_svg(
+        """<svg>
+          <rect width="10" height="8" fill="url(#missing)"/>
+          <line x1="0" y1="0" x2="10" y2="0" stroke="url(#missing-stroke)"/>
+          <line x1="0" y1="2" x2="10" y2="2" stroke="url(#fallback) #111111"/>
+          <line x1="0" y1="4" x2="10" y2="4" stroke="none"/>
+        </svg>"""
+    )
 
-    assert report.unsupported_attributes == {"fill:paint-server": 1}
+    assert report.unsupported_attributes == {"fill:paint-server": 1, "stroke:paint-server": 1}
 
 
 def test_pattern_paint_server_falls_back_to_representative_color() -> None:

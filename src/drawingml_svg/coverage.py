@@ -194,6 +194,7 @@ def _walk(
     hidden = display_none or visibility_hidden
     non_rendering_geometry = _has_non_rendering_geometry(element, style, viewport)
     no_visible_paint = _has_no_visible_paint(element, style, refs, css, viewport)
+    unresolved_paint_server = _has_unresolved_paint_server(style, refs, css)
 
     use_supported = True
     if tag == "use":
@@ -211,7 +212,7 @@ def _walk(
     else:
         stats.add_unsupported_element(tag)
 
-    if display_none or non_rendering_geometry or no_visible_paint:
+    if display_none or non_rendering_geometry or (no_visible_paint and not unresolved_paint_server):
         return
 
     matrix = _matrix_multiply(inherited_matrix, _style_transform_matrix(style, viewport))
@@ -409,6 +410,20 @@ def _has_no_visible_paint(
     has_fill = paint.fill not in {None, "none"}
     has_stroke = paint.stroke not in {None, "none"} and (paint.stroke_width or 0) > 0
     return not (has_fill or has_stroke)
+
+
+def _has_unresolved_paint_server(style: dict[str, str], refs: dict[str, ET.Element], css: list[CssRule]) -> bool:
+    for attr in ("fill", "stroke"):
+        value = style.get(attr)
+        if not value:
+            continue
+        ref = _url_ref(value)
+        if ref is None or ref[1].strip():
+            continue
+        color, _ = _paint_server_value(refs.get(ref[0]), refs, style.get("color"), css)
+        if not color:
+            return True
+    return False
 
 
 def _geometry_length(element: ET.Element, style: dict[str, str], attr: str, axis: str, viewport: tuple[float, float]) -> float:
