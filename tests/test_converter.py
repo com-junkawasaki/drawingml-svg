@@ -177,6 +177,21 @@ def test_converted_data_uri_image_can_be_embedded_as_pptx_media() -> None:
     assert 'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"' in rels
 
 
+def test_invalid_data_uri_image_is_not_embedded_as_pptx_media() -> None:
+    slide_xml = b"""<?xml version="1.0" encoding="utf-8"?>
+    <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+      <p:cSld><p:spTree><p:pic><p:blipFill><a:blip r:embed="data:image/png;base64,abc"/></p:blipFill></p:pic></p:spTree></p:cSld>
+    </p:sld>"""
+
+    prepared_slide, rels, media = prepare_slide_media(slide_xml)
+
+    assert media == []
+    assert b"data:image/png;base64,abc" in prepared_slide
+    assert 'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"' not in rels
+
+
 def test_polygon_polyline_linear_path_and_text_convert() -> None:
     dml = svg_to_drawingml(
         """<svg>
@@ -719,15 +734,15 @@ def test_analyze_svg_reports_coverage_and_unsupported_features() -> None:
 
 
 def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
-    svg = """<svg>
+    svg = f"""<svg>
       <style>
-        path { clip-rule: evenodd; paint-order: stroke fill; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; mix-blend-mode: multiply; }
-        text { text-rendering: geometricPrecision; }
+        path {{ clip-rule: evenodd; paint-order: stroke fill; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; mix-blend-mode: multiply; }}
+        text {{ text-rendering: geometricPrecision; }}
       </style>
       <path d="M0 0 H10 V10 Z" fill-rule="evenodd"/>
       <rect width="10" height="8" filter="url(#blur)" mask="url(#fade)"/>
       <text x="0" y="20" isolation="isolate">Hint</text>
-      <image href="data:image/png;base64,abc" x="0" y="0" width="10" height="8" image-rendering="pixelated" color-rendering="optimizeQuality"/>
+      <image href="{PNG_DATA_URI}" x="0" y="0" width="10" height="8" image-rendering="pixelated" color-rendering="optimizeQuality"/>
       <defs><linearGradient id="spread" spreadMethod="reflect" gradientUnits="userSpaceOnUse" gradientTransform="rotate(15)"><stop stop-color="#fff"/></linearGradient></defs>
     </svg>"""
 
@@ -748,6 +763,13 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
         "text-rendering": 1,
         "vector-effect": 1,
     }
+
+
+def test_invalid_data_uri_image_is_reported_and_not_converted() -> None:
+    svg = '<svg><image href="data:image/png;base64,abc" x="0" y="0" width="10" height="8"/></svg>'
+
+    assert "<p:pic>" not in svg_to_drawingml(svg)
+    assert analyze_svg(svg).unsupported_attributes == {"href": 1}
 
 
 def test_analyze_svg_ignores_default_visual_attribute_values() -> None:

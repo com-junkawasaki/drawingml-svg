@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import binascii
 import re
 import zipfile
 from pathlib import Path
@@ -115,7 +116,11 @@ def _parse_data_image(value: str) -> tuple[str, bytes] | None:
         return None
     kind = match.group(1).lower()
     extension = "jpg" if kind in {"jpeg", "jpg"} else kind
-    return extension, base64.b64decode(re.sub(r"\s+", "", match.group(2)))
+    try:
+        data = base64.b64decode(re.sub(r"\s+", "", match.group(2)), validate=True)
+    except binascii.Error:
+        return None
+    return extension, data
 
 
 CONTENT_TYPES = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

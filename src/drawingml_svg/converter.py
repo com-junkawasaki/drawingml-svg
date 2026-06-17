@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import re
+import base64
+import binascii
 import math
+import re
 from dataclasses import dataclass
 from typing import Iterable
 from xml.dom import minidom
@@ -2221,7 +2223,13 @@ def _switch_child_is_supported(element: ET.Element) -> bool:
 
 
 def _supported_data_image(value: str) -> bool:
-    return bool(re.match(r"^data:image/(?:png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=\s]+$", value, flags=re.I))
+    match = re.match(r"^data:image/(?:png|jpeg|jpg|gif|webp);base64,([A-Za-z0-9+/=\s]+)$", value, flags=re.I)
+    if not match:
+        return False
+    try:
+        return bool(base64.b64decode(re.sub(r"\s+", "", match.group(1)), validate=True))
+    except binascii.Error:
+        return False
 
 
 def _alpha(style: dict[str, str], channel: str) -> float | None:
