@@ -1265,10 +1265,10 @@ def _dml_alpha(parent: ET.Element) -> float | None:
 
 def _dml_blip_alpha(blip: ET.Element) -> float | None:
     alpha_mod_fix = blip.find(qn(NS_A, "alphaModFix"))
-    if alpha_mod_fix is None or alpha_mod_fix.get("amt") is None:
-        return None
-    value = _dml_int(alpha_mod_fix.get("amt"))
-    return value / 100000 if value is not None else None
+    if alpha_mod_fix is not None and alpha_mod_fix.get("amt") is not None:
+        value = _dml_int(alpha_mod_fix.get("amt"))
+        return value / 100000 if value is not None else None
+    return _dml_alpha(blip)
 
 
 def _dml_line_width(ln: ET.Element | None) -> float | None:

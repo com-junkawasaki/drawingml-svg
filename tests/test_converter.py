@@ -3189,6 +3189,23 @@ def test_data_uri_image_opacity_maps_to_picture_alpha_and_round_trips() -> None:
     assert 'opacity="0.35"' in round_trip
 
 
+def test_drawingml_picture_alpha_round_trips_to_svg_opacity() -> None:
+    dml = f"""<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+      xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+      <p:pic>
+        <p:nvPicPr><p:cNvPr id="2" name="image"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
+        <p:blipFill><a:blip r:embed="{PNG_DATA_URI}"><a:alpha val="40000"/></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill>
+        <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="95250" cy="95250"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>
+      </p:pic>
+    </p:spTree>"""
+
+    svg = drawingml_to_svg(dml)
+
+    assert 'opacity="0.4"' in svg
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_data_uri_image_percentage_opacity_maps_to_picture_alpha() -> None:
     svg = f'<svg><image href="{PNG_DATA_URI}" x="10" y="12" width="20" height="16" opacity="35%"/></svg>'
     dml = svg_to_drawingml(svg)
