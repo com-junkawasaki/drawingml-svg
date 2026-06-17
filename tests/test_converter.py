@@ -37,7 +37,7 @@ def test_drawingml_to_svg_rect_round_trip() -> None:
 def test_svg_line_round_trip_keeps_direction_with_flips() -> None:
     svg = drawingml_to_svg(svg_to_drawingml('<svg><line x1="20" y1="30" x2="5" y2="10" stroke="#ff0000"/></svg>'))
 
-    assert '<line fill="none" stroke="#ff0000" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" x1="20" y1="30" x2="5" y2="10"/>' in svg
+    assert '<line fill="none" stroke="#ff0000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" x1="20" y1="30" x2="5" y2="10"/>' in svg
 
 
 def test_svg_default_paint_is_explicitly_converted() -> None:
@@ -54,8 +54,9 @@ def test_svg_default_paint_is_explicitly_converted() -> None:
 def test_default_stroke_linecap_is_explicitly_flat() -> None:
     dml = svg_to_drawingml('<svg><line x1="0" y1="0" x2="10" y2="0" stroke="#111111"/></svg>')
 
-    assert '<a:ln cap="flat">' in dml
+    assert '<a:ln w="9525" cap="flat">' in dml
     svg = drawingml_to_svg(dml)
+    assert 'stroke-width="1"' in svg
     assert 'stroke-linecap="butt"' in svg
 
 

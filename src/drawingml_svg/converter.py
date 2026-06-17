@@ -525,6 +525,8 @@ def _svg_paint(style: dict[str, str], refs: dict[str, ET.Element] | None = None,
         fill = "none"
     if stroke_alpha is not None and stroke_alpha <= 0:
         stroke = "none"
+    if stroke not in {None, "none"} and parsed_stroke_width is None:
+        parsed_stroke_width = 1.0
     stroke_linecap = style.get("stroke-linecap")
     if stroke not in {None, "none"} and not stroke_linecap:
         stroke_linecap = "butt"
