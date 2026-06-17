@@ -2370,7 +2370,7 @@ def _computed_style(
         apply_declaration(key, value, important, (1, 0, 0, 0), 1_000_000)
     for key, value in tuple(style.items()):
         normalized = value.strip().lower()
-        if normalized == "inherit":
+        if normalized in {"inherit", "unset"}:
             if key in inherited:
                 style[key] = inherited[key]
             else:

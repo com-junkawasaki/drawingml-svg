@@ -1737,6 +1737,26 @@ def test_initial_style_values_reset_inherited_presentation_attributes() -> None:
     assert analyze_svg(svg).unsupported_attributes == {}
 
 
+def test_unset_style_values_follow_available_inherited_values_or_defaults() -> None:
+    svg = """<svg>
+      <style>
+        g.theme { fill: #123456; stroke: #abcdef; color: #f97316; text-anchor: middle; }
+        .reset { fill: unset; stroke: unset; text-anchor: unset; }
+      </style>
+      <g class="theme">
+        <rect class="reset" x="0" y="0" width="10" height="8" stroke-width="2"/>
+        <text class="reset" x="20" y="20" fill="currentColor">Unset</text>
+      </g>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    assert 'val="123456"' in dml
+    assert 'val="ABCDEF"' in dml
+    assert 'val="F97316"' not in dml
+    assert 'algn="ctr"' in dml
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_gradient_stop_color_inherit_uses_gradient_style() -> None:
     svg = """<svg>
       <defs>
