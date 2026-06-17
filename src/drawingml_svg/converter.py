@@ -2632,7 +2632,19 @@ def _computed_style(
         style["fill"] = style.get("color", "#000000")
     if style.get("stroke", "").strip().lower() == "currentcolor":
         style["stroke"] = style.get("color", "#000000")
+    _resolve_context_paint_values(style, inherited)
     return style
+
+
+def _resolve_context_paint_values(style: dict[str, str], inherited: dict[str, str]) -> None:
+    context_paints = {
+        "context-fill": inherited.get("fill"),
+        "context-stroke": inherited.get("stroke"),
+    }
+    for key in ("fill", "stroke"):
+        context_value = context_paints.get(style.get(key, "").strip().lower())
+        if context_value is not None:
+            style[key] = context_value
 
 
 def _previous_element_siblings(parent: ET.Element, element: ET.Element) -> tuple[ET.Element, ...]:

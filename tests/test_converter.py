@@ -2127,6 +2127,22 @@ def test_inherit_paint_values_use_parent_computed_style() -> None:
     assert analyze_svg(svg).unsupported_attributes == {}
 
 
+def test_context_paint_values_use_parent_computed_fill_and_stroke() -> None:
+    svg = """<svg>
+      <defs>
+        <symbol id="badge" viewBox="0 0 20 10">
+          <rect width="20" height="10" fill="context-stroke" stroke="context-fill" stroke-width="2"/>
+        </symbol>
+      </defs>
+      <use href="#badge" x="0" y="0" width="20" height="10" fill="#123456" stroke="#abcdef"/>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    assert 'val="ABCDEF"' in dml
+    assert 'val="123456"' in dml
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_initial_style_values_reset_inherited_presentation_attributes() -> None:
     svg = """<svg>
       <g fill="#123456" stroke="#abcdef" stroke-width="3" color="#f97316" font-size="24" text-anchor="middle">
