@@ -33,6 +33,17 @@ jobs:
           drawingml-svg analyze examples/sample.svg
           drawingml-svg analyze examples/complex.svg
           drawingml-svg analyze examples/coverage.svg
+          python - <<'PY'
+          from pathlib import Path
+
+          from drawingml_svg import analyze_svg
+
+          report = analyze_svg(Path("examples/coverage.svg").read_text(encoding="utf-8"))
+          assert report.estimated_element_coverage == 1.0, report
+          assert report.unsupported_elements == {}, report
+          assert report.unsupported_attributes == {}, report
+          assert report.unsupported_path_commands == {}, report
+          PY
 
       - name: Build PPTX smoke fixture
         run: |
