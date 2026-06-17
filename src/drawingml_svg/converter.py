@@ -2811,6 +2811,14 @@ def _combined_alpha(*values: float | None) -> float | None:
 
 
 def _clamped_num(value: str | None, default: float) -> float:
+    if value is None:
+        return max(0.0, min(float(default), 1.0))
+    value = value.strip()
+    if value.endswith("%"):
+        try:
+            return max(0.0, min(_finite_float(value[:-1]) / 100, 1.0))
+        except ValueError:
+            return max(0.0, min(float(default), 1.0))
     return max(0.0, min(_num(value, default), 1.0))
 
 
