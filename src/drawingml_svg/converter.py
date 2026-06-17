@@ -219,15 +219,14 @@ def _svg_shape_from_element(
         height = _geometry_length(element, style, "height", 0, "y", viewport)
         if width <= 0 or height <= 0:
             return None
-        rx = _geometry_length(
-            element,
-            style,
-            "rx",
-            _geometry_length(element, style, "ry", 0, "y", viewport),
-            "x",
-            viewport,
-        )
-        ry = _geometry_length(element, style, "ry", rx, "y", viewport)
+        rx = _optional_nonnegative_geometry_length(element, style, "rx", "x", viewport)
+        ry = _optional_nonnegative_geometry_length(element, style, "ry", "y", viewport)
+        if rx is None and ry is None:
+            rx = ry = 0.0
+        elif rx is None:
+            rx = ry
+        elif ry is None:
+            ry = rx
         shape = _transformed_rect_shape(x, y, width, height, rx, ry, matrix, plain_paint)
         if shape is not None:
             return shape
@@ -344,6 +343,22 @@ def _geometry_length(
     viewport: tuple[float, float],
 ) -> float:
     return _length(style.get(attr, element.get(attr)), default, axis, viewport)
+
+
+def _optional_nonnegative_geometry_length(
+    element: ET.Element,
+    style: dict[str, str],
+    attr: str,
+    axis: str,
+    viewport: tuple[float, float],
+) -> float | None:
+    value = style.get(attr, element.get(attr))
+    if value is None:
+        return None
+    parsed = _length(value, math.nan, axis, viewport)
+    if not math.isfinite(parsed) or parsed < 0:
+        return None
+    return parsed
 
 
 def _shape_has_visible_content(shape: Shape) -> bool:

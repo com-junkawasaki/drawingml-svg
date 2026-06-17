@@ -2702,6 +2702,21 @@ def test_round_rect_and_stroke_style_convert() -> None:
     assert 'stroke-dasharray="8 4"' in svg
 
 
+def test_invalid_negative_rect_radius_is_ignored() -> None:
+    negative_rx = svg_to_drawingml('<svg><rect width="20" height="10" rx="-3" fill="#111111"/></svg>')
+    negative_ry = svg_to_drawingml('<svg><rect width="20" height="10" ry="-3" fill="#111111"/></svg>')
+    fallback_from_ry = svg_to_drawingml('<svg><rect width="20" height="10" rx="-3" ry="4" fill="#111111"/></svg>')
+    fallback_from_rx = svg_to_drawingml('<svg><rect width="20" height="10" rx="4" ry="-3" fill="#111111"/></svg>')
+    bad_rx = svg_to_drawingml('<svg><rect width="20" height="10" rx="bad" ry="4" fill="#111111"/></svg>')
+
+    assert 'prst="roundRect"' not in negative_rx
+    assert 'prst="roundRect"' not in negative_ry
+    assert 'prst="roundRect"' in fallback_from_ry
+    assert 'prst="roundRect"' in fallback_from_rx
+    assert 'prst="roundRect"' in bad_rx
+    assert analyze_svg('<svg><rect width="20" height="10" rx="-3" fill="#111111"/></svg>').unsupported_attributes == {}
+
+
 def test_stroke_linecap_and_linejoin_values_are_normalized() -> None:
     source = '<svg><polyline points="0,0 20,0 20,12" fill="none" stroke="#111111" stroke-width="2" stroke-linecap=" ROUND " stroke-linejoin=" BEVEL "/></svg>'
     dml = svg_to_drawingml(source)
