@@ -1878,8 +1878,12 @@ def _parse_color(value: str | None) -> tuple[str | None, float | None]:
         return "none", None
     if lower in NAMED_COLORS:
         return NAMED_COLORS[lower], 0.0 if lower == "transparent" else None
-    if value.startswith("#") and len(value) == 4:
+    if re.fullmatch(r"#[0-9a-fA-F]{3}", value):
         return "#" + "".join(ch * 2 for ch in value[1:]).lower(), None
+    if re.fullmatch(r"#[0-9a-fA-F]{4}", value):
+        rgba = "".join(ch * 2 for ch in value[1:])
+        alpha = int(rgba[6:8], 16) / 255
+        return f"#{rgba[:6].lower()}", alpha
     if re.fullmatch(r"#[0-9a-fA-F]{6}", value):
         return value.lower(), None
     if re.fullmatch(r"#[0-9a-fA-F]{8}", value):

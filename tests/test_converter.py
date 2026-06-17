@@ -344,13 +344,14 @@ def test_defs_use_are_expanded_without_rendering_defs_directly() -> None:
 
 def test_opacity_is_written_as_drawingml_alpha() -> None:
     dml = svg_to_drawingml(
-        '<svg><rect x="0" y="0" width="10" height="8" fill="#ff0000" fill-opacity="0.5" stroke="#0000ff" opacity="0.25"/></svg>'
+        '<svg><rect x="0" y="0" width="10" height="8" fill="#f008" stroke="#0000ff" opacity="0.25"/></svg>'
     )
 
-    assert 'val="12500"' in dml
+    assert 'val="FF0000"' in dml
+    assert 'val="13333"' in dml
     assert 'val="25000"' in dml
     svg = drawingml_to_svg(dml)
-    assert 'fill-opacity="0.125"' in svg
+    assert 'fill-opacity="0.1333"' in svg
     assert 'stroke-opacity="0.25"' in svg
 
 
