@@ -1,3 +1,4 @@
+import io
 from importlib import resources
 from xml.etree import ElementTree as ET
 
@@ -38,6 +39,30 @@ def test_cli_converts_between_files_and_creates_output_parent(tmp_path) -> None:
 
     assert cli_main(["dml2svg", str(dml_output), "-o", str(svg_output)]) == 0
     assert 'fill="#123456"' in svg_output.read_text(encoding="utf-8")
+
+
+def test_cli_svg2dml_reads_stdin_and_writes_stdout(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO('<svg><rect x="1" y="2" width="3" height="4" fill="#123456"/></svg>'),
+    )
+
+    assert cli_main(["svg2dml"]) == 0
+    captured = capsys.readouterr()
+
+    assert "<p:spTree" in captured.out
+    assert 'val="123456"' in captured.out
+
+
+def test_cli_dml2svg_reads_dash_stdin_and_writes_dash_stdout(monkeypatch, capsys) -> None:
+    dml = svg_to_drawingml('<svg><rect x="1" y="2" width="3" height="4" fill="#123456"/></svg>')
+    monkeypatch.setattr("sys.stdin", io.StringIO(dml))
+
+    assert cli_main(["dml2svg", "-", "-o", "-"]) == 0
+    captured = capsys.readouterr()
+
+    assert "<svg" in captured.out
+    assert 'fill="#123456"' in captured.out
 
 
 def test_cli_alias_invocation_uses_executable_name(tmp_path, monkeypatch) -> None:
