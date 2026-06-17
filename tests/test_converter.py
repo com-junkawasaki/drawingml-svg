@@ -549,6 +549,18 @@ def test_root_viewbox_preserve_aspect_ratio_none_stretches_content() -> None:
     assert shape_ext.attrib == {"cx": "1905000", "cy": "1905000"}
 
 
+def test_root_viewbox_preserve_aspect_ratio_slice_aligns_max_edges() -> None:
+    dml = svg_to_drawingml(
+        '<svg viewBox="0 0 100 50" width="200" height="200" preserveAspectRatio="xMaxYMax slice"><rect x="0" y="0" width="100" height="50"/></svg>'
+    )
+
+    root = ET.fromstring(dml)
+    shape_off = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")[1]
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert shape_off.attrib == {"x": "-1905000", "y": "0"}
+    assert shape_ext.attrib == {"cx": "3810000", "cy": "1905000"}
+
+
 def test_nested_svg_viewbox_translates_scales_and_sets_child_viewport() -> None:
     svg = """<svg>
       <svg x="10" y="20" width="40" height="20" viewBox="0 0 20 10" preserveAspectRatio="none">
