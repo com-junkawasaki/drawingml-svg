@@ -40,6 +40,17 @@ def test_svg_line_round_trip_keeps_direction_with_flips() -> None:
     assert '<line fill="none" stroke="#ff0000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" x1="20" y1="30" x2="5" y2="10"/>' in svg
 
 
+def test_transformed_line_stays_as_editable_line_shape() -> None:
+    dml = svg_to_drawingml('<svg><g transform="translate(10 20) rotate(90)"><line x1="0" y1="0" x2="10" y2="0" stroke="#0f766e"/></g></svg>')
+
+    assert 'prst="line"' in dml
+    assert "<a:custGeom>" not in dml
+    assert 'x="95250"' in dml
+    assert 'y="190500"' in dml
+    assert 'cy="95250"' in dml
+    assert 'val="0F766E"' in dml
+
+
 def test_svg_default_paint_is_explicitly_converted() -> None:
     dml = svg_to_drawingml('<svg><rect x="0" y="0" width="10" height="8"/><line x1="0" y1="12" x2="10" y2="12"/></svg>')
 

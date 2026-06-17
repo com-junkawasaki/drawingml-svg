@@ -52,6 +52,7 @@
     <g class="badges" transform="translate(232 42) rotate(12)">
       <ellipse class="badge" cx="0" cy="0" rx="34" ry="20"/>
       <line x1="-22" y1="0" x2="22" y2="0" stroke="#7c2d12" stroke-width="2"/>
+      <line x1="-18" y1="-8" x2="18" y2="8" stroke="#0f766e" stroke-width="2"/>
     </g>
     <rect x="204" y="18" width="82" height="54" rx="8" fill="#fef3c7" stroke="#92400e" stroke-width="2" clip-path="url(#badge-crop)"/>
     <rect x="116" y="104" width="98" height="44" rx="6" fill="#ede9fe" stroke="#6d28d9" stroke-width="2" clip-path="url(#object-crop)"/>

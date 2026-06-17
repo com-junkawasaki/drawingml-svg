@@ -214,18 +214,16 @@ def _svg_shape_from_element(
     if tag == "line":
         p1 = _apply_matrix(matrix, (_length(element.get("x1"), 0, "x", viewport), _length(element.get("y1"), 0, "y", viewport)))
         p2 = _apply_matrix(matrix, (_length(element.get("x2"), 0, "x", viewport), _length(element.get("y2"), 0, "y", viewport)))
-        if _is_identity_matrix(matrix):
-            return Shape(
-                "line",
-                min(p1[0], p2[0]),
-                min(p1[1], p2[1]),
-                abs(p2[0] - p1[0]),
-                abs(p2[1] - p1[1]),
-                paint,
-                flip_h=p2[0] < p1[0],
-                flip_v=p2[1] < p1[1],
-            )
-        return _freeform_shape([p1, p2], paint, closed=False)
+        return Shape(
+            "line",
+            min(p1[0], p2[0]),
+            min(p1[1], p2[1]),
+            abs(p2[0] - p1[0]),
+            abs(p2[1] - p1[1]),
+            paint,
+            flip_h=p2[0] < p1[0],
+            flip_v=p2[1] < p1[1],
+        )
     if tag in {"polygon", "polyline"}:
         points = _transform_points(_parse_points(element.get("points", "")), matrix)
         return _freeform_shape(points, plain_paint if tag == "polygon" else paint, closed=tag == "polygon") if points else None
