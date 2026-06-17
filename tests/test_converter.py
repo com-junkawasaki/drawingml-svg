@@ -389,12 +389,25 @@ def test_css_class_and_group_transform_are_applied() -> None:
     assert "<a:custGeom>" not in dml
     assert 'val="E0E7FF"' in dml
     assert 'val="4338CA"' in dml
-    assert 'w="28575"' in dml
+    assert 'w="57150"' in dml
     assert "<a:t>CSS</a:t>" in dml
 
     root = ET.fromstring(dml)
     offsets = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")
     assert {"x": "190500", "y": "304800"} in [offset.attrib for offset in offsets]
+
+
+def test_group_scale_applies_to_stroke_width_and_dasharray() -> None:
+    dml = svg_to_drawingml(
+        '<svg><g transform="scale(2)"><line x1="0" y1="0" x2="40" y2="0" stroke="#111111" stroke-width="2" stroke-dasharray="8 4"/></g></svg>'
+    )
+
+    assert 'w="38100"' in dml
+    assert '<a:ds d="400000" sp="200000"/>' in dml
+
+    svg = drawingml_to_svg(dml)
+    assert 'stroke-width="4"' in svg
+    assert 'stroke-dasharray="16 8"' in svg
 
 
 def test_inline_style_important_values_are_normalized() -> None:

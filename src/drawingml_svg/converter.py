@@ -195,7 +195,8 @@ def _svg_shape_from_element(
     refs = refs or {}
     css = css or []
     paint = _svg_paint(style, refs, default_fill=tag != "line", css=css)
-    plain_paint = _paint_without_markers(paint)
+    scaled_paint = _scale_paint(paint, _matrix_scale(matrix))
+    plain_paint = _paint_without_markers(scaled_paint)
     if tag == "rect":
         x = _geometry_length(element, style, "x", 0, "x", viewport)
         y = _geometry_length(element, style, "y", 0, "y", viewport)
@@ -252,18 +253,18 @@ def _svg_shape_from_element(
             min(p1[1], p2[1]),
             abs(p2[0] - p1[0]),
             abs(p2[1] - p1[1]),
-            paint,
+            scaled_paint,
             flip_h=p2[0] < p1[0],
             flip_v=p2[1] < p1[1],
         )
     if tag in {"polygon", "polyline"}:
         points = _transform_points(_parse_points(element.get("points", "")), matrix)
-        return _freeform_shape(points, plain_paint if tag == "polygon" else paint, closed=tag == "polygon") if points else None
+        return _freeform_shape(points, plain_paint if tag == "polygon" else scaled_paint, closed=tag == "polygon") if points else None
     if tag == "path":
         path = _parse_linear_path(element.get("d", ""))
         if path:
             points, closed = path
-            return _freeform_shape(_transform_points(points, matrix), plain_paint if closed else paint, closed=closed)
+            return _freeform_shape(_transform_points(points, matrix), plain_paint if closed else scaled_paint, closed=closed)
     if tag == "text":
         text = _svg_text_content(element)
         if text:
@@ -727,6 +728,33 @@ def _paint_without_markers(paint: Paint) -> Paint:
         paint.stroke_dasharray,
         paint.stroke_miterlimit,
     )
+
+
+def _scale_paint(paint: Paint, scale: float) -> Paint:
+    if _close(scale, 1.0):
+        return paint
+    return Paint(
+        fill=paint.fill,
+        stroke=paint.stroke,
+        stroke_width=paint.stroke_width * scale if paint.stroke_width is not None else None,
+        fill_alpha=paint.fill_alpha,
+        stroke_alpha=paint.stroke_alpha,
+        stroke_linecap=paint.stroke_linecap,
+        stroke_linejoin=paint.stroke_linejoin,
+        stroke_dasharray=_scale_dasharray(paint.stroke_dasharray, scale),
+        stroke_miterlimit=paint.stroke_miterlimit,
+        marker_start=paint.marker_start,
+        marker_end=paint.marker_end,
+    )
+
+
+def _scale_dasharray(value: str | None, scale: float) -> str | None:
+    if value in {None, "", "none"}:
+        return value
+    nums = _svg_dasharray_numbers(value)
+    if nums is None:
+        return value
+    return " ".join(_fmt(number * scale) for number in nums)
 
 
 def _svg_marker_value(value: str | None, refs: dict[str, ET.Element]) -> str | None:
