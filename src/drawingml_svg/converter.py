@@ -2183,7 +2183,7 @@ def _parse_style(style: str) -> dict[str, str]:
 
 def _parse_style_declarations(style: str) -> dict[str, CssDeclaration]:
     result: dict[str, CssDeclaration] = {}
-    for item in style.split(";"):
+    for item in _css_declaration_list(style):
         if ":" not in item:
             continue
         key, value = item.split(":", 1)
@@ -2192,6 +2192,32 @@ def _parse_style_declarations(style: str) -> dict[str, CssDeclaration]:
         if key not in result or important or not result[key][1]:
             result[key] = (normalized, important)
     return result
+
+
+def _css_declaration_list(style: str) -> list[str]:
+    items: list[str] = []
+    current: list[str] = []
+    quote: str | None = None
+    paren_depth = 0
+    for char in style:
+        if quote is not None:
+            current.append(char)
+            if char == quote:
+                quote = None
+            continue
+        if char in {"'", '"'}:
+            quote = char
+        elif char == "(":
+            paren_depth += 1
+        elif char == ")" and paren_depth:
+            paren_depth -= 1
+        if char == ";" and paren_depth == 0:
+            items.append("".join(current))
+            current = []
+            continue
+        current.append(char)
+    items.append("".join(current))
+    return items
 
 
 def _normalize_css_value(value: str) -> str:
