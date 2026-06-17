@@ -1333,7 +1333,7 @@ def _close(left: float, right: float, tolerance: float = 1e-9) -> bool:
 
 
 def _svg_dasharray_numbers(value: str) -> list[float] | None:
-    parts = [part for part in re.split(r"[\s,]+", value.strip()) if part]
+    parts = _svg_dasharray_parts(value)
     if not parts:
         return None
     nums = []
@@ -1343,6 +1343,34 @@ def _svg_dasharray_numbers(value: str) -> list[float] | None:
             return None
         nums.append(number)
     return nums
+
+
+def _svg_dasharray_parts(value: str) -> list[str]:
+    parts: list[str] = []
+    current: list[str] = []
+    quote: str | None = None
+    paren_depth = 0
+    for char in value.strip():
+        if quote is not None:
+            current.append(char)
+            if char == quote:
+                quote = None
+            continue
+        if char in {"'", '"'}:
+            quote = char
+        elif char == "(":
+            paren_depth += 1
+        elif char == ")" and paren_depth:
+            paren_depth -= 1
+        if (char.isspace() or char == ",") and paren_depth == 0:
+            if current:
+                parts.append("".join(current))
+                current = []
+            continue
+        current.append(char)
+    if current:
+        parts.append("".join(current))
+    return parts
 
 
 def _svg_dasharray_to_dml(value: str) -> str | None:
