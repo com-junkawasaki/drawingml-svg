@@ -212,10 +212,10 @@ def _svg_shape_from_element(
             viewport,
         )
         ry = _geometry_length(element, style, "ry", rx, "y", viewport)
-        if _is_identity_matrix(matrix):
-            return Shape("roundRect" if rx or ry else "rect", x, y, width, height, plain_paint, rx=rx or None, ry=ry or None)
-        points = _transform_points(_rect_points(x, y, width, height), matrix)
-        return _freeform_shape(points, plain_paint, closed=True)
+        shape = _transformed_axis_aligned_rect_shape(x, y, width, height, rx, ry, matrix, plain_paint)
+        if shape is not None:
+            return shape
+        return _freeform_shape(_transform_points(_rect_points(x, y, width, height), matrix), plain_paint, closed=True)
     if tag == "circle":
         cx = _geometry_length(element, style, "cx", 0, "x", viewport)
         cy = _geometry_length(element, style, "cy", 0, "y", viewport)
@@ -1490,6 +1490,45 @@ def _dml_custom_points(cust: ET.Element, x: float, y: float) -> tuple[list[tuple
         elif tag == "close":
             closed = True
     return points, closed
+
+
+def _transformed_axis_aligned_rect_shape(
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    rx: float,
+    ry: float,
+    matrix: tuple[float, float, float, float, float, float],
+    paint: Paint,
+) -> Shape | None:
+    points = _transform_points(_rect_points(x, y, width, height), matrix)
+    xs = {round(px, 9) for px, _ in points}
+    ys = {round(py, 9) for _, py in points}
+    if len(xs) != 2 or len(ys) != 2:
+        return None
+    min_x = min(px for px, _ in points)
+    min_y = min(py for _, py in points)
+    max_x = max(px for px, _ in points)
+    max_y = max(py for _, py in points)
+    transformed_width = max_x - min_x
+    transformed_height = max_y - min_y
+    if transformed_width <= 0 or transformed_height <= 0:
+        return None
+    sx = transformed_width / width
+    sy = transformed_height / height
+    transformed_rx = min(rx * sx, transformed_width / 2) if rx else None
+    transformed_ry = min(ry * sy, transformed_height / 2) if ry else None
+    return Shape(
+        "roundRect" if transformed_rx or transformed_ry else "rect",
+        min_x,
+        min_y,
+        transformed_width,
+        transformed_height,
+        paint,
+        rx=transformed_rx,
+        ry=transformed_ry,
+    )
 
 
 def _svg_paint_attrs(paint: Paint) -> dict[str, str]:

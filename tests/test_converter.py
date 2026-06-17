@@ -385,7 +385,8 @@ def test_css_class_and_group_transform_are_applied() -> None:
           </g>
         </svg>"""
     )
-    assert "<a:custGeom>" in dml
+    assert 'prst="rect"' in dml
+    assert "<a:custGeom>" not in dml
     assert 'val="E0E7FF"' in dml
     assert 'val="4338CA"' in dml
     assert 'w="28575"' in dml
@@ -791,6 +792,8 @@ def test_root_viewbox_offsets_and_scales_coordinates() -> None:
     root = ET.fromstring(dml)
     shape_off = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")[1]
     shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert 'prst="rect"' in dml
+    assert "<a:custGeom>" not in dml
     assert shape_off.attrib == {"x": "0", "y": "0"}
     assert shape_ext.attrib == {"cx": "190500", "cy": "190500"}
 
@@ -842,10 +845,27 @@ def test_nested_svg_viewbox_translates_scales_and_sets_child_viewport() -> None:
     root = ET.fromstring(dml)
     shape_off = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")[1]
     shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert 'prst="rect"' in dml
+    assert "<a:custGeom>" not in dml
     assert shape_off.attrib == {"x": "476250", "y": "381000"}
     assert shape_ext.attrib == {"cx": "190500", "cy": "190500"}
     assert 'val="0F766E"' in dml
     assert analyze_svg(svg).estimated_element_coverage == 1.0
+
+
+def test_scaled_rounded_rect_stays_as_editable_round_rect() -> None:
+    dml = svg_to_drawingml(
+        '<svg><g transform="translate(10 20) scale(2 3)"><rect x="5" y="4" width="20" height="10" rx="3" ry="2" fill="#f97316"/></g></svg>'
+    )
+
+    root = ET.fromstring(dml)
+    shape_off = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")[1]
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert 'prst="roundRect"' in dml
+    assert "<a:custGeom>" not in dml
+    assert shape_off.attrib == {"x": "190500", "y": "304800"}
+    assert shape_ext.attrib == {"cx": "381000", "cy": "285750"}
+    assert analyze_svg('<svg><g transform="scale(2)"><rect width="10" height="8"/></g></svg>').estimated_element_coverage == 1.0
 
 
 def test_percent_lengths_resolve_against_root_viewport() -> None:
