@@ -1124,7 +1124,7 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
         path {{ clip-rule: evenodd; paint-order: stroke fill; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; mix-blend-mode: multiply; }}
         text {{ text-rendering: geometricPrecision; }}
       </style>
-      <path d="M0 0 H10 V10 Z" fill-rule="evenodd"/>
+      <path d="M0 0 H10 V10 Z" fill-rule="evenodd" stroke="#111111" stroke-width="2"/>
       <rect width="10" height="8" filter="url(#blur)" mask="url(#fade)"/>
       <text x="0" y="20" isolation="isolate">Hint</text>
       <image href="{PNG_DATA_URI}" x="0" y="0" width="10" height="8" image-rendering="pixelated" color-rendering="optimizeQuality"/>
@@ -1173,6 +1173,23 @@ def test_analyze_svg_ignores_default_visual_attribute_values() -> None:
     </svg>"""
 
     assert analyze_svg(svg).unsupported_attributes == {}
+
+
+def test_analyze_svg_ignores_paint_order_when_only_one_paint_channel_is_visible() -> None:
+    svg = """<svg>
+      <path d="M0 0 H10 V10 Z" fill="#111111" stroke="none" paint-order="stroke fill"/>
+      <path d="M20 0 H30 V10 Z" fill="none" stroke="#111111" stroke-width="2" paint-order="fill stroke"/>
+      <path d="M40 0 H50 V10 Z" fill="#111111" fill-opacity="0" stroke="#111111" stroke-width="2" paint-order="fill stroke"/>
+      <path d="M60 0 H70 V10 Z" fill="#111111" stroke="#111111" stroke-opacity="0" stroke-width="2" paint-order="stroke fill"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
+def test_analyze_svg_reports_paint_order_when_fill_and_stroke_are_visible() -> None:
+    svg = '<svg><path d="M0 0 H10 V10 Z" fill="#ffffff" stroke="#111111" stroke-width="2" paint-order="stroke fill"/></svg>'
+
+    assert analyze_svg(svg).unsupported_attributes == {"paint-order": 1}
 
 
 def test_analyze_svg_ignores_rendering_quality_hints() -> None:

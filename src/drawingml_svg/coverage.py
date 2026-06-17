@@ -23,6 +23,7 @@ from .converter import (
     _parse_transform,
     _root_viewbox_matrix,
     _supported_data_image,
+    _svg_paint,
     _svg_text_content,
     _svg_text_length_spacing_is_supported,
     _svg_word_spacing_is_supported,
@@ -264,6 +265,8 @@ def _inspect_attributes(
             continue
         if attr == "mix-blend-mode" and _mix_blend_mode_has_no_effect(specified_style):
             continue
+        if attr == "paint-order" and _paint_order_has_no_effect(element, style, refs, css):
+            continue
         if attr == "pathLength" and _path_length_has_no_effect(specified_style):
             continue
         if attr == "rotate" and _text_rotate_is_supported(element, specified_style):
@@ -466,6 +469,21 @@ def _word_spacing_is_supported(element: ET.Element, style: dict[str, str]) -> bo
 def _mix_blend_mode_has_no_effect(style: dict[str, str]) -> bool:
     value = style.get("mix-blend-mode")
     return value is not None and value.strip().lower() in {"", "normal"}
+
+
+def _paint_order_has_no_effect(
+    element: ET.Element,
+    style: dict[str, str],
+    refs: dict[str, ET.Element],
+    css: list[CssRule],
+) -> bool:
+    value = style.get("paint-order")
+    if value is None:
+        return False
+    paint = _svg_paint(style, refs, default_fill=_local_name(element.tag) != "line", css=css)
+    has_fill = paint.fill not in {None, "none"}
+    has_stroke = paint.stroke not in {None, "none"} and (paint.stroke_width or 0) > 0
+    return not (has_fill and has_stroke)
 
 
 def _stroke_dashoffset_has_no_effect(style: dict[str, str]) -> bool:
