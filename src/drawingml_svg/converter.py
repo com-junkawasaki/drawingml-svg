@@ -3132,9 +3132,10 @@ def _num(value: str | None, default: float) -> float:
             scale = unit_scale
             break
     try:
-        return float(stripped) * scale
+        number = float(stripped) * scale
     except ValueError:
         return float(default)
+    return number if math.isfinite(number) else float(default)
 
 
 def _optional_num(value: str | None) -> float | None:
@@ -3149,9 +3150,10 @@ def _length(value: str | None, default: float, axis: str, viewport: tuple[float,
     stripped = value.strip()
     if stripped.endswith("%"):
         try:
-            return float(stripped[:-1]) / 100 * _percentage_basis(axis, viewport)
+            number = float(stripped[:-1]) / 100 * _percentage_basis(axis, viewport)
         except ValueError:
             return float(default)
+        return number if math.isfinite(number) else float(default)
     return _num(value, default)
 
 

@@ -398,6 +398,22 @@ def test_non_finite_path_coordinates_are_reported_and_skipped() -> None:
     assert report.unsupported_elements == {"path:unsupported-command": 1}
 
 
+def test_non_finite_svg_lengths_fall_back_to_defaults() -> None:
+    svg = """<svg width="1e999" height="1e999">
+      <rect x="1e999" y="2" width="1e999" height="8" fill="#ef4444"/>
+      <rect x="4" y="6" width="10" height="8" stroke-width="1e999" fill="none" stroke="#111111"/>
+      <text x="0" y="24" font-size="1e999" fill="#111111">Fallback</text>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+    report = analyze_svg(svg)
+
+    assert dml.count("<p:sp>") == 2
+    assert 'x="0"' in dml
+    assert 'w="9525"' in dml
+    assert 'sz="1600"' in dml
+    assert report.unsupported_elements == {}
+
+
 def test_cubic_path_is_approximated_as_custom_geometry() -> None:
     dml = svg_to_drawingml('<svg><path d="M0 0 C10 20, 30 20, 40 0 S70 -20, 80 0" fill="none" stroke="#0891b2"/></svg>')
 
