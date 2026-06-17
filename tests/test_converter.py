@@ -534,11 +534,11 @@ def test_analyze_svg_reports_coverage_and_unsupported_features() -> None:
 def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
     svg = """<svg>
       <style>
-        path { clip-rule: evenodd; paint-order: stroke fill; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+        path { clip-rule: evenodd; paint-order: stroke fill; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; mix-blend-mode: multiply; }
         text { text-rendering: geometricPrecision; }
       </style>
       <path d="M0 0 H10 V10 Z" fill-rule="evenodd"/>
-      <text x="0" y="20">Hint</text>
+      <text x="0" y="20" isolation="isolate">Hint</text>
       <image href="data:image/png;base64,abc" image-rendering="pixelated" color-rendering="optimizeQuality"/>
     </svg>"""
 
@@ -550,6 +550,8 @@ def test_analyze_svg_reports_unconverted_visual_attributes() -> None:
         "color-rendering": 1,
         "fill-rule": 1,
         "image-rendering": 1,
+        "isolation": 1,
+        "mix-blend-mode": 1,
         "paint-order": 1,
         "shape-rendering": 1,
         "text-rendering": 1,

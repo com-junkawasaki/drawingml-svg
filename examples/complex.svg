@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 405" width="720" height="405">
   <style>
-    .accent-box { fill: #e0e7ff; stroke: #4338ca; stroke-width: 3; shape-rendering: crispEdges; }
+    .accent-box { fill: #e0e7ff; stroke: #4338ca; stroke-width: 3; shape-rendering: crispEdges; mix-blend-mode: multiply; }
     .soft-line { fill: none; stroke: #be123c; stroke-width: 4; }
     .ghosted { fill: #f0abfc; stroke: #86198f; stroke-width: 3; opacity: .55; }
     text.label { fill: #0f172a; font-size: 18; font-variant: all-small-caps; letter-spacing: 1.5px; word-spacing: 3px; text-rendering: geometricPrecision; }
@@ -26,7 +26,7 @@
   <!-- Deliberately included to document the current unsupported surface. -->
   <path d="M110 340 C180 270, 260 390, 340 318 S500 290, 610 338" fill="none" stroke="#0891b2" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
   <polygon points="316,74 344,104 332,144 292,144 280,104" fill="#fee2e2" stroke="#991b1b" stroke-width="3"/>
-  <g transform="translate(34 18) rotate(-8 620 278)">
+  <g transform="translate(34 18) rotate(-8 620 278)" isolation="isolate">
     <rect class="accent-box" x="596" y="246" width="76" height="46" fill="url(#panel-gradient)"/>
     <path class="soft-line" d="M590 320 L632 306 L676 324" stroke-dasharray="8 4" stroke-dashoffset="2" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
