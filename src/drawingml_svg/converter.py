@@ -1535,8 +1535,10 @@ def _computed_style(
         "font-family",
         "font-weight",
         "font-style",
+        "lengthAdjust",
         "text-decoration",
         "text-anchor",
+        "textLength",
         "dominant-baseline",
         "color",
         "display",
@@ -1548,6 +1550,7 @@ def _computed_style(
         "marker-mid",
         "marker-end",
         "paint-order",
+        "pathLength",
         "vector-effect",
     ):
         if element.get(attr) is not None:

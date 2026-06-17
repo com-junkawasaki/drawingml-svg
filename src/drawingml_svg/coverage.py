@@ -49,11 +49,14 @@ UNSUPPORTED_ATTRIBUTES = {
     "clip-rule",
     "fill-rule",
     "filter",
+    "lengthAdjust",
     "marker-end",
     "marker-mid",
     "marker-start",
     "mask",
     "paint-order",
+    "pathLength",
+    "textLength",
     "vector-effect",
 }
 
