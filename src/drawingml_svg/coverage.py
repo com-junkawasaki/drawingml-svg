@@ -103,7 +103,9 @@ UNSUPPORTED_ATTRIBUTES = {
     "stroke-linecap",
     "stroke-linejoin",
     "textLength",
+    "text-decoration",
     "text-decoration-color",
+    "text-decoration-line",
     "text-decoration-style",
     "text-orientation",
     "text-rendering",
@@ -343,6 +345,16 @@ def _inspect_attributes(
         if attr == "stroke-linecap" and _stroke_linecap_is_supported_or_noop(element, style, refs, css, viewport):
             continue
         if attr == "stroke-linejoin" and _stroke_linejoin_is_supported_or_noop(element, style, refs, css, viewport):
+            continue
+        if (
+            attr == "text-decoration"
+            and specified_style.get("text-decoration-line") is not None
+            and specified_style.get("text-decoration") == specified_style.get("text-decoration-line")
+        ):
+            continue
+        if attr == "text-decoration" and _text_decoration_line_is_supported_or_noop(specified_style):
+            continue
+        if attr == "text-decoration-line" and _text_decoration_line_is_supported_or_noop(specified_style):
             continue
         if attr == "text-decoration-color" and _text_decoration_color_has_no_effect(specified_style):
             continue
@@ -648,6 +660,16 @@ def _text_decoration_style_is_supported_or_noop(style: dict[str, str]) -> bool:
     if not _has_visible_text_decoration(style):
         return True
     return value.strip().lower() in {"", "solid"}
+
+
+def _text_decoration_line_is_supported_or_noop(style: dict[str, str]) -> bool:
+    value = style.get("text-decoration-line", style.get("text-decoration"))
+    if value is None:
+        return False
+    tokens = set(value.strip().lower().split())
+    if not tokens or tokens <= {"none"}:
+        return True
+    return tokens <= {"underline", "line-through"}
 
 
 def _has_visible_text_decoration(style: dict[str, str]) -> bool:

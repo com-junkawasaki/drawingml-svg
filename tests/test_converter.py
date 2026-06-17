@@ -1160,6 +1160,21 @@ def test_text_decoration_color_and_non_solid_style_are_reported_when_visible() -
     }
 
 
+def test_unsupported_text_decoration_tokens_are_reported() -> None:
+    svg = """<svg>
+      <text x="0" y="20" text-decoration="overline">Over</text>
+      <text x="0" y="40" text-decoration="underline overline">Mixed</text>
+      <text x="0" y="60" text-decoration-line="blink">Blink</text>
+      <text x="0" y="80" text-decoration-line="underline line-through">Supported</text>
+      <text x="0" y="100" text-decoration="none">None</text>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {
+        "text-decoration": 2,
+        "text-decoration-line": 1,
+    }
+
+
 def test_unconverted_text_layout_attributes_are_reported() -> None:
     svg = """<svg>
       <style>
