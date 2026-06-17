@@ -517,6 +517,35 @@ def test_css_descendant_selectors_are_applied_in_converter_and_analyzer() -> Non
     assert analyze_svg(svg).estimated_element_coverage == 1.0
 
 
+def test_css_sibling_selectors_are_applied_in_converter_and_analyzer() -> None:
+    svg = """<svg>
+      <style>
+        g > rect + rect { fill: #dc2626; }
+        rect ~ circle { stroke: #2563eb; stroke-width: 2; }
+        stop + stop { stop-color: #16a34a; }
+      </style>
+      <defs>
+        <linearGradient id="grad">
+          <stop offset="0%" stop-color="#16a34a"/>
+          <stop offset="100%"/>
+        </linearGradient>
+      </defs>
+      <g>
+        <rect width="10" height="8" fill="#111111"/>
+        <rect x="12" width="10" height="8"/>
+        <circle cx="28" cy="4" r="4" fill="url(#grad)"/>
+      </g>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    assert 'val="111111"' in dml
+    assert 'val="DC2626"' in dml
+    assert 'val="2563EB"' in dml
+    assert 'val="16A34A"' in dml
+    assert 'w="19050"' in dml
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_css_attribute_selectors_are_applied() -> None:
     svg = """<svg>
       <style>

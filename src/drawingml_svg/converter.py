@@ -124,7 +124,7 @@ def drawingml_to_svg(drawingml_text: str) -> str:
 def _svg_shapes(root: ET.Element) -> Iterable[Shape]:
     css = _collect_css(root)
     refs = _collect_refs(root)
-    yield from _svg_shapes_walk(root, css, refs, {}, _root_viewbox_matrix(root), set(), (), _viewport_size(root))
+    yield from _svg_shapes_walk(root, css, refs, {}, _root_viewbox_matrix(root), set(), (), _viewport_size(root), ())
 
 
 def _svg_shapes_walk(
@@ -136,12 +136,13 @@ def _svg_shapes_walk(
     ref_stack: set[str],
     ancestors: tuple[ET.Element, ...],
     viewport: tuple[float, float],
+    previous_siblings: tuple[ET.Element, ...],
 ) -> Iterable[Shape]:
     tag = _local_name(element.tag)
     if tag in {"defs", "style"}:
         return
 
-    style = _computed_style(element, css, inherited_style, ancestors)
+    style = _computed_style(element, css, inherited_style, ancestors, previous_siblings)
     if _is_hidden(style):
         return
     matrix = _matrix_multiply(inherited_matrix, _parse_transform(element.get("transform", "")))
@@ -172,12 +173,13 @@ def _svg_shapes_walk(
                     _viewbox_matrix(ref, use_width, use_height),
                 )
                 ref_viewport = _viewport_size(ref, use_width, use_height)
-            yield from _svg_shapes_walk(ref, css, refs, style, use_matrix, ref_stack | {href[1:]}, ancestors + (element,), ref_viewport)
+            yield from _svg_shapes_walk(ref, css, refs, style, use_matrix, ref_stack | {href[1:]}, ancestors + (element,), ref_viewport, ())
         return
     if tag == "switch":
         selected = _switch_selected_child(element)
         if selected is not None:
-            yield from _svg_shapes_walk(selected, css, refs, style, matrix, ref_stack, ancestors + (element,), child_viewport)
+            previous_children = _previous_element_siblings(element, selected)
+            yield from _svg_shapes_walk(selected, css, refs, style, matrix, ref_stack, ancestors + (element,), child_viewport, previous_children)
         return
 
     shape = _svg_shape_from_element(element, tag, style, matrix, refs, viewport, css, ancestors)
@@ -188,8 +190,10 @@ def _svg_shapes_walk(
     if shape is not None:
         yield shape
 
+    previous_children: list[ET.Element] = []
     for child in element:
-        yield from _svg_shapes_walk(child, css, refs, style, matrix, ref_stack, ancestors + (element,), child_viewport)
+        yield from _svg_shapes_walk(child, css, refs, style, matrix, ref_stack, ancestors + (element,), child_viewport, tuple(previous_children))
+        previous_children.append(child)
 
 
 def _svg_shape_from_element(
@@ -1522,15 +1526,17 @@ def _svg_text_content(
         leading = leading.strip()
     if leading:
         lines.append(_apply_text_transform(leading, style.get("text-transform")))
+    previous_children: list[ET.Element] = []
     for child in element:
         if _local_name(child.tag) == "tspan":
             child_preserve_space = preserve_space or _xml_space_preserve(child)
-            child_style = _computed_style(child, css, style, ancestors + (element,)) if css else _presentation_style(child, style)
+            child_style = _computed_style(child, css, style, ancestors + (element,), tuple(previous_children)) if css else _presentation_style(child, style)
             text = "".join(child.itertext())
             if not child_preserve_space:
                 text = text.strip()
             if text:
                 lines.append(_apply_text_transform(text, child_style.get("text-transform")))
+        previous_children.append(child)
     return "\n".join(lines)
 
 
@@ -2391,6 +2397,7 @@ def _computed_style(
     css: list[CssRule],
     inherited: dict[str, str],
     ancestors: tuple[ET.Element, ...] = (),
+    previous_siblings: tuple[ET.Element, ...] = (),
 ) -> dict[str, str]:
     style = dict(inherited)
     css_priorities: dict[str, tuple[int, tuple[int, int, int, int], int]] = {}
@@ -2458,7 +2465,7 @@ def _computed_style(
             apply_declaration(attr, element.get(attr, ""), False, (0, 0, 0, 0), -1)
 
     for selector, declarations, specificity, order in css:
-        if _selector_matches(selector, element, ancestors):
+        if _selector_matches(selector, element, ancestors, previous_siblings):
             css_specificity = (0, *specificity)
             for key, (value, important) in declarations.items():
                 apply_declaration(key, value, important, css_specificity, order)
@@ -2481,6 +2488,15 @@ def _computed_style(
     if style.get("stroke", "").strip().lower() == "currentcolor":
         style["stroke"] = style.get("color", "#000000")
     return style
+
+
+def _previous_element_siblings(parent: ET.Element, element: ET.Element) -> tuple[ET.Element, ...]:
+    siblings = []
+    for child in parent:
+        if child is element:
+            break
+        siblings.append(child)
+    return tuple(siblings)
 
 
 def _is_hidden(style: dict[str, str]) -> bool:
@@ -2633,17 +2649,25 @@ def _marker_is_supported(element: ET.Element, style: dict[str, str], refs: dict[
     return False
 
 
-def _selector_matches(selector: str, element: ET.Element, ancestors: tuple[ET.Element, ...]) -> bool:
+def _selector_matches(
+    selector: str,
+    element: ET.Element,
+    ancestors: tuple[ET.Element, ...],
+    previous_siblings: tuple[ET.Element, ...] = (),
+) -> bool:
     if selector.strip() == ":root":
         return not ancestors
     parts = _selector_parts(selector)
-    if not parts or parts[-1] == ">":
+    if not parts or parts[-1] in {">", "+", "~"}:
         return False
     if not _simple_selector_matches(parts[-1], element):
         return False
 
     ancestor_index = len(ancestors) - 1
+    sibling_index = len(previous_siblings) - 1
     require_direct = False
+    require_adjacent = False
+    require_sibling = False
     index = len(parts) - 2
     while index >= 0:
         part = parts[index]
@@ -2651,6 +2675,32 @@ def _selector_matches(selector: str, element: ET.Element, ancestors: tuple[ET.El
             require_direct = True
             index -= 1
             continue
+        if part == "+":
+            require_adjacent = True
+            index -= 1
+            continue
+        if part == "~":
+            require_sibling = True
+            index -= 1
+            continue
+        if require_adjacent:
+            if sibling_index < 0 or not _simple_selector_matches(part, previous_siblings[sibling_index]):
+                return False
+            sibling_index -= 1
+            require_adjacent = False
+            index -= 1
+            continue
+        elif require_sibling:
+            while sibling_index >= 0 and not _simple_selector_matches(part, previous_siblings[sibling_index]):
+                sibling_index -= 1
+            if sibling_index < 0:
+                return False
+            sibling_index -= 1
+            require_sibling = False
+            index -= 1
+            continue
+        elif part in {"+", "~"}:
+            return False
         if require_direct:
             if ancestor_index < 0 or not _simple_selector_matches(part, ancestors[ancestor_index]):
                 return False
@@ -2669,7 +2719,7 @@ def _selector_matches(selector: str, element: ET.Element, ancestors: tuple[ET.El
 def _selector_specificity(selector: str) -> tuple[int, int, int]:
     selector_without_attrs = _selector_without_attribute_selectors(_selector_without_supported_pseudo_classes(selector))
     selector_without_attrs = selector_without_attrs.replace(":root", "")
-    if any(mark in selector_without_attrs for mark in ("+", "~", ":")):
+    if ":" in selector_without_attrs:
         return (0, 0, 0)
     id_count = len(re.findall(r"#[A-Za-z_][\w:-]*", selector))
     class_count = len(re.findall(r"\.[A-Za-z_][\w:-]*", selector)) + len(re.findall(r"\[[^\]]+\]", selector))
@@ -2698,11 +2748,11 @@ def _selector_parts(selector: str) -> list[str]:
             paren_depth += 1
         elif char == ")" and paren_depth:
             paren_depth -= 1
-        if attribute_depth == 0 and paren_depth == 0 and char in {" ", ">"}:
+        if attribute_depth == 0 and paren_depth == 0 and char in {" ", ">", "+", "~"}:
             if current:
                 parts.append("".join(current))
                 current = []
-            if char == ">":
+            if char in {">", "+", "~"}:
                 parts.append(char)
             continue
         current.append(char)
@@ -3185,19 +3235,23 @@ def _pattern_child_colors(
     seen: set[str],
 ) -> list[tuple[str, float | None]]:
     colors = []
+    previous_children: list[ET.Element] = []
     for child in parent:
         tag = _local_name(child.tag)
-        style = _computed_style(child, css, inherited_style, ancestors)
+        style = _computed_style(child, css, inherited_style, ancestors, tuple(previous_children))
         if _is_hidden(style):
+            previous_children.append(child)
             continue
         if tag in {"g", "svg", "a"}:
             colors.extend(_pattern_child_colors(child, refs, current_color, css, style, ancestors + (child,), seen))
+            previous_children.append(child)
             continue
         if tag in {"rect", "circle", "ellipse", "path", "polygon", "polyline", "text", "tspan", "line"}:
             if tag != "line":
                 colors.extend(_pattern_paint_colors(style.get("fill", "#000000"), refs, current_color, css, seen, style, "fill"))
             colors.extend(_pattern_paint_colors(style.get("stroke"), refs, current_color, css, seen, style, "stroke"))
         colors.extend(_pattern_child_colors(child, refs, current_color, css, style, ancestors + (child,), seen))
+        previous_children.append(child)
     return colors
 
 
@@ -3235,10 +3289,12 @@ def _pattern_paint_colors(
 def _gradient_stops(element: ET.Element, current_color: str | None = None, css: list[CssRule] | None = None) -> list[tuple[str, float | None]]:
     stops = []
     gradient_style = _computed_style(element, css or [], {}, ())
+    previous_stops: list[ET.Element] = []
     for stop in element:
         if _local_name(stop.tag) != "stop":
+            previous_stops.append(stop)
             continue
-        style = _computed_style(stop, css or [], gradient_style, (element,))
+        style = _computed_style(stop, css or [], gradient_style, (element,), tuple(previous_stops))
         stop_color = style.get("stop-color", "black")
         if _is_current_color(stop_color):
             stop_color = style.get("color") or element.get("color") or current_color or "black"
@@ -3246,6 +3302,7 @@ def _gradient_stops(element: ET.Element, current_color: str | None = None, css: 
         if color and color != "none":
             stop_alpha = _combined_alpha(_clamped_num(stop.get("stop-opacity", style.get("stop-opacity")), 1.0), color_alpha)
             stops.append((color, stop_alpha))
+        previous_stops.append(stop)
     return stops
 
 

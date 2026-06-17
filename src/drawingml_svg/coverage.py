@@ -22,6 +22,7 @@ from .converter import (
     _parse_linear_path,
     _parse_points,
     _parse_transform,
+    _previous_element_siblings,
     _root_viewbox_matrix,
     _supported_data_image,
     _svg_paint,
@@ -110,7 +111,7 @@ def analyze_svg(svg_text: str) -> SvgCoverage:
     css = _collect_css(root)
     refs = _collect_refs(root)
     stats = _CoverageStats()
-    _walk(root, css, refs, {}, _root_viewbox_matrix(root), stats, (), _viewport_size(root))
+    _walk(root, css, refs, {}, _root_viewbox_matrix(root), stats, (), _viewport_size(root), ())
     measurable = max(stats.total_elements - stats.ignored_elements, 0)
     coverage = stats.convertible_elements / measurable if measurable else 1.0
     return SvgCoverage(
@@ -160,6 +161,7 @@ def _walk(
     stats: _CoverageStats,
     ancestors: tuple[ET.Element, ...],
     viewport: tuple[float, float],
+    previous_siblings: tuple[ET.Element, ...],
 ) -> None:
     tag = _local_name(element.tag)
     stats.total_elements += 1
@@ -171,8 +173,8 @@ def _walk(
     if tag in {"polygon", "polyline"}:
         points_supported = len(_parse_points(element.get("points", ""))) >= 2
 
-    style = _computed_style(element, css, inherited_style, ancestors)
-    specified_style = _computed_style(element, css, {}, ancestors)
+    style = _computed_style(element, css, inherited_style, ancestors, previous_siblings)
+    specified_style = _computed_style(element, css, {}, ancestors, previous_siblings)
     hidden = _is_hidden(style)
     non_rendering_geometry = _has_non_rendering_geometry(element, style, viewport)
     no_visible_paint = _has_no_visible_paint(element, style, refs, css)
@@ -212,15 +214,19 @@ def _walk(
     if tag == "switch":
         selected = _switch_selected_child(element)
         if selected is not None:
-            _walk(selected, css, refs, style, matrix, stats, ancestors + (element,), child_viewport)
+            previous_children = _previous_element_siblings(element, selected)
+            _walk(selected, css, refs, style, matrix, stats, ancestors + (element,), child_viewport, previous_children)
         return
 
+    previous_children: list[ET.Element] = []
     for child in element:
         if tag == "defs" and _local_name(child.tag) not in GRADIENT_ELEMENTS:
             stats.total_elements += 1
             stats.ignored_elements += 1
+            previous_children.append(child)
             continue
-        _walk(child, css, refs, style, matrix, stats, ancestors + (element,), child_viewport)
+        _walk(child, css, refs, style, matrix, stats, ancestors + (element,), child_viewport, tuple(previous_children))
+        previous_children.append(child)
 
 
 def _inspect_attributes(
