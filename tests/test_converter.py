@@ -1,4 +1,5 @@
 import io
+import zipfile
 from importlib import resources
 from xml.etree import ElementTree as ET
 
@@ -7,7 +8,7 @@ import pytest
 import drawingml_svg
 from drawingml_svg import analyze_svg, drawingml_to_svg, svg_to_drawingml
 from drawingml_svg.cli import main as cli_main
-from examples.make_pptx import build_slide_xml, prepare_slide_media
+from examples.make_pptx import build_slide_xml, prepare_slide_media, write_pptx
 
 PNG_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="
 
@@ -279,6 +280,35 @@ def test_invalid_data_uri_image_is_not_embedded_as_pptx_media() -> None:
     assert media == []
     assert b"data:image/png;base64,abc" in prepared_slide
     assert 'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"' not in rels
+
+
+def test_write_pptx_creates_package_with_unique_relationship_ids(tmp_path) -> None:
+    fragment = ET.fromstring(
+        svg_to_drawingml(f'<svg><rect width="10" height="8"/><image href="{PNG_DATA_URI}" x="12" y="0" width="8" height="8"/></svg>')
+    )
+    shapes = [
+        child
+        for child in fragment
+        if child.tag
+        in {
+            "{http://schemas.openxmlformats.org/presentationml/2006/main}sp",
+            "{http://schemas.openxmlformats.org/presentationml/2006/main}pic",
+        }
+    ]
+    pptx_path = tmp_path / "nested" / "sample.pptx"
+
+    write_pptx(pptx_path, build_slide_xml(shapes))
+
+    assert pptx_path.is_file()
+    with zipfile.ZipFile(pptx_path) as pptx:
+        names = set(pptx.namelist())
+        root_rels = ET.fromstring(pptx.read("_rels/.rels"))
+        slide_rels = ET.fromstring(pptx.read("ppt/slides/_rels/slide1.xml.rels"))
+    assert {"[Content_Types].xml", "ppt/slides/slide1.xml", "ppt/slides/_rels/slide1.xml.rels"} <= names
+    assert any(name.startswith("ppt/media/image") for name in names)
+    for rels in (root_rels, slide_rels):
+        ids = [rel.get("Id") for rel in rels]
+        assert len(ids) == len(set(ids))
 
 
 def test_polygon_polyline_linear_path_and_text_convert() -> None:
