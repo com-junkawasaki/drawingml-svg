@@ -359,6 +359,20 @@ def test_text_small_caps_maps_to_drawingml_caps() -> None:
     assert 'font-variant="small-caps"' in svg
 
 
+def test_text_all_small_caps_maps_to_drawingml_caps() -> None:
+    source = '<svg><text x="10" y="20" font-variant="all-small-caps" font-size="10" fill="#111">Caps</text></svg>'
+    dml = svg_to_drawingml(source)
+
+    root = ET.fromstring(dml)
+    run_pr = root.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}rPr")
+    assert run_pr is not None
+    assert run_pr.get("cap") == "all"
+    assert analyze_svg(source).unsupported_attributes == {}
+
+    svg = drawingml_to_svg(dml)
+    assert 'font-variant="all-small-caps"' in svg
+
+
 def test_xml_space_preserve_keeps_text_whitespace() -> None:
     dml = svg_to_drawingml(
         '<svg><text x="0" y="20" xml:space="preserve" fill="#111111">  padded  <tspan> kept </tspan></text></svg>'
@@ -576,7 +590,6 @@ def test_analyze_svg_reports_unconverted_layout_length_attributes() -> None:
     assert report.unsupported_elements == {}
     assert report.unsupported_attributes == {
         "lengthAdjust": 1,
-        "font-variant": 1,
         "pathLength": 1,
         "rotate": 1,
         "stroke-dashoffset": 1,

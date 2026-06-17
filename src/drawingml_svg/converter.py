@@ -778,6 +778,8 @@ def _append_text_body(parent: ET.Element, shape: Shape) -> None:
         r_pr_attrs["i"] = "1"
     if shape.font_variant == "small-caps":
         r_pr_attrs["cap"] = "small"
+    elif shape.font_variant == "all-small-caps":
+        r_pr_attrs["cap"] = "all"
     if _has_text_decoration(shape.text_decoration, "underline"):
         r_pr_attrs["u"] = "sng"
     if _has_text_decoration(shape.text_decoration, "line-through"):
@@ -1027,8 +1029,11 @@ def _dml_font_family(element: ET.Element) -> str | None:
 
 def _dml_font_variant(element: ET.Element) -> str | None:
     r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
-    if r_pr is not None and r_pr.get("cap") == "small":
-        return "small-caps"
+    if r_pr is not None:
+        if r_pr.get("cap") == "small":
+            return "small-caps"
+        if r_pr.get("cap") == "all":
+            return "all-small-caps"
     return None
 
 
@@ -1173,7 +1178,10 @@ def _svg_letter_spacing(style: dict[str, str], viewport: tuple[float, float]) ->
 def _font_variant(value: str | None) -> str | None:
     if value is None:
         return None
-    return "small-caps" if value.strip().lower() == "small-caps" else None
+    normalized = value.strip().lower()
+    if normalized in {"small-caps", "all-small-caps"}:
+        return normalized
+    return None
 
 
 def _is_bold(value: str | None) -> bool:

@@ -272,7 +272,7 @@ def _font_variant_is_supported(style: dict[str, str]) -> bool:
     value = style.get("font-variant")
     if value is None:
         return False
-    return value.strip().lower() in {"normal", "small-caps"}
+    return value.strip().lower() in {"normal", "small-caps", "all-small-caps"}
 
 
 def _path_is_supported(path_data: str) -> bool:
