@@ -74,7 +74,7 @@ jobs:
           assert "<a:headEnd type=\"triangle\"" in slide, "line marker was not converted to a DrawingML arrow"
           assert "<a:tailEnd type=\"triangle\"" in slide, "marker shorthand was not converted to a DrawingML start arrow"
           assert "<a:custDash>" in slide, "non-zero custom dash was not written"
-          assert '<a:ln w="14288">' in slide, "transformed text outline width was not scaled"
+          assert '<a:ln w="14288"' in slide, "transformed text outline width was not scaled"
           assert 'x="266700"' in slide and 'val="BFDBFE"' in slide, "CSS transform property was not applied to fixture geometry"
           assert 'x="1752600" y="914400"' not in slide, "transparent blend-only fixture should not produce a visible shape"
           assert 'val="DCFCE7"' in slide, "visible descendant inside hidden group was not rendered"
