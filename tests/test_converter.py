@@ -57,6 +57,10 @@ def _implemented_drawingml_preset_names() -> set[str]:
     return names
 
 
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
 def _webp_data_uri(width: int, height: int) -> str:
     payload = b"\0\0\0\0" + (width - 1).to_bytes(3, "little") + (height - 1).to_bytes(3, "little")
     data = b"RIFF" + (len(payload) + 10).to_bytes(4, "little") + b"WEBPVP8X" + len(payload).to_bytes(4, "little") + payload
@@ -68,7 +72,7 @@ def test_package_declares_inline_types() -> None:
 
 
 def test_project_metadata_exposes_public_repository_links() -> None:
-    metadata = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
+    metadata = tomllib.loads((_project_root() / "pyproject.toml").read_text(encoding="utf-8"))
     project = metadata["project"]
 
     assert "Typing :: Typed" in project["classifiers"]
@@ -81,6 +85,44 @@ def test_project_metadata_exposes_public_repository_links() -> None:
 
 def test_readme_documents_supported_drawingml_presets() -> None:
     assert _documented_drawingml_preset_names() == _implemented_drawingml_preset_names()
+
+
+def test_readme_project_links_point_to_packaged_docs() -> None:
+    root = _project_root()
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    manifest = (root / "MANIFEST.in").read_text(encoding="utf-8")
+
+    section = readme.split("## Project links\n", 1)[1].split("\n## ", 1)[0]
+    linked_docs = set(re.findall(r"\[([A-Z_]+\.md)\]\([A-Z_]+\.md\)", section))
+
+    assert linked_docs == {"CHANGELOG.md", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "RELEASE.md", "SECURITY.md"}
+    for doc in linked_docs:
+        assert (root / doc).is_file(), doc
+        assert f"include {doc}" in manifest
+
+
+def test_release_checklist_covers_distribution_and_pptx_smoke() -> None:
+    release = (_project_root() / "RELEASE.md").read_text(encoding="utf-8")
+
+    assert "CHANGELOG.md" in release
+    assert "pyproject.toml" in release
+    assert "examples/coverage.svg -o tmp/drawingml-svg-coverage.pptx" in release
+    assert "python -m zipfile --test tmp/drawingml-svg-coverage.pptx" in release
+    assert "python -m build --sdist --wheel -o tmp/dist" in release
+    assert "drawingml-svg --version" in release
+    assert "drawingml-svg analyze examples/coverage.svg" in release
+    assert "svg2dml examples/sample.svg -o tmp/release-smoke.xml" in release
+
+
+def test_dependabot_tracks_actions_and_python_dependencies() -> None:
+    dependabot = (_project_root() / ".github" / "dependabot.yml").read_text(encoding="utf-8")
+
+    assert dependabot.startswith("version: 2\n")
+    assert dependabot.count('package-ecosystem: "github-actions"') == 1
+    assert dependabot.count('package-ecosystem: "pip"') == 1
+    assert dependabot.count('directory: "/"') == 2
+    assert dependabot.count('interval: "weekly"') == 2
+    assert 'open-pull-requests-limit: 5' in dependabot
 
 
 def test_cli_analyze_writes_json_to_stdout(tmp_path, capsys) -> None:
