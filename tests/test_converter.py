@@ -5291,6 +5291,44 @@ def test_analyze_svg_reports_unsupported_use_references() -> None:
     assert external["unsupported_attributes"] == {"href": 1}
 
 
+def test_analyze_svg_reports_unsupported_content_referenced_by_use() -> None:
+    bad_path = '<svg><defs><path id="bad" d="M0 0 R10 10" fill="#111111"/></defs><use href="#bad"/></svg>'
+    bad_points = (
+        '<svg><defs><polyline id="bad" points="0,0" fill="none" stroke="#111111"/></defs><use href="#bad"/></svg>'
+    )
+    bad_image = '<svg><defs><image id="bad" href="https://example.test/a.png" width="10" height="10"/></defs><use href="#bad"/></svg>'
+
+    path_report = analyze_svg(bad_path)
+    points_report = analyze_svg(bad_points)
+    image_report = analyze_svg(bad_image)
+
+    assert svg_to_drawingml(bad_path).count("<p:sp>") == 0
+    assert path_report.unsupported_elements == {"use:unsupported-reference": 1}
+    assert path_report.unsupported_path_commands == {"R": 1}
+    assert points_report.unsupported_elements == {"use:unsupported-reference": 1}
+    assert image_report.unsupported_elements == {"use:unsupported-reference": 1}
+    assert image_report.unsupported_attributes == {"href": 1}
+
+
+def test_analyze_svg_reports_unsupported_attributes_on_content_referenced_by_use() -> None:
+    svg = """<svg>
+      <defs>
+        <rect id="filtered" width="10" height="8" filter="url(#blur)"/>
+        <line id="capped" x1="0" y1="12" x2="10" y2="12" stroke="#111111" stroke-linecap="triangle"/>
+        <text id="vertical" x="0" y="24" writing-mode="vertical-rl">Hi</text>
+      </defs>
+      <use href="#filtered"/>
+      <use href="#capped"/>
+      <use href="#vertical"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {
+        "filter": 1,
+        "stroke-linecap": 1,
+        "writing-mode": 1,
+    }
+
+
 def test_link_wrapper_converts_child_shapes_without_reporting_hyperlink_href() -> None:
     svg = """<svg>
       <a href="https://example.test" fill="#dbeafe" stroke="#1d4ed8">

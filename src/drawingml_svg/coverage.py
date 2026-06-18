@@ -260,7 +260,15 @@ def _walk(
 
     use_supported = True
     if tag == "use":
-        use_supported = _use_href_is_supported(element, refs)
+        use_supported = _use_href_is_supported(element, refs) and _use_referenced_subtree_is_supported(
+            element,
+            css,
+            refs,
+            style,
+            ancestors,
+            viewport,
+            stats,
+        )
     switch_supported = True
     if tag == "switch":
         switch_supported = _switch_selected_child(element) is not None or len(element) == 0
@@ -577,7 +585,7 @@ def _inspect_attributes(
             stats.add_unsupported_attribute("href")
     tag = _local_name(element.tag)
     if tag == "use":
-        _inspect_use_referenced_paint_servers(element, style, refs, css, viewport, stats)
+        _inspect_use_referenced_subtree_attributes(element, style, refs, css, viewport, stats)
     else:
         _inspect_visible_paint_server_channels(element, style, refs, css, viewport, stats)
 
@@ -624,6 +632,98 @@ def _inspect_use_referenced_paint_servers(
         return
     ref, ref_viewport, next_stack = ref_context
     _inspect_subtree_paint_servers(ref, css, refs, style, (element,), ref_viewport, stats, (), next_stack)
+
+
+def _inspect_use_referenced_subtree_attributes(
+    element: ET.Element,
+    style: dict[str, str],
+    refs: dict[str, ET.Element],
+    css: list[CssRule],
+    viewport: tuple[float, float],
+    stats: _CoverageStats,
+    ref_stack: frozenset[str] = frozenset(),
+) -> None:
+    ref_context = _use_reference_context(element, refs, viewport, ref_stack)
+    if ref_context is None:
+        return
+    ref, ref_viewport, next_stack = ref_context
+    _inspect_referenced_subtree_attributes(ref, css, refs, style, (element,), ref_viewport, stats, (), next_stack)
+
+
+def _inspect_referenced_subtree_attributes(
+    element: ET.Element,
+    css: list[CssRule],
+    refs: dict[str, ET.Element],
+    inherited_style: dict[str, str],
+    ancestors: tuple[ET.Element, ...],
+    viewport: tuple[float, float],
+    stats: _CoverageStats,
+    previous_siblings: tuple[ET.Element, ...] = (),
+    ref_stack: frozenset[str] = frozenset(),
+) -> None:
+    style = _computed_style(element, css, inherited_style, ancestors, previous_siblings)
+    specified_style = _computed_style(element, css, {}, ancestors, previous_siblings)
+    if _is_display_none(style) or _has_non_rendering_geometry(element, style, viewport):
+        return
+    tag = _local_name(element.tag)
+    no_visible_paint = _has_no_visible_paint(element, style, refs, css, viewport)
+    unresolved_paint_server = _has_unresolved_paint_server(style, refs, css)
+    if no_visible_paint and not unresolved_paint_server:
+        return
+    matrix = _style_transform_matrix(element, style, viewport)
+    if tag == "use":
+        _inspect_use_referenced_subtree_attributes(element, style, refs, css, viewport, stats, ref_stack)
+        return
+    if not _is_visibility_hidden(style):
+        _inspect_attributes(
+            element,
+            style,
+            specified_style,
+            refs,
+            css,
+            matrix,
+            stats,
+            ancestors,
+            viewport,
+            previous_siblings,
+        )
+    child_viewport = viewport
+    if tag == "svg" and ancestors:
+        child_viewport = _viewport_size(
+            element,
+            _optional_length(element.get("width"), "x", viewport),
+            _optional_length(element.get("height"), "y", viewport),
+        )
+    if tag == "switch":
+        selected = _switch_selected_child(element)
+        if selected is None:
+            return
+        _inspect_referenced_subtree_attributes(
+            selected,
+            css,
+            refs,
+            style,
+            ancestors + (element,),
+            child_viewport,
+            stats,
+            _previous_element_siblings(element, selected),
+            ref_stack,
+        )
+        return
+    previous_children: list[ET.Element] = []
+    for child in element:
+        _inspect_referenced_subtree_attributes(
+            child,
+            css,
+            refs,
+            style,
+            ancestors + (element,),
+            child_viewport,
+            stats,
+            tuple(previous_children),
+            ref_stack,
+        )
+        previous_children.append(child)
 
 
 def _inspect_subtree_paint_servers(
@@ -2354,6 +2454,112 @@ def _path_is_supported(path_data: str) -> bool:
 def _use_href_is_supported(element: ET.Element, refs: dict[str, ET.Element]) -> bool:
     href = _href(element)
     return bool(href and href.startswith("#") and href[1:] in refs)
+
+
+def _use_referenced_subtree_is_supported(
+    element: ET.Element,
+    css: list[CssRule],
+    refs: dict[str, ET.Element],
+    inherited_style: dict[str, str],
+    ancestors: tuple[ET.Element, ...],
+    viewport: tuple[float, float],
+    stats: _CoverageStats,
+    ref_stack: frozenset[str] = frozenset(),
+) -> bool:
+    ref_context = _use_reference_context(element, refs, viewport, ref_stack)
+    if ref_context is None:
+        return False
+    ref, ref_viewport, next_stack = ref_context
+    return _referenced_subtree_is_supported(
+        ref,
+        css,
+        refs,
+        inherited_style,
+        ancestors + (element,),
+        ref_viewport,
+        stats,
+        (),
+        next_stack,
+    )
+
+
+def _referenced_subtree_is_supported(
+    element: ET.Element,
+    css: list[CssRule],
+    refs: dict[str, ET.Element],
+    inherited_style: dict[str, str],
+    ancestors: tuple[ET.Element, ...],
+    viewport: tuple[float, float],
+    stats: _CoverageStats,
+    previous_siblings: tuple[ET.Element, ...] = (),
+    ref_stack: frozenset[str] = frozenset(),
+) -> bool:
+    style = _computed_style(element, css, inherited_style, ancestors, previous_siblings)
+    if _is_display_none(style):
+        return True
+    tag = _local_name(element.tag)
+    if tag == "use":
+        return _use_referenced_subtree_is_supported(element, css, refs, style, ancestors, viewport, stats, ref_stack)
+    if _is_visibility_hidden(style) or _has_non_rendering_geometry(element, style, viewport) or _has_no_visible_paint(
+        element,
+        style,
+        refs,
+        css,
+        viewport,
+    ):
+        return True
+    if tag == "path":
+        if not _path_is_supported(element.get("d", "")):
+            _inspect_path(element.get("d", ""), stats)
+            return False
+    elif tag in {"polygon", "polyline"}:
+        if len(_parse_points(element.get("points", ""))) < 2:
+            return False
+    elif tag == "image":
+        href = _href(element)
+        if not href or not _supported_data_image(href):
+            return False
+    elif tag == "switch":
+        selected = _switch_selected_child(element)
+        if selected is None:
+            return len(element) == 0
+        return _referenced_subtree_is_supported(
+            selected,
+            css,
+            refs,
+            style,
+            ancestors + (element,),
+            viewport,
+            stats,
+            _previous_element_siblings(element, selected),
+            ref_stack,
+        )
+    elif tag not in SUPPORTED_ELEMENTS and tag not in IGNORED_ELEMENTS:
+        return False
+
+    child_viewport = viewport
+    if tag == "svg" and ancestors:
+        child_viewport = _viewport_size(
+            element,
+            _optional_length(element.get("width"), "x", viewport),
+            _optional_length(element.get("height"), "y", viewport),
+        )
+    previous_children: list[ET.Element] = []
+    for child in element:
+        if not _referenced_subtree_is_supported(
+            child,
+            css,
+            refs,
+            style,
+            ancestors + (element,),
+            child_viewport,
+            stats,
+            tuple(previous_children),
+            ref_stack,
+        ):
+            return False
+        previous_children.append(child)
+    return True
 
 
 def _supported_element_issue(tag: str) -> str:
