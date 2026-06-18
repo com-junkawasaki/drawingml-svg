@@ -2094,6 +2094,27 @@ def test_drawingml_tint_and_shade_modifiers_round_trip_to_svg_hex_colors() -> No
     assert analyze_svg(svg).unsupported_attributes == {}
 
 
+def test_drawingml_scrgb_color_round_trips_to_svg_hex_colors() -> None:
+    dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="shape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="95250" cy="95250"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:scrgbClr r="20000" g="40000" b="60000"/></a:solidFill>
+          <a:ln><a:solidFill><a:scrgbClr r="100000" g="0" b="0"><a:shade val="50000"/></a:scrgbClr></a:solidFill></a:ln>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>"""
+
+    svg = drawingml_to_svg(dml)
+
+    assert 'fill="#336699"' in svg
+    assert 'stroke="#800000"' in svg
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_drawingml_system_color_last_color_round_trips_to_svg_hex_colors() -> None:
     dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">

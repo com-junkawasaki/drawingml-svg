@@ -1182,6 +1182,9 @@ def _dml_color(parent: ET.Element) -> str | None:
     srgb = parent.find(qn(NS_A, "srgbClr"))
     if srgb is not None and srgb.get("val"):
         return _apply_dml_luminance_modifiers(f"#{srgb.get('val', '').lower()}", srgb)
+    scrgb = parent.find(qn(NS_A, "scrgbClr"))
+    if scrgb is not None:
+        return _dml_scrgb_color(scrgb)
     scheme = parent.find(qn(NS_A, "schemeClr"))
     if scheme is not None and scheme.get("val"):
         return _dml_scheme_color(scheme)
@@ -1192,6 +1195,18 @@ def _dml_color(parent: ET.Element) -> str | None:
     if preset is not None and preset.get("val"):
         return _dml_preset_color(preset)
     return None
+
+
+def _dml_scrgb_color(element: ET.Element) -> str | None:
+    if element.get("r") is None or element.get("g") is None or element.get("b") is None:
+        return None
+    channels = (
+        round(_dml_percentage(element.get("r"), 0) * 255),
+        round(_dml_percentage(element.get("g"), 0) * 255),
+        round(_dml_percentage(element.get("b"), 0) * 255),
+    )
+    color = _rgb_to_hex(tuple(max(0, min(255, channel)) for channel in channels))
+    return _apply_dml_luminance_modifiers(color, element)
 
 
 def _dml_scheme_color(element: ET.Element) -> str | None:
