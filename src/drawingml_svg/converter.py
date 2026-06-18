@@ -2983,6 +2983,19 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
             (left, y + height * 0.8),
             (left, y + height * 0.2),
         ]
+    if kind in {"actionButtonBlank", "actionButtonHome", "actionButtonInformation"}:
+        radius_x = width * 0.12
+        radius_y = height * 0.12
+        return [
+            (x + radius_x, top),
+            (right - radius_x, top),
+            (right, y + radius_y),
+            (right, bottom - radius_y),
+            (right - radius_x, bottom),
+            (x + radius_x, bottom),
+            (left, bottom - radius_y),
+            (left, y + radius_y),
+        ]
     if kind == "funnel":
         return [
             (left, top),
