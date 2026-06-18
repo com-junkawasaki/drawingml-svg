@@ -4282,12 +4282,27 @@ def _apply_rect_clip(
     refs: dict[str, ET.Element],
     matrix: tuple[float, float, float, float, float, float],
 ) -> Shape | None:
-    if shape.kind not in {"rect", "roundRect", "ellipse", "text", "image"}:
+    if shape.kind not in {"rect", "roundRect", "ellipse", "line", "text", "image"}:
         return shape
     clip_bounds = _rect_clip_bounds(shape, style, refs, matrix)
     if clip_bounds is None:
         return shape
     clip_x, clip_y, clip_width, clip_height = clip_bounds
+    if shape.kind == "line":
+        clipped_line = _clip_line_to_rect(shape, clip_x, clip_y, clip_width, clip_height)
+        if clipped_line is None:
+            return None
+        (line_x1, line_y1), (line_x2, line_y2) = clipped_line
+        return Shape(
+            kind=shape.kind,
+            x=min(line_x1, line_x2),
+            y=min(line_y1, line_y2),
+            width=abs(line_x2 - line_x1),
+            height=abs(line_y2 - line_y1),
+            paint=shape.paint,
+            flip_h=line_x2 < line_x1,
+            flip_v=line_y2 < line_y1,
+        )
     x1 = max(shape.x, clip_x)
     y1 = max(shape.y, clip_y)
     x2 = min(shape.x + shape.width, clip_x + clip_width)
@@ -4321,6 +4336,51 @@ def _apply_rect_clip(
         image_src_rect=shape.image_src_rect,
         rotation=shape.rotation,
     )
+
+
+def _clip_line_to_rect(
+    shape: Shape,
+    clip_x: float,
+    clip_y: float,
+    clip_width: float,
+    clip_height: float,
+) -> tuple[tuple[float, float], tuple[float, float]] | None:
+    x1 = shape.x + shape.width if shape.flip_h else shape.x
+    x2 = shape.x if shape.flip_h else shape.x + shape.width
+    y1 = shape.y + shape.height if shape.flip_v else shape.y
+    y2 = shape.y if shape.flip_v else shape.y + shape.height
+    dx = x2 - x1
+    dy = y2 - y1
+    start = 0.0
+    end = 1.0
+    left = clip_x
+    right = clip_x + clip_width
+    top = clip_y
+    bottom = clip_y + clip_height
+    for edge_delta, edge_distance in (
+        (-dx, x1 - left),
+        (dx, right - x1),
+        (-dy, y1 - top),
+        (dy, bottom - y1),
+    ):
+        if _close(edge_delta, 0):
+            if edge_distance < 0:
+                return None
+            continue
+        ratio = edge_distance / edge_delta
+        if edge_delta < 0:
+            start = max(start, ratio)
+        else:
+            end = min(end, ratio)
+        if start > end:
+            return None
+    clipped_x1 = x1 + start * dx
+    clipped_y1 = y1 + start * dy
+    clipped_x2 = x1 + end * dx
+    clipped_y2 = y1 + end * dy
+    if _close(clipped_x1, clipped_x2) and _close(clipped_y1, clipped_y2):
+        return None
+    return (clipped_x1, clipped_y1), (clipped_x2, clipped_y2)
 
 
 def _rect_clip_bounds(
@@ -4382,7 +4442,7 @@ def _clip_path_is_supported(
     clip_path = style.get("clip-path")
     if not clip_path or clip_path == "none":
         return True
-    if _local_name(element.tag) not in {"rect", "circle", "ellipse", "text", "image"}:
+    if _local_name(element.tag) not in {"rect", "circle", "ellipse", "line", "text", "image"}:
         return False
     return _rect_clip_bounds(None, style, refs, matrix) is not None or _rect_clip_path_has_object_bbox_rect(style, refs)
 

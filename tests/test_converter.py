@@ -1514,6 +1514,48 @@ def test_object_bounding_box_clip_path_clips_circle_geometry() -> None:
     assert analyze_svg(svg).unsupported_attributes == {}
 
 
+def test_rectangular_clip_path_clips_line_geometry() -> None:
+    svg = """<svg>
+      <defs><clipPath id="crop"><rect x="10" y="5" width="20" height="10"/></clipPath></defs>
+      <line x1="0" y1="0" x2="40" y2="20" stroke="#111111" stroke-width="2" clip-path="url(#crop)"/>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    root = ET.fromstring(dml)
+    shape_off = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")[1]
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert 'prst="line"' in dml
+    assert shape_off.attrib == {"x": "95250", "y": "47625"}
+    assert shape_ext.attrib == {"cx": "190500", "cy": "95250"}
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
+def test_object_bounding_box_clip_path_clips_line_geometry() -> None:
+    svg = """<svg>
+      <defs><clipPath id="crop" clipPathUnits="objectBoundingBox"><rect x=".25" y=".25" width=".5" height=".5"/></clipPath></defs>
+      <line x1="10" y1="10" x2="50" y2="30" stroke="#111111" stroke-width="2" clip-path="url(#crop)"/>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    root = ET.fromstring(dml)
+    shape_off = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")[1]
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert 'prst="line"' in dml
+    assert shape_off.attrib == {"x": "190500", "y": "142875"}
+    assert shape_ext.attrib == {"cx": "190500", "cy": "95250"}
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
+def test_rectangular_clip_path_removes_line_outside_clip() -> None:
+    svg = """<svg>
+      <defs><clipPath id="crop"><rect x="10" y="10" width="10" height="10"/></clipPath></defs>
+      <line x1="0" y1="0" x2="5" y2="5" stroke="#111111" stroke-width="2" clip-path="url(#crop)"/>
+    </svg>"""
+
+    assert "<p:sp>" not in svg_to_drawingml(svg)
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_non_box_clip_targets_remain_reported_as_unsupported() -> None:
     svg = """<svg>
       <defs><clipPath id="crop"><rect x="10" y="12" width="20" height="10"/></clipPath></defs>
