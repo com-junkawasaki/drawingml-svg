@@ -590,7 +590,22 @@ def _html_inline_style(
         _add_html_text_decoration(style, "underline")
     if tag in {"s", "strike", "del"}:
         _add_html_text_decoration(style, "line-through")
+    if tag == "sup":
+        style["baseline-shift"] = "super"
+    if tag == "sub":
+        style["baseline-shift"] = "sub"
+    if style.get("baseline-shift") is None:
+        baseline_shift = _html_inline_baseline_shift(style.get("vertical-align"))
+        if baseline_shift is not None:
+            style["baseline-shift"] = baseline_shift
     return style
+
+
+def _html_inline_baseline_shift(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    return normalized if normalized in {"super", "sub"} else None
 
 
 def _add_html_text_decoration(style: dict[str, str], decoration: str) -> None:
@@ -611,6 +626,7 @@ def _html_text_run(text: str, style: dict[str, str], scale: float, break_before:
         font_family=_font_family(style.get("font-family")),
         text_decoration=style.get("text-decoration"),
         text_decoration_style=_text_decoration_style(style.get("text-decoration-style"), style.get("text-decoration")),
+        text_baseline_shift=_baseline_shift(style.get("baseline-shift")),
     )
 
 

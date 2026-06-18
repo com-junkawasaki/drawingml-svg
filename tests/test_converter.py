@@ -1309,6 +1309,31 @@ def test_foreign_object_html_table_inline_text_decorations_convert_to_runs() -> 
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_inline_baseline_shift_converts_to_runs() -> None:
+    svg = """<svg width="180" height="50">
+      <foreignObject x="10" y="8" width="150" height="24">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table>
+            <tr>
+              <td style="color:#111827">H<sup>2</sup>O <span style="vertical-align: sub">x</span><sub>1</sub></td>
+              <td>Other</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+
+    assert "<a:tbl>" in dml
+    assert '<a:rPr sz="1600" baseline="30000">' in dml
+    assert "<a:t>2</a:t>" in dml
+    assert dml.count('baseline="-25000"') == 2
+    assert "<a:t>x</a:t>" in dml
+    assert "<a:t>1</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+
 def test_foreign_object_html_table_spans_convert_to_native_table_merges() -> None:
     svg = """<svg width="120" height="60">
       <foreignObject x="10" y="8" width="100" height="40">

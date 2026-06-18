@@ -20,6 +20,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Added DrawingML table cell border extraction for individual `lnL`/`lnR`/`lnT`/`lnB` edges, including `noFill` edges.
 - Added simple SVG `foreignObject` HTML table inline text decoration conversion.
 - Added simple SVG `foreignObject` HTML table cell padding conversion to DrawingML text insets.
+- Added simple SVG `foreignObject` HTML table inline superscript/subscript conversion.
 - Added DrawingML table cell text inset handling from `bodyPr` `lIns`/`rIns`/`tIns`/`bIns`.
 - Added DrawingML table cell text vertical anchor extraction from `bodyPr` `anchor`.
 - Added DrawingML table cell list-style paragraph alignment fallback.
