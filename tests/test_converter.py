@@ -117,6 +117,23 @@ def test_cli_alias_version_writes_installed_package_version(monkeypatch, capsys,
     assert captured.out == "drawingml-svg 0.1.0\n"
 
 
+@pytest.mark.parametrize(
+    ("executable", "command"),
+    [("svg2dml", "svg2dml"), ("dml2svg", "dml2svg"), ("drawingml-svg-analyze", "analyze")],
+)
+def test_cli_alias_help_writes_command_help(monkeypatch, capsys, executable: str, command: str) -> None:
+    monkeypatch.setattr("sys.argv", [executable, "-h"])
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main()
+
+    captured = capsys.readouterr()
+
+    assert excinfo.value.code == 0
+    assert captured.out.startswith(f"usage: drawingml-svg {command} ")
+    assert "Input file. Reads stdin when omitted." in captured.out
+
+
 def test_cli_converts_between_files_and_creates_output_parent(tmp_path) -> None:
     source = tmp_path / "input.svg"
     dml_output = tmp_path / "nested" / "shape.xml"
