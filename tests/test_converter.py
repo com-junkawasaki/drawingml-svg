@@ -1144,6 +1144,42 @@ def test_foreign_object_html_table_colgroup_widths_convert_to_native_grid() -> N
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_row_heights_convert_to_native_rows() -> None:
+    svg = """<svg width="130" height="80">
+      <foreignObject x="10" y="8" width="100" height="60">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table>
+            <tr style="height:40px">
+              <td rowspan="2">Tall</td>
+              <td>A</td>
+            </tr>
+            <tr height="20">
+              <td>B</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+
+    assert "<a:tbl>" in dml
+    assert '<a:tr h="381000">' in dml
+    assert '<a:tr h="190500">' in dml
+    assert 'rowSpan="2"' in dml
+    assert "<a:t>Tall</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+    round_trip = drawingml_to_svg(dml)
+    rects = {
+        (rect.get("x"), rect.get("y"), rect.get("width"), rect.get("height"))
+        for rect in ET.fromstring(round_trip).findall("{http://www.w3.org/2000/svg}rect")
+    }
+    assert ("10", "8", "50", "60") in rects
+    assert ("60", "8", "50", "40") in rects
+    assert ("60", "48", "50", "20") in rects
+
+
 def test_foreign_object_html_table_shorthand_styles_convert() -> None:
     svg = """<svg width="120" height="50">
       <foreignObject x="10" y="8" width="100" height="24">

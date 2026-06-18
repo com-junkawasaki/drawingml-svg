@@ -23,6 +23,8 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Added simple SVG `foreignObject` HTML table inline superscript/subscript conversion.
 - Added simple SVG `foreignObject` HTML table font-variant and letter-spacing text conversion.
 - Added simple SVG `foreignObject` HTML table `colgroup` column width conversion.
+- Added simple SVG `foreignObject` HTML table row height conversion.
+- Fixed DrawingML native table vertical merge continuation cell placement.
 - Added simple SVG text `direction="rtl"` conversion to DrawingML paragraph direction.
 - Added simple SVG `foreignObject` HTML table cell RTL text direction conversion.
 - Added DrawingML native table cell RTL paragraph direction extraction.

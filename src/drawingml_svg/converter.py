@@ -432,7 +432,10 @@ def _svg_foreign_object_table_shapes(
         return ()
     scale_x = transformed.width / width
     scale_y = transformed.height / height
-    row_height = height / len(rows)
+    row_heights = _html_table_row_heights(table, len(rows), height)
+    row_edges = [0.0]
+    for row_height in row_heights:
+        row_edges.append(row_edges[-1] + row_height)
     column_widths = _html_table_column_widths(table, column_count, width)
     column_edges = [0.0]
     for column_width in column_widths:
@@ -441,10 +444,11 @@ def _svg_foreign_object_table_shapes(
     for row_index, row in enumerate(rows):
         for column_index, cell, column_span, row_span in row:
             end_column = min(column_count, column_index + column_span)
+            end_row = min(len(rows), row_index + row_span)
             cell_x = transformed.x + column_edges[column_index] * scale_x
-            cell_y = transformed.y + row_index * row_height * scale_y
+            cell_y = transformed.y + row_edges[row_index] * scale_y
             cell_width = (column_edges[end_column] - column_edges[column_index]) * scale_x
-            cell_height = row_span * row_height * scale_y
+            cell_height = (row_edges[end_row] - row_edges[row_index]) * scale_y
             cell_style = _html_table_cell_style(element, cell, css, style)
             fill = _html_background_color(cell_style) or "#ffffff"
             stroke = _html_border_color(cell_style) or "#000000"
@@ -709,6 +713,21 @@ def _html_table_grid(table: ET.Element) -> tuple[list[list[tuple[int, ET.Element
     return rows, column_count
 
 
+def _html_table_row_heights(table: ET.Element, row_count: int, total_height: float) -> tuple[float, ...]:
+    specs: list[float | None] = []
+    for row in table.iter():
+        if _local_name(row.tag) != "tr" or not any(_local_name(cell.tag) in {"td", "th"} for cell in row):
+            continue
+        style_height = _parse_style(row.get("style", "")).get("height")
+        height = _html_table_size_value(style_height, total_height)
+        if height is None:
+            height = _html_table_size_value(row.get("height"), total_height)
+        specs.append(height)
+        if len(specs) >= row_count:
+            break
+    return _html_table_sizes(specs, row_count, total_height)
+
+
 def _html_table_column_widths(table: ET.Element, column_count: int, total_width: float) -> tuple[float, ...]:
     specs: list[float | None] = []
     for child in table:
@@ -727,32 +746,38 @@ def _html_table_column_widths(table: ET.Element, column_count: int, total_width:
                 break
         if len(specs) >= column_count:
             break
-    specs = specs[:column_count]
-    if len(specs) < column_count:
-        specs.extend([None] * (column_count - len(specs)))
-    fixed_sum = sum(width for width in specs if width is not None)
-    missing = sum(1 for width in specs if width is None)
+    return _html_table_sizes(specs, column_count, total_width)
+
+
+def _html_table_sizes(specs: list[float | None], count: int, total_size: float) -> tuple[float, ...]:
+    if count <= 0:
+        return ()
+    specs = specs[:count]
+    if len(specs) < count:
+        specs.extend([None] * (count - len(specs)))
+    fixed_sum = sum(size for size in specs if size is not None)
+    missing = sum(1 for size in specs if size is None)
     if fixed_sum <= 0:
-        return tuple(total_width / column_count for _ in range(column_count))
+        return tuple(total_size / count for _ in range(count))
     if missing:
-        fallback = (total_width - fixed_sum) / missing if fixed_sum < total_width else total_width / column_count
-        widths = tuple(width if width is not None and width > 0 else fallback for width in specs)
-        width_sum = sum(widths)
-        scale = total_width / width_sum if width_sum > 0 else 1.0
-        return tuple(width * scale for width in widths)
-    scale = total_width / fixed_sum if fixed_sum > 0 else 1.0
-    return tuple(width * scale for width in specs if width is not None)
+        fallback = (total_size - fixed_sum) / missing if fixed_sum < total_size else total_size / count
+        sizes = tuple(size if size is not None and size > 0 else fallback for size in specs)
+        size_sum = sum(sizes)
+        scale = total_size / size_sum if size_sum > 0 else 1.0
+        return tuple(size * scale for size in sizes)
+    scale = total_size / fixed_sum if fixed_sum > 0 else 1.0
+    return tuple(size * scale for size in specs if size is not None)
 
 
 def _html_table_col_width(col: ET.Element, total_width: float) -> float | None:
     style_width = _parse_style(col.get("style", "")).get("width")
-    width = _html_table_width_value(style_width, total_width)
+    width = _html_table_size_value(style_width, total_width)
     if width is not None:
         return width
-    return _html_table_width_value(col.get("width"), total_width)
+    return _html_table_size_value(col.get("width"), total_width)
 
 
-def _html_table_width_value(value: str | None, total_width: float) -> float | None:
+def _html_table_size_value(value: str | None, total_size: float) -> float | None:
     if value is None:
         return None
     stripped = value.strip().lower()
@@ -760,7 +785,7 @@ def _html_table_width_value(value: str | None, total_width: float) -> float | No
         return None
     if stripped.endswith("%"):
         percent = _num(stripped[:-1], math.nan)
-        return max(0.0, total_width * percent / 100) if math.isfinite(percent) else None
+        return max(0.0, total_size * percent / 100) if math.isfinite(percent) else None
     width = _html_first_length(stripped)
     return max(0.0, width) if width is not None else None
 
@@ -1014,6 +1039,9 @@ def _dml_table_shapes(element: ET.Element) -> Iterable[Shape]:
                 break
             column_span, row_span = _dml_table_cell_span(cell)
             if _dml_table_cell_is_merge_continuation(cell):
+                if _dml_bool_attr(cell, "vMerge") and not _dml_bool_attr(cell, "hMerge"):
+                    left += sum(grid_widths[column_index : column_index + column_span]) * scale_x
+                    column_index += column_span
                 continue
             end_column = min(len(grid_widths), column_index + column_span)
             end_row = min(len(row_heights), row_index + row_span)
