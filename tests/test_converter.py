@@ -1482,10 +1482,42 @@ def test_object_bounding_box_clip_path_clips_image_geometry() -> None:
     assert analyze_svg(svg).unsupported_attributes == {}
 
 
-def test_non_rectangular_clip_targets_remain_reported_as_unsupported() -> None:
+def test_rectangular_clip_path_clips_ellipse_geometry() -> None:
+    svg = """<svg>
+      <defs><clipPath id="crop"><rect x="12" y="16" width="18" height="10"/></clipPath></defs>
+      <ellipse cx="20" cy="20" rx="15" ry="10" fill="#dbeafe" clip-path="url(#crop)"/>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    root = ET.fromstring(dml)
+    shape_off = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")[1]
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert 'prst="ellipse"' in dml
+    assert shape_off.attrib == {"x": "114300", "y": "152400"}
+    assert shape_ext.attrib == {"cx": "171450", "cy": "95250"}
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
+def test_object_bounding_box_clip_path_clips_circle_geometry() -> None:
+    svg = """<svg>
+      <defs><clipPath id="crop" clipPathUnits="objectBoundingBox"><rect x=".25" y=".2" width=".5" height=".4"/></clipPath></defs>
+      <circle cx="50" cy="50" r="20" fill="#dbeafe" clip-path="url(#crop)"/>
+    </svg>"""
+    dml = svg_to_drawingml(svg)
+
+    root = ET.fromstring(dml)
+    shape_off = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}off")[1]
+    shape_ext = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}ext")[1]
+    assert 'prst="ellipse"' in dml
+    assert shape_off.attrib == {"x": "381000", "y": "361950"}
+    assert shape_ext.attrib == {"cx": "190500", "cy": "152400"}
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
+def test_non_box_clip_targets_remain_reported_as_unsupported() -> None:
     svg = """<svg>
       <defs><clipPath id="crop"><rect x="10" y="12" width="20" height="10"/></clipPath></defs>
-      <ellipse cx="20" cy="20" rx="15" ry="10" clip-path="url(#crop)"/>
+      <polygon points="0,0 20,0 10,20" clip-path="url(#crop)"/>
     </svg>"""
 
     assert analyze_svg(svg).unsupported_attributes == {"clip-path": 1}
