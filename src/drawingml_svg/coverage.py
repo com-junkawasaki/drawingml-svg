@@ -749,7 +749,7 @@ def _text_decoration_color_has_no_effect(
     paint = _svg_paint(style, refs, default_fill=True, css=css, viewport=viewport)
     if paint.fill in {None, "none"} or (paint.fill_alpha is not None and paint.fill_alpha < 1):
         return False
-    color_value = style.get("color") if value.strip().lower() == "currentcolor" else value
+    color_value = style.get("color", "#000000") if value.strip().lower() == "currentcolor" else value
     decoration_color, decoration_alpha = _parse_color(color_value)
     return decoration_color == paint.fill and decoration_alpha in {None, 1.0}
 

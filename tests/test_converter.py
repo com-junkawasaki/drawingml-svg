@@ -1350,6 +1350,10 @@ def test_text_decoration_color_and_non_solid_style_are_reported_when_visible() -
       <text x="0" y="100" fill="#111111" text-decoration-line="underline" text-decoration-color="#111111">Same</text>
       <text x="0" y="120" color="#111111" fill="currentColor" text-decoration-line="underline"
         text-decoration-color="currentColor">Current</text>
+      <text x="0" y="140" fill="currentColor" text-decoration-line="underline"
+        text-decoration-color="currentColor">Default current</text>
+      <text x="0" y="160" fill="#000000" text-decoration-line="underline"
+        text-decoration-color="currentColor">Default black</text>
     </svg>"""
 
     assert analyze_svg(svg).unsupported_attributes == {
