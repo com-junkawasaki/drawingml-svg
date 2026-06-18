@@ -325,6 +325,8 @@ def _inspect_attributes(
             continue
         if attr in {"marker", "marker-start", "marker-end"} and _marker_is_supported(element, style, refs):
             continue
+        if attr == "marker-mid" and _marker_mid_has_no_effect(element, specified_style):
+            continue
         if attr == "font-variant" and _font_variant_is_supported(specified_style):
             continue
         if attr == "font-feature-settings" and _css_none_or_normal_has_no_effect(specified_style, attr):
@@ -1089,6 +1091,21 @@ def _attribute_has_no_effect(attr: str, style: dict[str, str]) -> bool:
 
 def _clip_rule_has_no_effect(ancestors: tuple[ET.Element, ...]) -> bool:
     return not any(_local_name(ancestor.tag) == "clipPath" for ancestor in ancestors)
+
+
+def _marker_mid_has_no_effect(element: ET.Element, style: dict[str, str]) -> bool:
+    value = style.get("marker-mid")
+    if value is None or value.strip().lower() in {"", "none"}:
+        return False
+    tag = _local_name(element.tag)
+    if tag == "line":
+        return True
+    if tag == "polyline":
+        return len(_parse_points(element.get("points", ""))) <= 2
+    if tag == "path":
+        path = _parse_linear_path(element.get("d", ""))
+        return bool(path and len(path[0]) <= 2)
+    return False
 
 
 def _path_length_has_no_effect(

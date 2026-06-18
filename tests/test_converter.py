@@ -5604,6 +5604,18 @@ def test_marker_shorthand_with_midpoints_is_reported_as_unsupported() -> None:
     assert analyze_svg(svg).unsupported_attributes == {"marker": 1}
 
 
+def test_marker_mid_without_interior_vertices_is_noop() -> None:
+    svg = """<svg>
+      <defs><marker id="arrow" viewBox="0 0 10 10"><path d="M0 0 L10 5 L0 10 Z"/></marker></defs>
+      <line x1="0" y1="0" x2="10" y2="0" stroke="#111111" marker-mid="url(#arrow)"/>
+      <polyline points="0,4 10,4" fill="none" stroke="#111111" marker-mid="url(#arrow)"/>
+      <path d="M0 8 L10 8" fill="none" stroke="#111111" marker-mid="url(#arrow)"/>
+      <polyline points="0,12 10,12 10,20" fill="none" stroke="#111111" marker-mid="url(#arrow)"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {"marker-mid": 1}
+
+
 def test_data_uri_image_converts_to_picture_and_round_trips() -> None:
     svg = f'<svg><image href="{PNG_DATA_URI}" x="10" y="12" width="20" height="16"/></svg>'
     dml = svg_to_drawingml(svg)
