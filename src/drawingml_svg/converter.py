@@ -6,7 +6,7 @@ import colorsys
 import math
 import re
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Callable, Iterable
 from xml.dom import minidom
 from xml.etree import ElementTree as ET
 
@@ -1048,10 +1048,11 @@ def _dml_paint(sp_pr: ET.Element) -> Paint:
 
 
 def _dml_text_paint(element: ET.Element, sp_pr: ET.Element) -> Paint:
-    r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
+    r_pr = _dml_text_run_properties(element)
+    def_r_pr = _dml_default_text_run_properties(element)
     ln = r_pr.find(qn(NS_A, "ln")) if r_pr is not None else None
     shape_paint = _dml_paint(sp_pr)
-    fill, fill_alpha = _dml_text_fill(r_pr, shape_paint)
+    fill, fill_alpha = _dml_text_fill(r_pr, def_r_pr, shape_paint)
     return Paint(
         fill=fill,
         stroke=_dml_line_color(ln) if ln is not None else shape_paint.stroke,
@@ -1065,21 +1066,37 @@ def _dml_text_paint(element: ET.Element, sp_pr: ET.Element) -> Paint:
     )
 
 
-def _dml_text_fill(r_pr: ET.Element | None, shape_paint: Paint) -> tuple[str | None, float | None]:
-    if r_pr is None:
+def _dml_text_fill(
+    r_pr: ET.Element | None,
+    def_r_pr: ET.Element | None,
+    shape_paint: Paint,
+) -> tuple[str | None, float | None]:
+    source = _dml_text_fill_properties(r_pr)
+    if source is None:
+        source = _dml_text_fill_properties(def_r_pr)
+    if source is None:
         return shape_paint.fill, shape_paint.fill_alpha
-    if r_pr.find(qn(NS_A, "noFill")) is not None:
+    if source.find(qn(NS_A, "noFill")) is not None:
         return "none", None
-    solid_fill = r_pr.find(qn(NS_A, "solidFill"))
+    solid_fill = source.find(qn(NS_A, "solidFill"))
     if solid_fill is not None:
         return _dml_color(solid_fill), _dml_alpha(solid_fill)
-    grad_fill = r_pr.find(qn(NS_A, "gradFill"))
+    grad_fill = source.find(qn(NS_A, "gradFill"))
     if grad_fill is not None:
         return _dml_gradient_fill(grad_fill)
-    pattern_fill = r_pr.find(qn(NS_A, "pattFill"))
+    pattern_fill = source.find(qn(NS_A, "pattFill"))
     if pattern_fill is not None:
         return _dml_pattern_fill(pattern_fill)
     return shape_paint.fill, shape_paint.fill_alpha
+
+
+def _dml_text_fill_properties(element: ET.Element | None) -> ET.Element | None:
+    if element is None:
+        return None
+    for tag in ("noFill", "solidFill", "gradFill", "pattFill"):
+        if element.find(qn(NS_A, tag)) is not None:
+            return element
+    return None
 
 
 def _append_dml_paint(parent: ET.Element, paint: Paint) -> None:
@@ -1848,15 +1865,36 @@ def _dml_paragraph_text(paragraph: ET.Element) -> str:
     return "".join(parts)
 
 
+def _dml_text_run_properties(element: ET.Element) -> ET.Element | None:
+    return element.find(f".//{qn(NS_A, 'rPr')}")
+
+
+def _dml_default_text_run_properties(element: ET.Element) -> ET.Element | None:
+    return element.find(f".//{qn(NS_A, 'defRPr')}")
+
+
+def _dml_text_property(
+    element: ET.Element,
+    predicate: Callable[[ET.Element], bool],
+) -> ET.Element | None:
+    r_pr = _dml_text_run_properties(element)
+    if r_pr is not None and predicate(r_pr):
+        return r_pr
+    def_r_pr = _dml_default_text_run_properties(element)
+    if def_r_pr is not None and predicate(def_r_pr):
+        return def_r_pr
+    return None
+
+
 def _dml_font_weight(element: ET.Element) -> str | None:
-    r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
+    r_pr = _dml_text_property(element, lambda item: item.get("b") is not None)
     if r_pr is not None and r_pr.get("b") in {"1", "true"}:
         return "bold"
     return None
 
 
 def _dml_font_size(element: ET.Element) -> float | None:
-    r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
+    r_pr = _dml_text_property(element, lambda item: item.get("sz") is not None)
     if r_pr is not None and r_pr.get("sz"):
         try:
             return int(r_pr.get("sz", "0")) / 100
@@ -1866,21 +1904,23 @@ def _dml_font_size(element: ET.Element) -> float | None:
 
 
 def _dml_font_style(element: ET.Element) -> str | None:
-    r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
+    r_pr = _dml_text_property(element, lambda item: item.get("i") is not None)
     if r_pr is not None and r_pr.get("i") in {"1", "true"}:
         return "italic"
     return None
 
 
 def _dml_font_family(element: ET.Element) -> str | None:
-    latin = element.find(f".//{qn(NS_A, 'rPr')}/{qn(NS_A, 'latin')}")
-    if latin is not None:
-        return latin.get("typeface")
+    r_pr = _dml_text_property(element, lambda item: item.find(qn(NS_A, "latin")) is not None)
+    if r_pr is not None:
+        latin = r_pr.find(qn(NS_A, "latin"))
+        if latin is not None:
+            return latin.get("typeface")
     return None
 
 
 def _dml_font_variant(element: ET.Element) -> str | None:
-    r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
+    r_pr = _dml_text_property(element, lambda item: item.get("cap") is not None)
     if r_pr is not None:
         if r_pr.get("cap") == "small":
             return "small-caps"
@@ -1890,7 +1930,7 @@ def _dml_font_variant(element: ET.Element) -> str | None:
 
 
 def _dml_letter_spacing(element: ET.Element) -> float | None:
-    r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
+    r_pr = _dml_text_property(element, lambda item: item.get("spc") is not None)
     if r_pr is None or r_pr.get("spc") is None:
         return None
     try:
@@ -1900,7 +1940,7 @@ def _dml_letter_spacing(element: ET.Element) -> float | None:
 
 
 def _dml_text_decoration(element: ET.Element) -> str | None:
-    r_pr = element.find(f".//{qn(NS_A, 'rPr')}")
+    r_pr = _dml_text_property(element, lambda item: item.get("u") is not None or item.get("strike") is not None)
     if r_pr is None:
         return None
     values = []
