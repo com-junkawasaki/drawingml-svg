@@ -1176,6 +1176,53 @@ def test_foreign_object_html_table_colgroup_backgrounds_convert_to_cell_fills() 
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_background_layers_convert_to_cell_fills() -> None:
+    svg = """<svg width="180" height="70">
+      <style>
+        table.layers { background:#f8fafc; }
+        table.layers col.hot { background-color:#dbeafe; }
+        table.layers tbody tr.total { background:#fef3c7; }
+      </style>
+      <foreignObject x="10" y="8" width="150" height="40">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table class="layers">
+            <colgroup style="background:#dcfce7">
+              <col class="hot"/>
+              <col/>
+            </colgroup>
+            <col/>
+            <tbody>
+              <tr class="total">
+                <td>Row</td>
+                <td style="background:#fee2e2">Cell</td>
+                <td>Table row</td>
+              </tr>
+              <tr>
+                <td>Col</td>
+                <td>Group</td>
+                <td>Table</td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+    root = ET.fromstring(dml)
+    ns = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+    fills = [
+        color.get("val")
+        for color in root.findall(".//a:tcPr/a:solidFill/a:srgbClr", ns)
+    ]
+
+    assert "<a:tbl>" in dml
+    assert fills == ["FEF3C7", "FEE2E2", "FEF3C7", "DBEAFE", "DCFCE7", "F8FAFC"]
+    assert "<a:t>Row</a:t>" in dml
+    assert "<a:t>Table</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+
 def test_foreign_object_html_table_header_cells_default_to_center_alignment() -> None:
     svg = """<svg width="160" height="60">
       <foreignObject x="10" y="8" width="130" height="36">

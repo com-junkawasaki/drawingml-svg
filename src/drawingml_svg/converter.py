@@ -445,7 +445,7 @@ def _svg_foreign_object_table_shapes(
     column_edges = [0.0]
     for column_width in column_widths:
         column_edges.append(column_edges[-1] + column_width)
-    column_styles = _html_table_column_styles(element, table, column_count, css, style)
+    column_backgrounds = _html_table_column_backgrounds(element, table, column_count, css)
     shapes: list[Shape] = []
     for row_index, row in enumerate(rows):
         for column_index, cell, column_span, row_span in row:
@@ -456,8 +456,13 @@ def _svg_foreign_object_table_shapes(
             cell_width = (column_edges[end_column] - column_edges[column_index]) * scale_x
             cell_height = (row_edges[end_row] - row_edges[row_index]) * scale_y
             cell_style = _html_table_cell_style(element, cell, css, style)
-            column_style = column_styles[column_index] if column_index < len(column_styles) else {}
-            fill, fill_alpha = _html_table_cell_background_fill(cell_style, column_style)
+            fill, fill_alpha = _html_table_cell_background_fill(
+                element,
+                table,
+                cell,
+                column_backgrounds[column_index] if column_index < len(column_backgrounds) else (),
+                css,
+            )
             stroke, stroke_alpha = _html_border_stroke(cell_style)
             shapes.append(
                 Shape(
@@ -771,58 +776,41 @@ def _html_table_column_widths(table: ET.Element, column_count: int, total_width:
     return _html_table_sizes(specs, column_count, total_width)
 
 
-def _html_table_column_styles(
+def _html_table_column_backgrounds(
     foreign_object: ET.Element,
     table: ET.Element,
     column_count: int,
     css: list[CssRule],
-    inherited_style: dict[str, str],
-) -> tuple[dict[str, str], ...]:
-    styles: list[dict[str, str]] = []
-    table_path = _element_path(foreign_object, table)
-    table_style = inherited_style
-    if table_path:
-        for index, node in enumerate(table_path[1:], start=1):
-            parent = table_path[index - 1]
-            table_style = _computed_style(
-                node,
-                css,
-                table_style,
-                tuple(table_path[:index]),
-                _previous_element_siblings(parent, node),
-            )
-    for col in _html_table_col_elements(table):
-        path = _element_path(foreign_object, col)
-        col_style = table_style
-        if path:
-            start_index = len(table_path) if table_path else 1
-            for index, node in enumerate(path[start_index:], start=start_index):
-                parent = path[index - 1]
-                col_style = _computed_style(
-                    node,
-                    css,
-                    col_style,
-                    tuple(path[:index]),
-                    _previous_element_siblings(parent, node),
-                )
-        span = max(1, _dml_int(col.get("span"), 1) or 1)
-        styles.extend(dict(col_style) for _ in range(span))
-        if len(styles) >= column_count:
-            break
-    if len(styles) < column_count:
-        styles.extend({} for _ in range(column_count - len(styles)))
-    return tuple(styles[:column_count])
-
-
-def _html_table_col_elements(table: ET.Element) -> tuple[ET.Element, ...]:
-    columns: list[ET.Element] = []
+) -> tuple[tuple[tuple[str, float | None], ...], ...]:
+    backgrounds: list[tuple[tuple[str, float | None], ...]] = []
     for child in table:
         tag = _local_name(child.tag)
         if tag == "colgroup":
-            columns.extend(col for col in child if _local_name(col.tag) == "col")
+            colgroup_fill = _html_element_background_fill(foreign_object, child, css)
+            col_elements = [col for col in child if _local_name(col.tag) == "col"]
         elif tag == "col":
-            columns.append(child)
-    return tuple(columns)
+            colgroup_fill = (None, None)
+            col_elements = [child]
+        else:
+            continue
+        for col in col_elements:
+            layers = tuple(
+                (fill, alpha)
+                for fill, alpha in (
+                    _html_element_background_fill(foreign_object, col, css),
+                    colgroup_fill,
+                )
+                if fill is not None
+            )
+            span = max(1, _dml_int(col.get("span"), 1) or 1)
+            backgrounds.extend(layers for _ in range(span))
+            if len(backgrounds) >= column_count:
+                break
+        if len(backgrounds) >= column_count:
+            break
+    if len(backgrounds) < column_count:
+        backgrounds.extend(() for _ in range(column_count - len(backgrounds)))
+    return tuple(backgrounds[:column_count])
 
 
 def _html_table_element_size(table: ET.Element, axis: str, total_size: float) -> float | None:
@@ -969,13 +957,48 @@ def _html_background_fill(style: dict[str, str]) -> tuple[str | None, float | No
 
 
 def _html_table_cell_background_fill(
-    cell_style: dict[str, str],
-    column_style: dict[str, str],
+    foreign_object: ET.Element,
+    table: ET.Element,
+    cell: ET.Element,
+    column_backgrounds: tuple[tuple[str, float | None], ...],
+    css: list[CssRule],
 ) -> tuple[str | None, float | None]:
-    fill, alpha = _html_background_fill(cell_style)
-    if fill is not None:
-        return fill, alpha
-    return _html_background_fill(column_style)
+    path = _element_path(foreign_object, cell)
+    row = next((ancestor for ancestor in reversed(path[:-1]) if _local_name(ancestor.tag) == "tr"), None)
+    row_group = next(
+        (
+            ancestor
+            for ancestor in reversed(path[:-1])
+            if _local_name(ancestor.tag) in {"thead", "tbody", "tfoot"}
+        ),
+        None,
+    )
+    candidates = [
+        _html_element_background_fill(foreign_object, element, css)
+        for element in (cell, row, row_group)
+        if element is not None
+    ]
+    candidates.extend(column_backgrounds)
+    candidates.append(_html_element_background_fill(foreign_object, table, css))
+    for fill, alpha in candidates:
+        if fill is not None:
+            return fill, alpha
+    return None, None
+
+
+def _html_element_background_fill(
+    foreign_object: ET.Element,
+    element: ET.Element,
+    css: list[CssRule],
+) -> tuple[str | None, float | None]:
+    path = _element_path(foreign_object, element)
+    if path:
+        ancestors = tuple(path[:-1])
+        previous_siblings = _previous_element_siblings(path[-2], element) if len(path) > 1 else ()
+    else:
+        ancestors = (foreign_object,)
+        previous_siblings = ()
+    return _html_background_fill(_computed_style(element, css, {}, ancestors, previous_siblings))
 
 
 def _html_border_color(style: dict[str, str]) -> str | None:
