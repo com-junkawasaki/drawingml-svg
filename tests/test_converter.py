@@ -5649,6 +5649,21 @@ def test_analyze_svg_reports_gradient_href_references_from_visible_descendants()
     }
 
 
+def test_analyze_svg_reports_gradient_href_references_from_use_descendants() -> None:
+    svg = """<svg>
+      <defs>
+        <linearGradient id="missing" href="#missing-base"/>
+        <g id="glyph"><rect width="10" height="8" fill="url(#missing)"/></g>
+      </defs>
+      <use href="#glyph"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {
+        "fill:paint-server": 1,
+        "href": 1,
+    }
+
+
 def test_analyze_svg_reports_missing_paint_server() -> None:
     report = analyze_svg(
         """<svg>
@@ -5660,6 +5675,36 @@ def test_analyze_svg_reports_missing_paint_server() -> None:
     )
 
     assert report.unsupported_attributes == {"fill:paint-server": 1, "stroke:paint-server": 1}
+
+
+def test_analyze_svg_reports_missing_paint_server_on_use_descendants() -> None:
+    svg = """<svg>
+      <defs>
+        <g id="glyph">
+          <rect width="10" height="8" fill="url(#missing)"/>
+          <line x1="0" y1="0" x2="10" y2="0" stroke="url(#missing-stroke)"/>
+          <rect x="12" width="10" height="8" fill="url(#hidden)" fill-opacity="0"/>
+          <line x1="12" y1="0" x2="22" y2="0" stroke="url(#hidden-stroke)" stroke-width="0"/>
+        </g>
+      </defs>
+      <use href="#glyph"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {"fill:paint-server": 1, "stroke:paint-server": 1}
+
+
+def test_analyze_svg_reports_inherited_paint_server_on_use_descendants_once() -> None:
+    inherited = """<svg>
+      <defs><g id="glyph"><rect width="10" height="8"/></g></defs>
+      <use href="#glyph" fill="url(#missing)"/>
+    </svg>"""
+    overridden = """<svg>
+      <defs><g id="glyph"><rect width="10" height="8" fill="#111111"/></g></defs>
+      <use href="#glyph" fill="url(#missing)"/>
+    </svg>"""
+
+    assert analyze_svg(inherited).unsupported_attributes == {"fill:paint-server": 1}
+    assert analyze_svg(overridden).unsupported_attributes == {}
 
 
 def test_analyze_svg_ignores_missing_paint_server_on_invisible_channels() -> None:
@@ -5743,6 +5788,20 @@ def test_analyze_svg_reports_pattern_without_paint_fallback() -> None:
     svg = """<svg>
       <defs><pattern id="empty" width="4" height="4"/></defs>
       <rect width="10" height="8" fill="url(#empty)" stroke="url(#empty)"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {"fill:pattern": 1, "stroke:pattern": 1}
+
+
+def test_analyze_svg_reports_pattern_without_paint_fallback_on_use_descendants() -> None:
+    svg = """<svg>
+      <defs>
+        <pattern id="empty" width="4" height="4"/>
+        <g id="glyph">
+          <rect width="10" height="8" fill="url(#empty)" stroke="url(#empty)"/>
+        </g>
+      </defs>
+      <use href="#glyph"/>
     </svg>"""
 
     assert analyze_svg(svg).unsupported_attributes == {"fill:pattern": 1, "stroke:pattern": 1}

@@ -575,24 +575,116 @@ def _inspect_attributes(
             and _paint_server_is_referenced(element, css, refs, ancestors, viewport)
         ):
             stats.add_unsupported_attribute("href")
+    tag = _local_name(element.tag)
+    if tag == "use":
+        _inspect_use_referenced_paint_servers(element, style, refs, css, viewport, stats)
+    else:
+        _inspect_visible_paint_server_channels(element, style, refs, css, viewport, stats)
+
+
+def _inspect_visible_paint_server_channels(
+    element: ET.Element,
+    style: dict[str, str],
+    refs: dict[str, ET.Element],
+    css: list[CssRule],
+    viewport: tuple[float, float],
+    stats: _CoverageStats,
+) -> None:
     for attr in ("fill", "stroke"):
         value = style.get(attr)
-        if value:
-            ref = _url_ref(value)
-            if ref is not None and not ref[1].strip():
-                if not _paint_channel_is_visible(element, style, viewport, attr):
-                    continue
-                paint_server_tag = _local_name(refs.get(ref[0], ET.Element("")).tag)
-                if paint_server_tag == "pattern":
-                    color, _ = _paint_server_value(refs.get(ref[0]), refs, style.get("color"), css)
-                    if not color:
-                        stats.add_unsupported_attribute(f"{attr}:pattern")
-                elif paint_server_tag in {"linearGradient", "radialGradient"}:
-                    color, _ = _paint_server_value(refs.get(ref[0]), refs, style.get("color"), css)
-                    if not color:
-                        stats.add_unsupported_attribute(f"{attr}:paint-server")
-                else:
-                    stats.add_unsupported_attribute(f"{attr}:paint-server")
+        if not value:
+            continue
+        ref = _url_ref(value)
+        if ref is None or ref[1].strip() or not _paint_channel_is_visible(element, style, viewport, attr):
+            continue
+        paint_server_tag = _local_name(refs.get(ref[0], ET.Element("")).tag)
+        if paint_server_tag == "pattern":
+            color, _ = _paint_server_value(refs.get(ref[0]), refs, style.get("color"), css)
+            if not color:
+                stats.add_unsupported_attribute(f"{attr}:pattern")
+        elif paint_server_tag in {"linearGradient", "radialGradient"}:
+            color, _ = _paint_server_value(refs.get(ref[0]), refs, style.get("color"), css)
+            if not color:
+                stats.add_unsupported_attribute(f"{attr}:paint-server")
+        else:
+            stats.add_unsupported_attribute(f"{attr}:paint-server")
+
+
+def _inspect_use_referenced_paint_servers(
+    element: ET.Element,
+    style: dict[str, str],
+    refs: dict[str, ET.Element],
+    css: list[CssRule],
+    viewport: tuple[float, float],
+    stats: _CoverageStats,
+    ref_stack: frozenset[str] = frozenset(),
+) -> None:
+    ref_context = _use_reference_context(element, refs, viewport, ref_stack)
+    if ref_context is None:
+        return
+    ref, ref_viewport, next_stack = ref_context
+    _inspect_subtree_paint_servers(ref, css, refs, style, (element,), ref_viewport, stats, (), next_stack)
+
+
+def _inspect_subtree_paint_servers(
+    element: ET.Element,
+    css: list[CssRule],
+    refs: dict[str, ET.Element],
+    inherited_style: dict[str, str],
+    ancestors: tuple[ET.Element, ...],
+    viewport: tuple[float, float],
+    stats: _CoverageStats,
+    previous_siblings: tuple[ET.Element, ...] = (),
+    ref_stack: frozenset[str] = frozenset(),
+) -> None:
+    style = _computed_style(element, css, inherited_style, ancestors, previous_siblings)
+    if _is_display_none(style) or _is_visibility_hidden(style):
+        return
+    tag = _local_name(element.tag)
+    if tag == "use":
+        _inspect_use_referenced_paint_servers(element, style, refs, css, viewport, stats, ref_stack)
+        return
+    if tag not in {"defs", "linearGradient", "pattern", "radialGradient", "stop"} and not _has_non_rendering_geometry(
+        element, style, viewport
+    ):
+        _inspect_visible_paint_server_channels(element, style, refs, css, viewport, stats)
+    child_viewport = viewport
+    if tag == "svg" and ancestors:
+        child_viewport = _viewport_size(
+            element,
+            _optional_length(element.get("width"), "x", viewport),
+            _optional_length(element.get("height"), "y", viewport),
+        )
+    if tag == "switch":
+        selected = _switch_selected_child(element)
+        if selected is None:
+            return
+        _inspect_subtree_paint_servers(
+            selected,
+            css,
+            refs,
+            style,
+            ancestors + (element,),
+            child_viewport,
+            stats,
+            _previous_element_siblings(element, selected),
+            ref_stack,
+        )
+        return
+    previous_children: list[ET.Element] = []
+    for child in element:
+        _inspect_subtree_paint_servers(
+            child,
+            css,
+            refs,
+            style,
+            ancestors + (element,),
+            child_viewport,
+            stats,
+            tuple(previous_children),
+            ref_stack,
+        )
+        previous_children.append(child)
 
 
 def _paint_channel_is_visible(
