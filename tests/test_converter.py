@@ -3137,12 +3137,30 @@ def test_drawingml_additional_star_presets_round_trip_to_svg_polygons() -> None:
           <a:solidFill><a:srgbClr val="FEE2E2"/></a:solidFill>
         </p:spPr>
       </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="six point star"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="666750" y="190500"/><a:ext cx="190500" cy="190500"/></a:xfrm>
+          <a:prstGeom prst="star6"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="DCFCE7"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="5" name="ten point star"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="952500" y="190500"/><a:ext cx="190500" cy="190500"/></a:xfrm>
+          <a:prstGeom prst="star10"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="FEF3C7"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
     </p:spTree>"""
 
     svg = drawingml_to_svg(dml)
 
     assert '<polygon fill="#dbeafe" points="20,20 22,28 30,30 22,32 20,40 18,32 10,30 18,28"/>' in svg
     assert '<polygon fill="#fee2e2" points="50,20 51.6,26.4 57,23 53.6,28.4 60,30 53.6,31.6 57,37 51.6,33.6 50,40 48.4,33.6 43,37 46.4,31.6 40,30 46.4,28.4 43,23 48.4,26.4"/>' in svg
+    assert '<polygon fill="#dcfce7" points="80,20 82,26.6 88.6,25 84,30 88.6,35 82,33.4 80,40 78,33.4 71.4,35 76,30 71.4,25 78,26.6"/>' in svg
+    assert '<polygon fill="#fef3c7" points="110,20 111.2,27.2 115.8,22 113.6,28.6 120,27 114,31 119.6,33 112.8,32.6 113,39 110,34 107,39 107.2,32.6 100.4,33 106,31 100,27 106.4,28.6 104.2,22 108.8,27.2"/>' in svg
 
 
 def test_drawingml_math_symbol_presets_round_trip_to_svg_polygons() -> None:

@@ -2938,6 +2938,21 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
             (left, y + height * 0.38),
             (x + width * 0.38, y + height * 0.38),
         ]
+    if kind == "star6":
+        return [
+            (center_x, top),
+            (x + width * 0.6, y + height * 0.33),
+            (x + width * 0.93, quarter_y),
+            (x + width * 0.7, center_y),
+            (x + width * 0.93, three_quarter_y),
+            (x + width * 0.6, y + height * 0.67),
+            (center_x, bottom),
+            (x + width * 0.4, y + height * 0.67),
+            (x + width * 0.07, three_quarter_y),
+            (x + width * 0.3, center_y),
+            (x + width * 0.07, quarter_y),
+            (x + width * 0.4, y + height * 0.33),
+        ]
     if kind == "star8":
         return [
             (center_x, top),
@@ -2956,6 +2971,27 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
             (x + width * 0.32, y + height * 0.42),
             (x + width * 0.15, y + height * 0.15),
             (x + width * 0.42, y + height * 0.32),
+        ]
+    if kind == "star10":
+        return [
+            (center_x, top),
+            (x + width * 0.56, y + height * 0.36),
+            (x + width * 0.79, y + height * 0.1),
+            (x + width * 0.68, y + height * 0.43),
+            (right, y + height * 0.35),
+            (x + width * 0.7, y + height * 0.55),
+            (x + width * 0.98, y + height * 0.65),
+            (x + width * 0.64, y + height * 0.63),
+            (x + width * 0.65, y + height * 0.95),
+            (center_x, y + height * 0.7),
+            (x + width * 0.35, y + height * 0.95),
+            (x + width * 0.36, y + height * 0.63),
+            (x + width * 0.02, y + height * 0.65),
+            (x + width * 0.3, y + height * 0.55),
+            (left, y + height * 0.35),
+            (x + width * 0.32, y + height * 0.43),
+            (x + width * 0.21, y + height * 0.1),
+            (x + width * 0.44, y + height * 0.36),
         ]
     if kind == "rightArrow":
         return [(left, quarter_y), (arrow_head_x, quarter_y), (arrow_head_x, top), (right, center_y), (arrow_head_x, bottom), (arrow_head_x, three_quarter_y), (left, three_quarter_y)]
