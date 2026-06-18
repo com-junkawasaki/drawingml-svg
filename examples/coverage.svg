@@ -63,6 +63,7 @@
     <text x="112" y="154" textLength="58" lengthAdjust=" SPACINGANDGLYPHS " letter-spacing=" NORMAL " font-size="8" fill="#0f172a">wide text</text>
     <text x="222" y="154" word-spacing="5" letter-spacing=" NORMAL " text-transform="uppercase" font-size="8" fill="#0f172a">word gap</text>
     <text x="302" y="154" text-anchor=" MIDDLE " dominant-baseline=" CENTRAL " font-size="7" fill="#0f172a">anchor</text>
+    <text x="236" y="144" font-size="7" fill="#0f172a">run <tspan text-anchor="end">anchor</tspan></text>
     <text x="302" y="144" font-weight=" BOLD " font-style=" oblique 10deg " font-size="7" fill="#0f172a">style</text>
     <text x="302" y="126" font-family="'A,B Display', Arial, sans-serif" font-size="6" fill="#0f172a">family</text>
     <text x="284" y="116" kerning="4" font-kerning="none" font-size="7" fill="#0f172a">A</text>

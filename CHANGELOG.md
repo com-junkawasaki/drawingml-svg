@@ -26,6 +26,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Refined analyzer handling for `pathLength` on shapes without a visible dashed stroke.
 - Refined analyzer handling for default `currentColor` text decoration colors.
 - Refined analyzer handling for SVG kerning attributes on single-character text.
+- Refined analyzer handling for run-level `tspan` `text-anchor` values that do not create a positioned text chunk.
 
 ## 0.1.0
 

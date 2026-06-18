@@ -6027,7 +6027,6 @@ def test_tspan_run_level_styling_converts_to_separate_drawingml_runs() -> None:
     </svg>"""
 
     assert analyze_svg(svg).unsupported_attributes == {
-        "text-anchor": 1,
         "word-spacing": 1,
     }
     dml = svg_to_drawingml(svg)
@@ -6042,6 +6041,12 @@ def test_tspan_run_level_styling_converts_to_separate_drawingml_runs() -> None:
     assert '<a:latin typeface="Arial"/>' in dml
     assert '<a:t>Wide gap</a:t>' in dml
     assert '<a:t>KEPT</a:t>' in dml
+
+
+def test_positioned_tspan_text_anchor_is_reported_when_not_first_text_chunk() -> None:
+    svg = '<svg><text x="0" y="20">Lead<tspan x="50" y="20" text-anchor="middle">Chunk</tspan></text></svg>'
+
+    assert analyze_svg(svg).unsupported_attributes == {"text-anchor": 1}
 
 
 def test_font_weight_and_style_values_are_normalized() -> None:

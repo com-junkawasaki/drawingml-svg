@@ -463,11 +463,15 @@ def _inspect_tspan_run_attributes(
 ) -> None:
     if _local_name(element.tag) != "tspan":
         return
-    if specified_style.get("text-anchor") is not None and not _first_positioned_tspan_text_anchor_is_supported(
-        element,
-        specified_style,
-        ancestors,
-        previous_siblings,
+    if (
+        specified_style.get("text-anchor") is not None
+        and not _first_positioned_tspan_text_anchor_is_supported(
+            element,
+            specified_style,
+            ancestors,
+            previous_siblings,
+        )
+        and not _tspan_text_anchor_has_no_effect(element, specified_style)
     ):
         stats.add_unsupported_attribute("text-anchor")
     if _word_spacing_is_supported(element, specified_style):
@@ -495,6 +499,15 @@ def _first_positioned_tspan_text_anchor_is_supported(
     if element.get("x") is None or element.get("y") is None:
         return False
     return not any(_local_name(sibling.tag) == "tspan" and "".join(sibling.itertext()).strip() for sibling in previous_siblings)
+
+
+def _tspan_text_anchor_has_no_effect(element: ET.Element, specified_style: dict[str, str]) -> bool:
+    if _local_name(element.tag) != "tspan":
+        return False
+    value = specified_style.get("text-anchor")
+    if value is None or value.strip().lower() not in {"", "start", "middle", "end"}:
+        return False
+    return element.get("x") is None and element.get("y") is None
 
 
 def _first_positioned_tspan_baseline_is_supported(
