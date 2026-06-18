@@ -54,6 +54,8 @@ def _normalize_argv(argv: list[str] | None) -> list[str] | None:
         return argv
     invoked_as = Path(sys.argv[0]).name
     if invoked_as in {"svg2dml", "dml2svg", "drawingml-svg-analyze"}:
+        if sys.argv[1:] in (["--version"], ["-h"], ["--help"]):
+            return sys.argv[1:]
         if invoked_as == "drawingml-svg-analyze":
             invoked_as = "analyze"
         return [invoked_as, *sys.argv[1:]]
