@@ -563,6 +563,8 @@ def _inspect_attributes(
         if value:
             ref = _url_ref(value)
             if ref is not None and not ref[1].strip():
+                if not _paint_channel_is_visible(style, viewport, attr):
+                    continue
                 paint_server_tag = _local_name(refs.get(ref[0], ET.Element("")).tag)
                 if paint_server_tag == "pattern":
                     color, _ = _paint_server_value(refs.get(ref[0]), refs, style.get("color"), css)
@@ -574,6 +576,21 @@ def _inspect_attributes(
                         stats.add_unsupported_attribute(f"{attr}:paint-server")
                 else:
                     stats.add_unsupported_attribute(f"{attr}:paint-server")
+
+
+def _paint_channel_is_visible(
+    style: dict[str, str],
+    viewport: tuple[float, float],
+    attr: str,
+) -> bool:
+    if attr == "fill":
+        return not _alpha_is_zero(style.get("opacity")) and not _alpha_is_zero(style.get("fill-opacity"))
+    stroke_width = _optional_length(style.get("stroke-width"), "diag", viewport)
+    return (
+        not _alpha_is_zero(style.get("opacity"))
+        and not _alpha_is_zero(style.get("stroke-opacity"))
+        and stroke_width != 0
+    )
 
 
 def _inspect_tspan_run_attributes(

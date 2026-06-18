@@ -5372,6 +5372,17 @@ def test_analyze_svg_reports_missing_paint_server() -> None:
     assert report.unsupported_attributes == {"fill:paint-server": 1, "stroke:paint-server": 1}
 
 
+def test_analyze_svg_ignores_missing_paint_server_on_invisible_channels() -> None:
+    svg = """<svg>
+      <rect width="10" height="8" fill="url(#missing)" opacity="0"/>
+      <rect width="10" height="8" fill="url(#missing)" fill-opacity="0"/>
+      <line x1="0" y1="0" x2="10" y2="0" stroke="url(#missing)" stroke-width="0"/>
+      <line x1="0" y1="2" x2="10" y2="2" stroke="url(#missing)" stroke-opacity="0"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_pattern_paint_server_falls_back_to_representative_color() -> None:
     svg = """<svg>
       <style>.dot { fill: currentcolor; }</style>
@@ -5417,6 +5428,16 @@ def test_analyze_svg_reports_pattern_without_paint_fallback() -> None:
     </svg>"""
 
     assert analyze_svg(svg).unsupported_attributes == {"fill:pattern": 1, "stroke:pattern": 1}
+
+
+def test_analyze_svg_ignores_pattern_without_fallback_on_invisible_channels() -> None:
+    svg = """<svg>
+      <defs><pattern id="empty" width="4" height="4"/></defs>
+      <rect width="10" height="8" fill="url(#empty)" opacity="0"/>
+      <line x1="0" y1="0" x2="10" y2="0" stroke="url(#empty)" stroke-width="0"/>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {}
 
 
 def test_paint_server_fallback_color_is_used_when_server_is_missing() -> None:
