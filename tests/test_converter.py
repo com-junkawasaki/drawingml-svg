@@ -1203,6 +1203,29 @@ def test_foreign_object_html_table_cell_alignment_converts() -> None:
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_cell_rtl_direction_converts() -> None:
+    svg = """<svg width="150" height="50">
+      <foreignObject x="10" y="8" width="120" height="24">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table>
+            <tr>
+              <td style="direction:rtl">RTL</td>
+              <td direction="rtl">Attr</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+
+    assert "<a:tbl>" in dml
+    assert dml.count('<a:pPr rtl="1"/>') == 2
+    assert "<a:t>RTL</a:t>" in dml
+    assert "<a:t>Attr</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+
 def test_foreign_object_html_table_cell_padding_converts_to_text_insets() -> None:
     svg = """<svg width="150" height="60">
       <style>

@@ -480,6 +480,7 @@ def _svg_foreign_object_table_shapes(
                         font_variant=_font_variant(cell_style.get("font-variant")),
                         text_anchor=_html_text_anchor(cell_style),
                         text_baseline=_html_vertical_align(cell_style) or "middle",
+                        text_direction=_text_direction(cell_style.get("direction")),
                         letter_spacing=_svg_letter_spacing(cell_style, (0.0, 0.0)),
                         text_runs=_html_table_cell_text_runs(cell, css, cell_style, max(scale_x, scale_y)),
                     )
