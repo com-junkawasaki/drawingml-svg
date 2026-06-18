@@ -2983,6 +2983,51 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
             (left, y + height * 0.8),
             (left, y + height * 0.2),
         ]
+    if kind == "funnel":
+        return [
+            (left, top),
+            (right, top),
+            (x + width * 0.62, y + height * 0.58),
+            (x + width * 0.62, bottom),
+            (x + width * 0.38, bottom),
+            (x + width * 0.38, y + height * 0.58),
+        ]
+    if kind == "wedgeRectCallout":
+        return [
+            (left, top),
+            (right, top),
+            (right, y + height * 0.68),
+            (x + width * 0.62, y + height * 0.68),
+            (x + width * 0.42, bottom),
+            (x + width * 0.48, y + height * 0.68),
+            (left, y + height * 0.68),
+        ]
+    if kind == "wedgeRoundRectCallout":
+        return [
+            (x + width * 0.12, top),
+            (x + width * 0.88, top),
+            (right, y + height * 0.12),
+            (right, y + height * 0.68),
+            (x + width * 0.62, y + height * 0.68),
+            (x + width * 0.42, bottom),
+            (x + width * 0.48, y + height * 0.68),
+            (x + width * 0.12, y + height * 0.68),
+            (left, y + height * 0.56),
+            (left, y + height * 0.12),
+        ]
+    if kind == "wedgeEllipseCallout":
+        return [
+            (center_x, top),
+            (x + width * 0.85, y + height * 0.08),
+            (right, y + height * 0.34),
+            (x + width * 0.88, y + height * 0.58),
+            (x + width * 0.62, y + height * 0.68),
+            (x + width * 0.42, bottom),
+            (x + width * 0.48, y + height * 0.68),
+            (x + width * 0.18, y + height * 0.64),
+            (left, y + height * 0.38),
+            (x + width * 0.12, y + height * 0.12),
+        ]
     if kind == "ribbon":
         return [
             (left, y + height * 0.18),

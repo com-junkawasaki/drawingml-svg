@@ -3051,6 +3051,51 @@ def test_drawingml_ribbon_presets_round_trip_to_svg_polygons() -> None:
     assert '<polygon fill="#dcfce7" points="110,20 117.2,24.4 117.2,21.6 142.8,21.6 142.8,24.4 150,20 146,30 150,40 142.8,35.6 142.8,38.4 117.2,38.4 117.2,35.6 110,40 114,30"/>' in svg
 
 
+def test_drawingml_callout_presets_round_trip_to_svg_polygons() -> None:
+    dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="funnel"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="95250" y="190500"/><a:ext cx="381000" cy="381000"/></a:xfrm>
+          <a:prstGeom prst="funnel"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="DBEAFE"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="wedge rect callout"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="571500" y="190500"/><a:ext cx="381000" cy="381000"/></a:xfrm>
+          <a:prstGeom prst="wedgeRectCallout"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="FEE2E2"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="wedge round rect callout"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="1047750" y="190500"/><a:ext cx="381000" cy="381000"/></a:xfrm>
+          <a:prstGeom prst="wedgeRoundRectCallout"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="DCFCE7"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="5" name="wedge ellipse callout"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="1524000" y="190500"/><a:ext cx="381000" cy="381000"/></a:xfrm>
+          <a:prstGeom prst="wedgeEllipseCallout"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="FEF3C7"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>"""
+
+    svg = drawingml_to_svg(dml)
+
+    assert '<polygon fill="#dbeafe" points="10,20 50,20 34.8,43.2 34.8,60 25.2,60 25.2,43.2"/>' in svg
+    assert '<polygon fill="#fee2e2" points="60,20 100,20 100,47.2 84.8,47.2 76.8,60 79.2,47.2 60,47.2"/>' in svg
+    assert '<polygon fill="#dcfce7" points="114.8,20 145.2,20 150,24.8 150,47.2 134.8,47.2 126.8,60 129.2,47.2 114.8,47.2 110,42.4 110,24.8"/>' in svg
+    assert '<polygon fill="#fef3c7" points="180,20 194,23.2 200,33.6 195.2,43.2 184.8,47.2 176.8,60 179.2,47.2 167.2,45.6 160,35.2 164.8,24.8"/>' in svg
+
+
 def test_drawingml_bracket_presets_round_trip_to_svg_polygons() -> None:
     dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
