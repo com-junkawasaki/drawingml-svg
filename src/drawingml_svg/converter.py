@@ -1135,6 +1135,8 @@ def _line_points(shape: Shape) -> dict[str, str]:
 
 def _extract_svg_table(shapes: list[Shape]) -> tuple[SvgTable | None, list[Shape]]:
     rects = [shape for shape in shapes if _svg_table_rect_candidate(shape)]
+    if not rects:
+        return _extract_svg_line_table(shapes)
     if len(rects) < 4 or len(rects) != sum(1 for shape in shapes if shape.kind == "rect"):
         return None, shapes
 
@@ -1238,6 +1240,129 @@ def _svg_table_rect_candidate(shape: Shape) -> bool:
 
 def _svg_table_text_candidate(shape: Shape) -> bool:
     return shape.kind == "text" and shape.rotation is None and not shape.flip_h and not shape.flip_v
+
+
+def _extract_svg_line_table(shapes: list[Shape]) -> tuple[SvgTable | None, list[Shape]]:
+    if any(shape.kind not in {"line", "text"} for shape in shapes):
+        return None, shapes
+    lines = [shape for shape in shapes if shape.kind == "line"]
+    if len(lines) < 4 or any(not _svg_table_line_candidate(line) for line in lines):
+        return None, shapes
+    verticals = [line for line in lines if _svg_table_vertical_line(line)]
+    horizontals = [line for line in lines if _svg_table_horizontal_line(line)]
+    if len(verticals) < 3 or len(horizontals) < 3 or len(verticals) + len(horizontals) != len(lines):
+        return None, shapes
+
+    x_edges = _svg_table_edges((line.x, line.x) for line in verticals)
+    y_edges = _svg_table_edges((line.y, line.y) for line in horizontals)
+    if len(x_edges) < 3 or len(y_edges) < 3:
+        return None, shapes
+    x_min, x_max = x_edges[0], x_edges[-1]
+    y_min, y_max = y_edges[0], y_edges[-1]
+    if not _svg_table_lines_cover_edges(verticals, x_edges, y_min, y_max, "vertical"):
+        return None, shapes
+    if not _svg_table_lines_cover_edges(horizontals, y_edges, x_min, x_max, "horizontal"):
+        return None, shapes
+
+    columns = tuple(x_edges[index + 1] - x_edges[index] for index in range(len(x_edges) - 1))
+    rows = tuple(y_edges[index + 1] - y_edges[index] for index in range(len(y_edges) - 1))
+    if any(size <= 0 for size in columns + rows):
+        return None, shapes
+
+    paint = _svg_table_line_grid_paint(lines)
+    text_map: dict[tuple[int, int], Shape] = {}
+    consumed_texts: set[int] = set()
+    for index, shape in enumerate(shapes):
+        if not _svg_table_text_candidate(shape):
+            continue
+        center_x = shape.x + shape.width / 2
+        center_y = shape.y + shape.height / 2
+        column = _svg_table_interval_index(x_edges, center_x)
+        row = _svg_table_interval_index(y_edges, center_y)
+        if row is None or column is None:
+            continue
+        key = (row, column)
+        if key in text_map:
+            return None, shapes
+        text_map[key] = shape
+        consumed_texts.add(index)
+
+    cells = tuple(
+        tuple(
+            SvgTableCell(
+                Shape(
+                    "rect",
+                    x_edges[column],
+                    y_edges[row],
+                    columns[column],
+                    rows[row],
+                    paint,
+                ),
+                text_map.get((row, column)),
+            )
+            for column in range(len(columns))
+        )
+        for row in range(len(rows))
+    )
+    table = SvgTable(x_min, y_min, columns, rows, cells)
+    consumed_lines = {id(line) for line in lines}
+    remaining = [shape for index, shape in enumerate(shapes) if id(shape) not in consumed_lines and index not in consumed_texts]
+    return table, remaining
+
+
+def _svg_table_line_candidate(shape: Shape) -> bool:
+    return (
+        shape.rotation is None
+        and shape.paint.stroke not in {None, "none"}
+        and (_svg_table_vertical_line(shape) or _svg_table_horizontal_line(shape))
+    )
+
+
+def _svg_table_vertical_line(shape: Shape) -> bool:
+    return _close(shape.width, 0.0, 1e-6) and shape.height > 0
+
+
+def _svg_table_horizontal_line(shape: Shape) -> bool:
+    return _close(shape.height, 0.0, 1e-6) and shape.width > 0
+
+
+def _svg_table_lines_cover_edges(
+    lines: list[Shape],
+    edges: tuple[float, ...],
+    start: float,
+    end: float,
+    orientation: str,
+) -> bool:
+    for edge in edges:
+        if not any(_svg_table_line_covers_edge(line, edge, start, end, orientation) for line in lines):
+            return False
+    return True
+
+
+def _svg_table_line_covers_edge(
+    line: Shape,
+    edge: float,
+    start: float,
+    end: float,
+    orientation: str,
+) -> bool:
+    if orientation == "vertical":
+        return _close(line.x, edge, 1e-6) and _close(line.y, start, 1e-6) and _close(line.y + line.height, end, 1e-6)
+    return _close(line.y, edge, 1e-6) and _close(line.x, start, 1e-6) and _close(line.x + line.width, end, 1e-6)
+
+
+def _svg_table_line_grid_paint(lines: list[Shape]) -> Paint:
+    line = next((shape for shape in lines if shape.paint.stroke not in {None, "none"}), lines[0])
+    return Paint(
+        fill="none",
+        stroke=line.paint.stroke,
+        stroke_width=line.paint.stroke_width,
+        stroke_alpha=line.paint.stroke_alpha,
+        stroke_linecap=line.paint.stroke_linecap,
+        stroke_linejoin=line.paint.stroke_linejoin,
+        stroke_dasharray=line.paint.stroke_dasharray,
+        stroke_miterlimit=line.paint.stroke_miterlimit,
+    )
 
 
 def _svg_table_edges(ranges: Iterable[tuple[float, float]]) -> tuple[float, ...]:
