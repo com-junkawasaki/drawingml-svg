@@ -13,14 +13,21 @@ keywords = ["drawingml", "svg", "ooxml", "converter"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
   "Topic :: Multimedia :: Graphics :: Editors :: Vector-Based",
   "Topic :: Text Processing :: Markup :: XML",
 ]
+
+[project.urls]
+Homepage = "https://github.com/com-junkawasaki/drawingml-svg"
+Repository = "https://github.com/com-junkawasaki/drawingml-svg"
+Issues = "https://github.com/com-junkawasaki/drawingml-svg/issues"
 
 [project.scripts]
 drawingml-svg = "drawingml_svg.cli:main"

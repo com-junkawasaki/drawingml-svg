@@ -1,7 +1,9 @@
 import base64
 import io
+import tomllib
 import zipfile
 from importlib import resources
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import pytest
@@ -22,6 +24,18 @@ def _webp_data_uri(width: int, height: int) -> str:
 
 def test_package_declares_inline_types() -> None:
     assert resources.files(drawingml_svg).joinpath("py.typed").is_file()
+
+
+def test_project_metadata_exposes_public_repository_links() -> None:
+    metadata = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
+    project = metadata["project"]
+
+    assert "Typing :: Typed" in project["classifiers"]
+    assert project["urls"] == {
+        "Homepage": "https://github.com/com-junkawasaki/drawingml-svg",
+        "Repository": "https://github.com/com-junkawasaki/drawingml-svg",
+        "Issues": "https://github.com/com-junkawasaki/drawingml-svg/issues",
+    }
 
 
 def test_cli_analyze_writes_json_to_stdout(tmp_path, capsys) -> None:
