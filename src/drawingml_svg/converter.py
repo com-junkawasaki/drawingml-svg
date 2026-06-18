@@ -476,14 +476,16 @@ def _dml_table_shapes(element: ET.Element) -> Iterable[Shape]:
             shapes.extend(_dml_table_cell_border_shapes(cell, left, top, cell_width, cell_height))
             text = _dml_table_cell_text(cell)
             if text:
-                inset = min(cell_width, cell_height, 4.0)
+                left_inset, top_inset, right_inset, bottom_inset = _dml_table_cell_text_insets(
+                    cell, scale_x, scale_y
+                )
                 shapes.append(
                     Shape(
                         "text",
-                        left + inset,
-                        top,
-                        max(0.0, cell_width - inset * 2),
-                        cell_height,
+                        left + left_inset,
+                        top + top_inset,
+                        max(0.0, cell_width - left_inset - right_inset),
+                        max(0.0, cell_height - top_inset - bottom_inset),
                         _dml_table_cell_text_paint(cell),
                         text=text,
                         font_size=_dml_font_size(cell),
@@ -498,6 +500,11 @@ def _dml_table_shapes(element: ET.Element) -> Iterable[Shape]:
             column_index = end_column
         top += row_height * scale_y
     return tuple(shapes)
+
+
+def _dml_table_cell_text_insets(cell: ET.Element, scale_x: float, scale_y: float) -> tuple[float, float, float, float]:
+    left, top, right, bottom = _dml_text_insets(cell)
+    return left * scale_x, top * scale_y, right * scale_x, bottom * scale_y
 
 
 def _dml_table_cell_span(cell: ET.Element) -> tuple[int, int]:

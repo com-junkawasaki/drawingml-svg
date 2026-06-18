@@ -7529,3 +7529,31 @@ def test_drawingml_native_table_preserves_individual_cell_borders() -> None:
     assert '<line fill="none" stroke="#2563eb" stroke-width="1" x1="0" y1="0" x2="40" y2="0"/>' in svg
     assert '<line fill="none" stroke="#16a34a" stroke-width="3" x1="0" y1="20" x2="40" y2="20"/>' in svg
     assert 'x1="40" y1="0" x2="40" y2="20"' not in svg
+
+
+def test_drawingml_native_table_cell_text_insets_adjust_svg_text_position() -> None:
+    dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+      <p:graphicFrame>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="381000" cy="190500"/></p:xfrm>
+        <a:graphic><a:graphicData>
+          <a:tbl>
+            <a:tblGrid><a:gridCol w="381000"/></a:tblGrid>
+            <a:tr h="190500">
+              <a:tc>
+                <a:txBody>
+                  <a:bodyPr lIns="19050" tIns="28575" rIns="95250" bIns="19050"/>
+                  <a:lstStyle/>
+                  <a:p><a:r><a:rPr sz="1000"/><a:t>Inset</a:t></a:r></a:p>
+                </a:txBody>
+                <a:tcPr/>
+              </a:tc>
+            </a:tr>
+          </a:tbl>
+        </a:graphicData></a:graphic>
+      </p:graphicFrame>
+    </p:spTree>"""
+
+    svg = drawingml_to_svg(dml)
+
+    assert '<text fill="#000000" stroke="none" x="2" y="10.5" font-size="10" dominant-baseline="middle">Inset</text>' in svg
