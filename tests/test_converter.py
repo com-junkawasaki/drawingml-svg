@@ -1230,6 +1230,28 @@ def test_foreign_object_html_table_cell_padding_converts_to_text_insets() -> Non
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_cell_text_variant_and_spacing_convert() -> None:
+    svg = """<svg width="150" height="50">
+      <foreignObject x="10" y="8" width="120" height="24">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table>
+            <tr>
+              <td style="font-variant:all-small-caps;letter-spacing:1.5px">Caps</td>
+              <td>Other</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+
+    assert "<a:tbl>" in dml
+    assert '<a:rPr sz="1600" cap="all" spc="112">' in dml
+    assert "<a:t>Caps</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+
 def test_foreign_object_html_table_cell_line_breaks_convert() -> None:
     svg = """<svg width="120" height="70">
       <foreignObject x="10" y="8" width="90" height="45">
@@ -1261,7 +1283,7 @@ def test_foreign_object_html_table_inline_text_styles_convert_to_runs() -> None:
         <body xmlns="http://www.w3.org/1999/xhtml">
           <table>
             <tr>
-              <td style="color:#111827">Plain <strong>Bold</strong> <em>Italic</em> <span style="color:#dc2626;font-size:18px">Red</span></td>
+              <td style="color:#111827">Plain <strong>Bold</strong> <em>Italic</em> <span style="color:#dc2626;font-size:18px;font-variant:small-caps;letter-spacing:2px">Red</span></td>
               <td>Other</td>
             </tr>
           </table>
@@ -1277,7 +1299,7 @@ def test_foreign_object_html_table_inline_text_styles_convert_to_runs() -> None:
     assert "<a:t>Bold</a:t>" in dml
     assert '<a:rPr sz="1600" i="1">' in dml
     assert "<a:t>Italic</a:t>" in dml
-    assert '<a:rPr sz="1800">' in dml
+    assert '<a:rPr sz="1800" cap="small" spc="150">' in dml
     assert 'val="DC2626"' in dml
     assert "<a:t>Red</a:t>" in dml
     assert analyze_svg(svg).unsupported_elements == {}

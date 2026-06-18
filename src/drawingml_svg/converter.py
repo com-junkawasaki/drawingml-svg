@@ -475,8 +475,10 @@ def _svg_foreign_object_table_shapes(
                         font_weight=cell_style.get("font-weight") or ("bold" if _local_name(cell.tag) == "th" else None),
                         font_style=cell_style.get("font-style"),
                         font_family=_font_family(cell_style.get("font-family")),
+                        font_variant=_font_variant(cell_style.get("font-variant")),
                         text_anchor=_html_text_anchor(cell_style),
                         text_baseline=_html_vertical_align(cell_style) or "middle",
+                        letter_spacing=_svg_letter_spacing(cell_style, (0.0, 0.0)),
                         text_runs=_html_table_cell_text_runs(cell, css, cell_style, max(scale_x, scale_y)),
                     )
                 )
@@ -624,9 +626,11 @@ def _html_text_run(text: str, style: dict[str, str], scale: float, break_before:
         font_weight=style.get("font-weight"),
         font_style=style.get("font-style"),
         font_family=_font_family(style.get("font-family")),
+        font_variant=_font_variant(style.get("font-variant")),
         text_decoration=style.get("text-decoration"),
         text_decoration_style=_text_decoration_style(style.get("text-decoration-style"), style.get("text-decoration")),
         text_baseline_shift=_baseline_shift(style.get("baseline-shift")),
+        letter_spacing=_svg_letter_spacing(style, (0.0, 0.0)),
     )
 
 
