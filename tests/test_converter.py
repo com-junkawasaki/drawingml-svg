@@ -2486,6 +2486,31 @@ def test_analyze_svg_ignores_fill_rule_without_visible_fill() -> None:
     assert analyze_svg(svg).unsupported_attributes == {}
 
 
+def test_analyze_svg_ignores_inherited_fill_rule_without_visible_fill() -> None:
+    svg = """<svg>
+      <g fill-rule="evenodd"/>
+      <g fill-rule="evenodd">
+        <path d="M0 0 H10 V10 Z" fill="none" stroke="#111111"/>
+      </g>
+      <g fill-rule="evenodd" visibility="hidden">
+        <path d="M20 0 H30 V10 Z" fill="#111111"/>
+      </g>
+      <g fill="none">
+        <g fill-rule="evenodd">
+          <path d="M40 0 H50 V10 Z" stroke="#111111"/>
+        </g>
+      </g>
+    </svg>"""
+
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
+def test_analyze_svg_reports_inherited_fill_rule_with_visible_fill() -> None:
+    svg = '<svg><g fill-rule="evenodd"><path d="M0 0 H10 V10 Z" fill="#111111"/></g></svg>'
+
+    assert analyze_svg(svg).unsupported_attributes == {"fill-rule": 1}
+
+
 def test_analyze_svg_reports_fill_rule_when_fill_is_visible() -> None:
     svg = '<svg><path d="M0 0 H10 V10 Z" fill="#111111" fill-rule="evenodd"/></svg>'
 

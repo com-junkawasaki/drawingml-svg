@@ -31,6 +31,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Refined analyzer handling for marker-only `paint-order` changes that have no visible effect without markers.
 - Refined analyzer handling for inherited group markers when visible descendants convert to DrawingML line arrows.
 - Refined analyzer handling for inherited `marker-mid` values without visible interior vertices.
+- Refined analyzer handling for inherited SVG `fill-rule` values when descendants have no visible fill.
 - Refined analyzer handling for default SVG `isolation="auto"` values.
 - Refined analyzer handling for group-level clipping and effect attributes when the subtree has no visible rendering.
 - Refined analyzer handling for `text-decoration-color` values that match the visible text fill.

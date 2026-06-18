@@ -390,7 +390,7 @@ def _inspect_attributes(
             element, refs, css
         ):
             continue
-        if attr == "fill-rule" and _fill_rule_has_no_effect(element, style, refs, css, viewport):
+        if attr == "fill-rule" and _fill_rule_has_no_effect(element, style, refs, css, ancestors, viewport):
             continue
         if attr in {"clip-path", "filter", "isolation", "mask", "mix-blend-mode"} and not _subtree_has_visible_rendering(
             element,
@@ -718,6 +718,66 @@ def _subtree_has_visible_rendering(
             ancestors + (element,),
             child_viewport,
             tuple(previous_children),
+        ):
+            return True
+        previous_children.append(child)
+    return False
+
+
+def _subtree_has_visible_fill(
+    element: ET.Element,
+    css: list[CssRule],
+    refs: dict[str, ET.Element],
+    style: dict[str, str],
+    ancestors: tuple[ET.Element, ...],
+    viewport: tuple[float, float],
+) -> bool:
+    if _is_display_none(style):
+        return False
+    tag = _local_name(element.tag)
+    if (
+        not _is_visibility_hidden(style)
+        and tag in {"circle", "ellipse", "path", "polygon", "polyline", "rect", "text", "tspan"}
+        and not _has_non_rendering_geometry(element, style, viewport)
+        and _has_visible_fill(element, style, refs, css, viewport)
+    ):
+        return True
+    child_viewport = viewport
+    if tag == "svg" and ancestors:
+        child_viewport = _viewport_size(
+            element,
+            _optional_length(element.get("width"), "x", viewport),
+            _optional_length(element.get("height"), "y", viewport),
+        )
+    if tag == "switch":
+        selected = _switch_selected_child(element)
+        if selected is None:
+            return False
+        selected_style = _computed_style(
+            selected,
+            css,
+            style,
+            ancestors + (element,),
+            _previous_element_siblings(element, selected),
+        )
+        return _subtree_has_visible_fill(
+            selected,
+            css,
+            refs,
+            selected_style,
+            ancestors + (element,),
+            child_viewport,
+        )
+    previous_children: list[ET.Element] = []
+    for child in element:
+        child_style = _computed_style(child, css, style, ancestors + (element,), tuple(previous_children))
+        if _subtree_has_visible_fill(
+            child,
+            css,
+            refs,
+            child_style,
+            ancestors + (element,),
+            child_viewport,
         ):
             return True
         previous_children.append(child)
@@ -1469,13 +1529,27 @@ def _fill_rule_has_no_effect(
     style: dict[str, str],
     refs: dict[str, ET.Element],
     css: list[CssRule],
+    ancestors: tuple[ET.Element, ...],
     viewport: tuple[float, float],
 ) -> bool:
     value = style.get("fill-rule")
     if value is None:
         return False
-    paint = _svg_paint(style, refs, default_fill=_local_name(element.tag) != "line", css=css, viewport=viewport)
-    return paint.fill in {None, "none"}
+    return not _subtree_has_visible_fill(element, css, refs, style, ancestors, viewport)
+
+
+def _has_visible_fill(
+    element: ET.Element,
+    style: dict[str, str],
+    refs: dict[str, ET.Element],
+    css: list[CssRule],
+    viewport: tuple[float, float],
+) -> bool:
+    tag = _local_name(element.tag)
+    if tag in {"text", "tspan"} and not _svg_text_content(element):
+        return False
+    paint = _svg_paint(style, refs, default_fill=tag != "line", css=css, viewport=viewport)
+    return paint.fill not in {None, "none"}
 
 
 def _stroke_dashoffset_has_no_effect(style: dict[str, str], viewport: tuple[float, float]) -> bool:
