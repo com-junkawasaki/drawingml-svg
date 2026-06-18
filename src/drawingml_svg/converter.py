@@ -2835,6 +2835,24 @@ def _regular_star_points(points: int, x: float, y: float, width: float, height: 
     ]
 
 
+def _ellipse_arc_points(
+    center_x: float,
+    center_y: float,
+    radius_x: float,
+    radius_y: float,
+    start_degrees: float,
+    end_degrees: float,
+    segments: int = 12,
+) -> list[tuple[float, float]]:
+    return [
+        (
+            center_x + math.cos(math.radians(start_degrees + (end_degrees - start_degrees) * index / segments)) * radius_x,
+            center_y + math.sin(math.radians(start_degrees + (end_degrees - start_degrees) * index / segments)) * radius_y,
+        )
+        for index in range(segments + 1)
+    ]
+
+
 def _dml_preset_points(kind: str, x: float, y: float, width: float, height: float) -> list[tuple[float, float]]:
     if width <= 0 or height <= 0:
         return []
@@ -2909,6 +2927,12 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
             (left, three_quarter_y),
             (left, quarter_y),
         ]
+    if kind == "pie":
+        return [(center_x, center_y), *_ellipse_arc_points(center_x, center_y, width / 2, height / 2, -90, 0)]
+    if kind == "blockArc":
+        outer = _ellipse_arc_points(center_x, center_y, width / 2, height / 2, -90, 0)
+        inner = _ellipse_arc_points(center_x, center_y, width * 0.28, height * 0.28, 0, -90)
+        return [*outer, *inner]
     if kind == "decagon":
         return _regular_polygon_points(10, x, y, width, height)
     if kind == "dodecagon":
