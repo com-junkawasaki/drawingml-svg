@@ -330,7 +330,7 @@ def _inspect_attributes(
             specified_style, attr
         ):
             continue
-        if attr == "kerning" and _css_auto_or_normal_has_no_effect(specified_style, attr):
+        if attr == "kerning" and _kerning_has_no_effect(specified_style):
             continue
         if attr in {"gradientTransform", "gradientUnits", "spreadMethod"} and _gradient_fallback_is_supported(
             element, refs, css
@@ -670,6 +670,16 @@ def _glyph_orientation_has_no_effect(style: dict[str, str], attr: str) -> bool:
         return False
     normalized = value.strip().lower()
     return normalized in {"", "auto", "0", "0deg", "0grad", "0rad", "0turn"}
+
+
+def _kerning_has_no_effect(style: dict[str, str]) -> bool:
+    value = style.get("kerning")
+    if value is None:
+        return False
+    normalized = value.strip().lower()
+    if normalized in {"", "auto", "normal"}:
+        return True
+    return _optional_length(value, "x", (0.0, 0.0)) == 0
 
 
 def _baseline_shift_has_no_effect(style: dict[str, str]) -> bool:

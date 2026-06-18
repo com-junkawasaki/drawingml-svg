@@ -55,7 +55,7 @@
       <tspan>Coverage</tspan>
       <tspan x="160" dy="24" text-transform="uppercase" fill="#dc2626" fill-opacity=".85" font-weight="700" font-style="italic" text-decoration-line="underline" baseline-shift="sub">fixture</tspan>
     </text>
-    <text x="96" y="66" dx="4" dy="2" rotate="3" letter-spacing="2px" font-variant="small-caps" xml:space="preserve" font-size="9" fill="#334155">  spaced  </text>
+    <text x="96" y="66" dx="4" dy="2" rotate="3" letter-spacing="2px" kerning="0" font-variant="small-caps" xml:space="preserve" font-size="9" fill="#334155">  spaced  </text>
     <text x="30" y="72" rotate=".25turn" font-size="6" fill="#0f172a">turn</text>
     <text font-size="7" fill="#0f172a"><tspan x="252" y="66" text-anchor="middle" dominant-baseline="middle">tspan anchor</tspan></text>
     <text x="302" y="134" text-transform=" NORMAL " font-size="7" fill="#0f172a">MiXeD</text>

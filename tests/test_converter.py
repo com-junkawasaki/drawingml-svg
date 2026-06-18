@@ -1439,6 +1439,7 @@ def test_unconverted_text_direction_and_typography_attributes_are_reported() -> 
         alignment-baseline="hanging" dominant-baseline="middle" glyph-orientation-vertical="0deg"
         glyph-orientation-horizontal="0" kerning="auto" font-kerning="normal"
         font-feature-settings="normal" font-variation-settings="normal">Noop</text>
+      <text x="0" y="140" kerning="0px">Zero kerning</text>
     </svg>"""
 
     assert analyze_svg(svg).unsupported_attributes == {
