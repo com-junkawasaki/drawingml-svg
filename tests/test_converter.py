@@ -2074,6 +2074,47 @@ def test_drawingml_run_properties_override_default_run_properties() -> None:
     assert 'fill="#334455"' not in svg
 
 
+def test_drawingml_non_latin_typefaces_fall_back_to_svg_font_family() -> None:
+    dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="text"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="0"/><a:ext cx="762000" cy="571500"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr/><a:lstStyle/>
+          <a:p>
+            <a:pPr><a:defRPr sz="1200"><a:ea typeface="Yu Gothic"/></a:defRPr></a:pPr>
+            <a:r><a:t>East Asian</a:t></a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="text"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="0" y="666750"/><a:ext cx="762000" cy="571500"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr/><a:lstStyle/>
+          <a:p>
+            <a:pPr><a:defRPr sz="1200"><a:cs typeface="Arial Unicode MS"/></a:defRPr></a:pPr>
+            <a:r><a:rPr><a:sym typeface="Wingdings"/></a:rPr><a:t>Symbol</a:t></a:r>
+          </a:p>
+        </p:txBody>
+      </p:sp>
+    </p:spTree>"""
+
+    svg = drawingml_to_svg(dml)
+
+    assert 'font-family="Yu Gothic"' in svg
+    assert 'font-family="Wingdings"' in svg
+    assert 'font-family="Arial Unicode MS"' not in svg
+    assert analyze_svg(svg).unsupported_attributes == {}
+
+
 def test_drawingml_default_run_outline_falls_back_to_svg_text_stroke() -> None:
     dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">

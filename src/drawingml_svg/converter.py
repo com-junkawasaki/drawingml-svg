@@ -2014,11 +2014,21 @@ def _dml_font_style(element: ET.Element) -> str | None:
 
 
 def _dml_font_family(element: ET.Element) -> str | None:
-    r_pr = _dml_text_property(element, lambda item: item.find(qn(NS_A, "latin")) is not None)
+    r_pr = _dml_text_property(element, _dml_has_typeface)
     if r_pr is not None:
-        latin = r_pr.find(qn(NS_A, "latin"))
-        if latin is not None:
-            return latin.get("typeface")
+        return _dml_typeface(r_pr)
+    return None
+
+
+def _dml_has_typeface(element: ET.Element) -> bool:
+    return _dml_typeface(element) is not None
+
+
+def _dml_typeface(element: ET.Element) -> str | None:
+    for tag in ("latin", "ea", "cs", "sym"):
+        font = element.find(qn(NS_A, tag))
+        if font is not None and font.get("typeface"):
+            return font.get("typeface")
     return None
 
 
