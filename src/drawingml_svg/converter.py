@@ -2874,6 +2874,8 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
         return [(x + width * 0.15, top), (right, top), (right, bottom), (x + width * 0.15, bottom), (left, center_y)]
     if kind == "flowChartDisplay":
         return [(left, top), (x + width * 0.8, top), (right, center_y), (x + width * 0.8, bottom), (left, bottom), (x + width * 0.15, center_y)]
+    if kind in {"flowChartOr", "flowChartSummingJunction"}:
+        return _regular_polygon_points(12, x, y, width, height)
     if kind == "pentagon":
         return [(center_x, top), (right, y + height * 0.38), (x + width * 0.81, bottom), (x + width * 0.19, bottom), (left, y + height * 0.38)]
     if kind in {"hexagon", "flowChartPreparation"}:
