@@ -2906,6 +2906,32 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
         return [(right, top), (left, top), (left, bottom), (right, bottom), (right, three_quarter_y), (quarter_x, three_quarter_y), (quarter_x, quarter_y), (right, quarter_y)]
     if kind == "rightBracket":
         return [(left, top), (right, top), (right, bottom), (left, bottom), (left, three_quarter_y), (three_quarter_x, three_quarter_y), (three_quarter_x, quarter_y), (left, quarter_y)]
+    if kind == "leftBrace":
+        return [
+            (right, top),
+            (center_x, top),
+            (quarter_x, quarter_y),
+            (center_x, center_y),
+            (quarter_x, three_quarter_y),
+            (center_x, bottom),
+            (right, bottom),
+            (three_quarter_x, three_quarter_y),
+            (right, center_y),
+            (three_quarter_x, quarter_y),
+        ]
+    if kind == "rightBrace":
+        return [
+            (left, top),
+            (center_x, top),
+            (three_quarter_x, quarter_y),
+            (center_x, center_y),
+            (three_quarter_x, three_quarter_y),
+            (center_x, bottom),
+            (left, bottom),
+            (quarter_x, three_quarter_y),
+            (left, center_y),
+            (quarter_x, quarter_y),
+        ]
     if kind in {"plus", "mathPlus"}:
         return [
             (x + width * 0.35, top),

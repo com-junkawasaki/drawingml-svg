@@ -2966,12 +2966,30 @@ def test_drawingml_bracket_presets_round_trip_to_svg_polygons() -> None:
           <a:solidFill><a:srgbClr val="FEE2E2"/></a:solidFill>
         </p:spPr>
       </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="4" name="left brace"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="1047750" y="190500"/><a:ext cx="381000" cy="381000"/></a:xfrm>
+          <a:prstGeom prst="leftBrace"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="DCFCE7"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="5" name="right brace"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="1524000" y="190500"/><a:ext cx="381000" cy="381000"/></a:xfrm>
+          <a:prstGeom prst="rightBrace"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="FEF3C7"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
     </p:spTree>"""
 
     svg = drawingml_to_svg(dml)
 
     assert '<polygon fill="#dbeafe" points="50,20 10,20 10,60 50,60 50,50 20,50 20,30 50,30"/>' in svg
     assert '<polygon fill="#fee2e2" points="60,20 100,20 100,60 60,60 60,50 90,50 90,30 60,30"/>' in svg
+    assert '<polygon fill="#dcfce7" points="150,20 130,20 120,30 130,40 120,50 130,60 150,60 140,50 150,40 140,30"/>' in svg
+    assert '<polygon fill="#fef3c7" points="160,20 180,20 190,30 180,40 190,50 180,60 160,60 170,50 160,40 170,30"/>' in svg
 
 
 def test_drawingml_polygon_presets_preserve_rotation_and_flip() -> None:
