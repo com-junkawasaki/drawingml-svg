@@ -2839,6 +2839,10 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
         return [(left, top), (three_quarter_x, top), (right, center_y), (three_quarter_x, bottom), (left, bottom), (quarter_x, center_y)]
     if kind == "homePlate":
         return [(left, top), (three_quarter_x, top), (right, center_y), (three_quarter_x, bottom), (left, bottom)]
+    if kind == "foldedCorner":
+        return [(left, top), (three_quarter_x, top), (right, quarter_y), (right, bottom), (left, bottom)]
+    if kind == "corner":
+        return [(left, top), (right, top), (right, quarter_y), (quarter_x, quarter_y), (quarter_x, bottom), (left, bottom)]
     if kind == "plus":
         return [
             (x + width * 0.35, top),
