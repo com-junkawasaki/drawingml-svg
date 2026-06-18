@@ -529,6 +529,7 @@ def _dml_table_shapes(element: ET.Element) -> Iterable[Shape]:
                         text_baseline=_dml_table_cell_text_baseline(cell) or "middle",
                         text_baseline_shift=_dml_text_baseline_shift_from_properties(text_properties),
                         letter_spacing=_dml_letter_spacing_from_properties(text_properties),
+                        text_runs=_dml_table_cell_text_runs(cell),
                 )
             )
             left += cell_width
@@ -563,6 +564,13 @@ def _dml_table_cell_text(cell: ET.Element) -> str:
         return ""
     paragraphs = tx_body.findall(qn(NS_A, "p"))
     return "\n".join(_dml_paragraph_text(tx_body, paragraph, index + 1) for index, paragraph in enumerate(paragraphs))
+
+
+def _dml_table_cell_text_runs(cell: ET.Element) -> tuple[TextRun, ...]:
+    tx_body = cell.find(qn(NS_A, "txBody"))
+    if tx_body is None:
+        return ()
+    return _dml_text_runs_from_body(cell, tx_body, Paint(fill="#000000", stroke="none"))
 
 
 def _dml_table_cell_fill(cell: ET.Element) -> tuple[str | None, float | None]:
@@ -2832,10 +2840,17 @@ def _dml_text_runs(element: ET.Element, sp_pr: ET.Element) -> tuple[TextRun, ...
     tx_body = element.find(qn(NS_P, "txBody"))
     if tx_body is None:
         return ()
+    return _dml_text_runs_from_body(element, tx_body, _dml_paint(sp_pr, element))
+
+
+def _dml_text_runs_from_body(
+    element: ET.Element,
+    tx_body: ET.Element,
+    shape_paint: Paint,
+) -> tuple[TextRun, ...]:
     paragraphs = tx_body.findall(qn(NS_A, "p"))
     if not paragraphs:
         return ()
-    shape_paint = _dml_paint(sp_pr, element)
     runs: list[TextRun] = []
     for paragraph_index, paragraph in enumerate(paragraphs):
         p_pr = paragraph.find(qn(NS_A, "pPr"))

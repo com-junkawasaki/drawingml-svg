@@ -7946,3 +7946,40 @@ def test_drawingml_native_table_cell_list_style_default_run_styles_apply_to_text
     assert 'stroke-linejoin="round"' in svg
     assert 'stroke-dasharray="4 3"' in svg
     assert ">Styled</text>" in svg
+
+
+def test_drawingml_native_table_cell_rich_text_runs_round_trip_to_svg_tspans() -> None:
+    dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+      <p:graphicFrame>
+        <p:xfrm><a:off x="0" y="0"/><a:ext cx="381000" cy="190500"/></p:xfrm>
+        <a:graphic><a:graphicData>
+          <a:tbl>
+            <a:tblGrid><a:gridCol w="381000"/></a:tblGrid>
+            <a:tr h="190500">
+              <a:tc>
+                <a:txBody>
+                  <a:bodyPr/>
+                  <a:lstStyle/>
+                  <a:p>
+                    <a:r><a:rPr sz="1200"><a:solidFill><a:srgbClr val="111827"/></a:solidFill></a:rPr><a:t>Plain </a:t></a:r>
+                    <a:r><a:rPr sz="1400" b="1"><a:solidFill><a:srgbClr val="DC2626"/></a:solidFill></a:rPr><a:t>Rich</a:t></a:r>
+                  </a:p>
+                </a:txBody>
+                <a:tcPr/>
+              </a:tc>
+            </a:tr>
+          </a:tbl>
+        </a:graphicData></a:graphic>
+      </p:graphicFrame>
+    </p:spTree>"""
+
+    svg = drawingml_to_svg(dml)
+
+    assert "<tspan" in svg
+    assert 'fill="#111827"' in svg
+    assert ">Plain </tspan>" in svg
+    assert 'fill="#dc2626"' in svg
+    assert 'font-size="14"' in svg
+    assert 'font-weight="bold"' in svg
+    assert ">Rich</tspan>" in svg
