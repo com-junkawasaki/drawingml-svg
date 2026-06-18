@@ -2799,6 +2799,7 @@ def _dml_kind_to_shape(kind: str) -> str | None:
         "flowChartProcess": "rect",
         "roundRect": "roundRect",
         "flowChartTerminator": "roundRect",
+        "flowChartAlternateProcess": "roundRect",
         "ellipse": "ellipse",
         "oval": "ellipse",
         "flowChartConnector": "ellipse",
@@ -2902,6 +2903,19 @@ def _dml_preset_points(kind: str, x: float, y: float, width: float, height: floa
         ]
     if kind == "flowChartPunchedCard":
         return [(x + width * 0.18, top), (right, top), (right, bottom), (left, bottom), (left, y + height * 0.18)]
+    if kind == "flowChartPunchedTape":
+        return [
+            (left, y + height * 0.12),
+            (quarter_x, top),
+            (center_x, y + height * 0.12),
+            (three_quarter_x, top),
+            (right, y + height * 0.12),
+            (right, y + height * 0.88),
+            (three_quarter_x, bottom),
+            (center_x, y + height * 0.88),
+            (quarter_x, bottom),
+            (left, y + height * 0.88),
+        ]
     if kind == "flowChartDelay":
         return [(left, top), (x + width * 0.7, top), (right, center_y), (x + width * 0.7, bottom), (left, bottom)]
     if kind == "flowChartStoredData":

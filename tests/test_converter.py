@@ -3690,6 +3690,33 @@ def test_drawingml_flowchart_presets_round_trip_to_svg_shapes() -> None:
     assert '<rect fill="#fef3c7" x="140" y="20" width="40" height="20" rx="3.3333" ry="3.3333"/>' in svg
 
 
+def test_drawingml_additional_flowchart_process_presets_round_trip_to_svg_shapes() -> None:
+    dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+      xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="alternate process"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="95250" y="190500"/><a:ext cx="381000" cy="190500"/></a:xfrm>
+          <a:prstGeom prst="flowChartAlternateProcess"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="DBEAFE"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="3" name="punched tape"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="571500" y="190500"/><a:ext cx="381000" cy="190500"/></a:xfrm>
+          <a:prstGeom prst="flowChartPunchedTape"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="FEE2E2"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+    </p:spTree>"""
+
+    svg = drawingml_to_svg(dml)
+
+    assert '<rect fill="#dbeafe" x="10" y="20" width="40" height="20" rx="3.3333" ry="3.3333"/>' in svg
+    assert '<polygon fill="#fee2e2" points="60,22.4 70,20 80,22.4 90,20 100,22.4 100,37.6 90,40 80,37.6 70,40 60,37.6"/>' in svg
+
+
 def test_drawingml_additional_flowchart_presets_round_trip_to_svg_shapes() -> None:
     dml = """<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
