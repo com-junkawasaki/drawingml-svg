@@ -1,0 +1,18 @@
+# Changelog
+
+All notable changes to this project are documented here.
+
+This project follows a simple, human-readable changelog. Until the project reaches a stable release cadence, unreleased changes are collected under `Unreleased`.
+
+## Unreleased
+
+- Added OSS project guidance, including contributing, security, code of conduct, issue templates, PR template, and README status links.
+- Expanded DrawingML preset coverage for common polygons, arrows, symbols, flowchart shapes, ribbons, callouts, and action buttons.
+- Added CLI `--version` support for the main command and console-script aliases.
+- Strengthened CI with Python 3.11 through 3.14, analyzer fixtures, PPTX smoke generation, wheel smoke tests, and sdist metadata checks.
+- Added README documentation for supported DrawingML preset geometries.
+
+## 0.1.0
+
+- Initial public alpha package for converting between SVG and DrawingML shape fragments.
+- Included CLI commands for `svg2dml`, `dml2svg`, and SVG coverage analysis.
