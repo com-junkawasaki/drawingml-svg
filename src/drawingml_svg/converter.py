@@ -753,7 +753,28 @@ def _html_table_column_widths(table: ET.Element, column_count: int, total_width:
                 break
         if len(specs) >= column_count:
             break
+    if not specs:
+        specs = _html_table_first_row_column_widths(table, column_count, total_width)
     return _html_table_sizes(specs, column_count, total_width)
+
+
+def _html_table_first_row_column_widths(table: ET.Element, column_count: int, total_width: float) -> list[float | None]:
+    specs: list[float | None] = []
+    for row in table.iter():
+        if _local_name(row.tag) != "tr":
+            continue
+        for cell in row:
+            if _local_name(cell.tag) not in {"td", "th"}:
+                continue
+            width = _html_table_cell_width(cell, total_width)
+            column_span = max(1, _dml_int(cell.get("colspan"), 1) or 1)
+            column_width = width / column_span if width is not None else None
+            specs.extend(column_width for _ in range(column_span))
+            if len(specs) >= column_count:
+                return specs
+        if specs:
+            return specs
+    return specs
 
 
 def _html_table_sizes(specs: list[float | None], count: int, total_size: float) -> tuple[float, ...]:
@@ -782,6 +803,14 @@ def _html_table_col_width(col: ET.Element, total_width: float) -> float | None:
     if width is not None:
         return width
     return _html_table_size_value(col.get("width"), total_width)
+
+
+def _html_table_cell_width(cell: ET.Element, total_width: float) -> float | None:
+    style_width = _parse_style(cell.get("style", "")).get("width")
+    width = _html_table_size_value(style_width, total_width)
+    if width is not None:
+        return width
+    return _html_table_size_value(cell.get("width"), total_width)
 
 
 def _html_table_size_value(value: str | None, total_size: float) -> float | None:

@@ -1144,6 +1144,63 @@ def test_foreign_object_html_table_colgroup_widths_convert_to_native_grid() -> N
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_first_row_cell_widths_convert_to_native_grid() -> None:
+    svg = """<svg width="150" height="60">
+      <foreignObject x="10" y="8" width="120" height="36">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table>
+            <tr>
+              <th style="width:25%">Label</th>
+              <th width="90">Value</th>
+            </tr>
+            <tr>
+              <td>A</td>
+              <td>42</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+
+    assert "<a:tbl>" in dml
+    assert '<a:gridCol w="285750"/>' in dml
+    assert '<a:gridCol w="857250"/>' in dml
+    assert "<a:t>Label</a:t>" in dml
+    assert "<a:t>42</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+
+def test_foreign_object_html_table_colspan_cell_width_distributes_to_spanned_columns() -> None:
+    svg = """<svg width="150" height="60">
+      <foreignObject x="10" y="8" width="120" height="36">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table>
+            <tr>
+              <th colspan="2" width="80">Wide</th>
+              <th style="width:40px">Narrow</th>
+            </tr>
+            <tr>
+              <td>A</td>
+              <td>B</td>
+              <td>C</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+
+    assert "<a:tbl>" in dml
+    assert dml.count('<a:gridCol w="381000"/>') == 3
+    assert 'gridSpan="2"' in dml
+    assert "<a:t>Wide</a:t>" in dml
+    assert "<a:t>C</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+
 def test_foreign_object_html_table_row_heights_convert_to_native_rows() -> None:
     svg = """<svg width="130" height="80">
       <foreignObject x="10" y="8" width="100" height="60">
