@@ -1834,6 +1834,76 @@ def test_foreign_object_html_table_spacing_presentation_attributes_convert() -> 
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_cellspacing_converts_to_native_spacer_cells() -> None:
+    svg = """<svg width="150" height="60">
+      <foreignObject x="10" y="8" width="120" height="30">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table cellspacing="4" style="background:#f8fafc">
+            <tr>
+              <td>A</td>
+              <td>B</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+
+    assert "<a:tbl>" in dml
+    assert dml.count('<a:gridCol w="38100"/>') == 3
+    assert dml.count('<a:gridCol w="514350"/>') == 2
+    assert dml.count('<a:tr h="38100">') == 2
+    assert '<a:tr h="209550">' in dml
+    assert 'val="F8FAFC"' in dml
+    assert '<a:lnL w="0">' in dml
+    assert "<a:t>A</a:t>" in dml
+    assert "<a:t>B</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+    round_trip = drawingml_to_svg(dml)
+    rects = {
+        (rect.get("x"), rect.get("y"), rect.get("width"), rect.get("height"))
+        for rect in ET.fromstring(round_trip).findall("{http://www.w3.org/2000/svg}rect")
+    }
+    assert ("10", "8", "4", "4") in rects
+    assert ("14", "12", "54", "22") in rects
+    assert ("72", "12", "54", "22") in rects
+
+
+def test_foreign_object_html_table_border_spacing_css_converts_unless_collapsed() -> None:
+    spaced = """<svg width="150" height="60">
+      <style>table.report { border-spacing: 6px 2px; }</style>
+      <foreignObject x="10" y="8" width="120" height="30">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table class="report"><tr><td>A</td><td>B</td></tr></table>
+        </body>
+      </foreignObject>
+    </svg>"""
+    collapsed = """<svg width="150" height="60">
+      <foreignObject x="10" y="8" width="120" height="30">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table style="border-spacing:6px 2px;border-collapse:collapse"><tr><td>A</td><td>B</td></tr></table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    spaced_dml = svg_to_drawingml(spaced)
+    collapsed_dml = svg_to_drawingml(collapsed)
+
+    assert "<a:tbl>" in spaced_dml
+    spacer_columns = spaced_dml.count('<a:gridCol w="57150"/>')
+    assert spacer_columns == 3
+    assert spaced_dml.count('<a:tr h="19050">') == 2
+    assert analyze_svg(spaced).unsupported_elements == {}
+
+    assert "<a:tbl>" in collapsed_dml
+    assert collapsed_dml.count("<a:gridCol") == 2
+    assert '<a:gridCol w="571500"/>' in collapsed_dml
+    assert collapsed_dml.count("<a:tr") == 1
+    assert analyze_svg(collapsed).unsupported_elements == {}
+
+
 def test_foreign_object_html_table_bordercolor_presentation_attr_converts() -> None:
     svg = """<svg width="150" height="60">
       <foreignObject x="10" y="8" width="120" height="30">

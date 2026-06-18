@@ -438,6 +438,7 @@ def _svg_foreign_object_table_shapes(
         return ()
     scale_x = transformed.width / width
     scale_y = transformed.height / height
+    table_style = _html_table_cell_style(element, table, css, style)
     table_width = _html_table_element_size(table, "width", width) or width
     table_height = _html_table_element_size(table, "height", height) or height
     caption = _html_table_caption(table)
@@ -449,11 +450,19 @@ def _svg_foreign_object_table_shapes(
     table_y = _html_table_y_offset(table)
     caption_side = _html_table_caption_side(caption_style)
     grid_y = table_y + caption_height if caption_text and caption_side == "top" else table_y
-    row_heights = _html_table_row_heights(table, len(rows), grid_height or table_height)
+    spacing_x, spacing_y = _html_table_border_spacing(table_style, table_width, grid_height or table_height)
+    if _html_table_has_spans(rows):
+        spacing_x = spacing_y = 0.0
+    row_total = max(0.0, grid_height or table_height)
+    column_total = table_width
+    if spacing_x > 0 or spacing_y > 0:
+        row_total = max(0.0, row_total - spacing_y * (len(rows) + 1))
+        column_total = max(0.0, column_total - spacing_x * (column_count + 1))
+    row_heights = _html_table_row_heights(table, len(rows), row_total or grid_height or table_height)
     row_edges = [0.0]
     for row_height in row_heights:
         row_edges.append(row_edges[-1] + row_height)
-    column_widths = _html_table_column_widths(table, column_count, table_width)
+    column_widths = _html_table_column_widths(table, column_count, column_total or table_width)
     column_edges = [0.0]
     for column_width in column_widths:
         column_edges.append(column_edges[-1] + column_width)
@@ -472,6 +481,28 @@ def _svg_foreign_object_table_shapes(
                 caption_height * scale_y,
                 css,
                 max(scale_x, scale_y),
+            )
+        )
+    if spacing_x > 0 or spacing_y > 0:
+        return tuple(
+            shapes
+            + list(
+                _html_table_spaced_table_shapes(
+                    element,
+                    table,
+                    rows,
+                    column_widths,
+                    row_heights,
+                    column_backgrounds,
+                    transformed.x + table_x * scale_x,
+                    transformed.y + grid_y * scale_y,
+                    spacing_x,
+                    spacing_y,
+                    scale_x,
+                    scale_y,
+                    css,
+                    style,
+                )
             )
         )
     for row_index, row in enumerate(rows):
@@ -820,6 +851,10 @@ def _html_table_grid(table: ET.Element) -> tuple[list[list[tuple[int, ET.Element
     return rows, column_count
 
 
+def _html_table_has_spans(rows: list[list[tuple[int, ET.Element, int, int]]]) -> bool:
+    return any(column_span > 1 or row_span > 1 for row in rows for _, _, column_span, row_span in row)
+
+
 def _html_table_row_heights(table: ET.Element, row_count: int, total_height: float) -> tuple[float, ...]:
     specs: list[float | None] = []
     for row in table.iter():
@@ -996,6 +1031,167 @@ def _html_table_sizes(specs: list[float | None], count: int, total_size: float) 
         return tuple(size * scale for size in sizes)
     scale = total_size / fixed_sum if fixed_sum > 0 else 1.0
     return tuple(size * scale for size in specs if size is not None)
+
+
+def _html_table_border_spacing(
+    style: dict[str, str],
+    table_width: float,
+    table_height: float,
+) -> tuple[float, float]:
+    if (style.get("border-collapse") or "").strip().lower() == "collapse":
+        return 0.0, 0.0
+    value = style.get("border-spacing")
+    if value is None:
+        return 0.0, 0.0
+    tokens = _css_value_tokens(value)
+    if not tokens:
+        return 0.0, 0.0
+    horizontal = _html_first_length(tokens[0])
+    vertical = _html_first_length(tokens[1]) if len(tokens) > 1 else horizontal
+    spacing_x = max(0.0, horizontal if horizontal is not None else 0.0)
+    spacing_y = max(0.0, vertical if vertical is not None else 0.0)
+    return (
+        _html_table_fit_spacing(spacing_x, table_width),
+        _html_table_fit_spacing(spacing_y, table_height),
+    )
+
+
+def _html_table_fit_spacing(spacing: float, total_size: float) -> float:
+    if spacing <= 0 or total_size <= 0:
+        return 0.0
+    return min(spacing, total_size / 3)
+
+
+def _html_table_spaced_table_shapes(
+    foreign_object: ET.Element,
+    table: ET.Element,
+    rows: list[list[tuple[int, ET.Element, int, int]]],
+    column_widths: tuple[float, ...],
+    row_heights: tuple[float, ...],
+    column_backgrounds: tuple[tuple[tuple[str, float | None], ...], ...],
+    x: float,
+    y: float,
+    spacing_x: float,
+    spacing_y: float,
+    scale_x: float,
+    scale_y: float,
+    css: list[CssRule],
+    inherited_style: dict[str, str],
+) -> tuple[Shape, ...]:
+    table_fill, table_fill_alpha = _html_element_background_fill(foreign_object, table, css)
+    cells = {
+        (row_index, column_index): cell
+        for row_index, row in enumerate(rows)
+        for column_index, cell, _, _ in row
+    }
+    x_tracks = _html_table_spaced_tracks(column_widths, spacing_x)
+    y_tracks = _html_table_spaced_tracks(row_heights, spacing_y)
+    shapes: list[Shape] = []
+    for top, bottom, row_index in y_tracks:
+        for left, right, column_index in x_tracks:
+            width = (right - left) * scale_x
+            height = (bottom - top) * scale_y
+            if width <= 0 or height <= 0:
+                continue
+            if row_index is None or column_index is None:
+                shapes.append(
+                    Shape(
+                        "rect",
+                        x + left * scale_x,
+                        y + top * scale_y,
+                        width,
+                        height,
+                        Paint(fill=table_fill or "none", stroke="none", stroke_width=0.0, fill_alpha=table_fill_alpha),
+                    )
+                )
+                continue
+            cell = cells.get((row_index, column_index))
+            if cell is None:
+                continue
+            cell_x = x + left * scale_x
+            cell_y = y + top * scale_y
+            cell_style = _html_table_cell_style(foreign_object, cell, css, inherited_style)
+            fill, fill_alpha = _html_table_cell_background_fill(
+                foreign_object,
+                table,
+                cell,
+                column_backgrounds[column_index] if column_index < len(column_backgrounds) else (),
+                css,
+            )
+            stroke, stroke_alpha = _html_border_stroke(cell_style)
+            border_left, border_right, border_top, border_bottom = _html_table_cell_border_paints(cell_style)
+            shapes.append(
+                Shape(
+                    "rect",
+                    cell_x,
+                    cell_y,
+                    width,
+                    height,
+                    Paint(
+                        fill=fill or "#ffffff",
+                        stroke=stroke or "#000000",
+                        stroke_width=_html_border_width(cell_style),
+                        fill_alpha=fill_alpha,
+                        stroke_alpha=stroke_alpha,
+                        stroke_dasharray=_html_border_dasharray(cell_style),
+                        stroke_compound=_html_border_compound(cell_style),
+                    ),
+                    table_border_left=border_left,
+                    table_border_right=border_right,
+                    table_border_top=border_top,
+                    table_border_bottom=border_bottom,
+                )
+            )
+            text = _html_table_cell_text(cell)
+            if not text:
+                continue
+            left_inset, top_inset, right_inset, bottom_inset = _html_padding_insets(
+                cell_style,
+                scale_x,
+                scale_y,
+                width,
+                height,
+            )
+            font_size = _svg_font_size(cell_style.get("font-size")) * max(scale_x, scale_y)
+            text_fill, text_fill_alpha = _html_text_fill(cell_style)
+            shapes.append(
+                Shape(
+                    "text",
+                    cell_x + left_inset,
+                    cell_y + top_inset,
+                    max(0.0, width - left_inset - right_inset),
+                    max(0.0, height - top_inset - bottom_inset),
+                    Paint(fill=text_fill or "#000000", stroke="none", fill_alpha=text_fill_alpha),
+                    text=text,
+                    font_size=font_size,
+                    font_weight=cell_style.get("font-weight") or ("bold" if _local_name(cell.tag) == "th" else None),
+                    font_style=cell_style.get("font-style"),
+                    font_family=_font_family(cell_style.get("font-family")),
+                    font_variant=_font_variant(cell_style.get("font-variant")),
+                    text_anchor=_html_table_cell_text_anchor(cell, cell_style),
+                    text_baseline=_html_vertical_align(cell_style) or "middle",
+                    text_direction=_text_direction(cell_style.get("direction")),
+                    text_wrap=_html_text_wrap(cell_style),
+                    letter_spacing=_svg_letter_spacing(cell_style, (0.0, 0.0)),
+                    text_runs=_html_table_cell_text_runs(cell, css, cell_style, max(scale_x, scale_y)),
+                )
+            )
+    return tuple(shapes)
+
+
+def _html_table_spaced_tracks(sizes: tuple[float, ...], spacing: float) -> tuple[tuple[float, float, int | None], ...]:
+    tracks: list[tuple[float, float, int | None]] = []
+    offset = 0.0
+    if spacing > 0:
+        tracks.append((offset, offset + spacing, None))
+        offset += spacing
+    for index, size in enumerate(sizes):
+        tracks.append((offset, offset + size, index))
+        offset += size
+        if spacing > 0:
+            tracks.append((offset, offset + spacing, None))
+            offset += spacing
+    return tuple(tracks)
 
 
 def _html_table_col_width(col: ET.Element, total_width: float) -> float | None:
@@ -6519,6 +6715,8 @@ def _computed_style(
         "mask",
         "mix-blend-mode",
         "overflow",
+        "border-collapse",
+        "border-spacing",
         "padding",
         "padding-bottom",
         "padding-left",
@@ -6553,6 +6751,7 @@ def _computed_style(
         ("border", "border"),
         ("bordercolor", "border-color"),
         ("cellpadding", "padding"),
+        ("cellspacing", "border-spacing"),
     ):
         if element.get(attr) is not None:
             apply_declaration(style_key, element.get(attr, ""), False, (0, 0, 0, 0), -1)
