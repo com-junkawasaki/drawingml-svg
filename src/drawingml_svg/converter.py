@@ -518,20 +518,26 @@ def _html_table_grid(table: ET.Element) -> tuple[list[list[tuple[int, ET.Element
 
 
 def _html_background_color(style: dict[str, str]) -> str | None:
-    return _html_color(style.get("background-color")) or _html_color((style.get("background") or "").split(" ", 1)[0])
+    return _html_color(style.get("background-color")) or _html_first_color(style.get("background"))
 
 
 def _html_border_color(style: dict[str, str]) -> str | None:
-    return _html_color(style.get("border-color")) or _html_color((style.get("border") or "").rsplit(" ", 1)[-1])
+    if _html_border_is_none(style):
+        return "none"
+    return _html_first_color(style.get("border-color")) or _html_first_color(style.get("border"))
 
 
 def _html_border_width(style: dict[str, str]) -> float:
+    if _html_border_is_none(style):
+        return 0.0
     border_width = style.get("border-width")
     if border_width:
-        return max(0.0, _num(border_width.split()[0], 1.0))
+        width = _html_first_length(border_width)
+        return max(0.0, width if width is not None else 1.0)
     border = style.get("border")
     if border:
-        return max(0.0, _num(border.split()[0], 1.0))
+        width = _html_first_length(border)
+        return max(0.0, width if width is not None else 1.0)
     return 1.0
 
 
@@ -542,6 +548,31 @@ def _html_text_color(style: dict[str, str]) -> str | None:
 def _html_color(value: str | None) -> str | None:
     color, _ = _parse_color(value)
     return color
+
+
+def _html_first_color(value: str | None) -> str | None:
+    if not value:
+        return None
+    for token in _css_value_tokens(value):
+        color = _html_color(token.strip(","))
+        if color is not None:
+            return color
+    return None
+
+
+def _html_first_length(value: str) -> float | None:
+    for token in _css_value_tokens(value):
+        token = token.strip(",").lower()
+        if token in {"thin", "medium", "thick"}:
+            return {"thin": 1.0, "medium": 3.0, "thick": 5.0}[token]
+        if re.fullmatch(r"(?:calc\(.+\)|[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[eE][-+]?\d+)?(?:px|pt|pc|in|cm|mm|q)?)", token):
+            return _num(token, 0.0)
+    return None
+
+
+def _html_border_is_none(style: dict[str, str]) -> bool:
+    values = [style.get("border-style"), style.get("border")]
+    return any(token.strip(",").lower() in {"none", "hidden"} for value in values if value for token in _css_value_tokens(value))
 
 
 def _foreign_object_table_is_supported(

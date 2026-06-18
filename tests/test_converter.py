@@ -1116,6 +1116,33 @@ def test_foreign_object_html_table_single_column_converts_to_native_drawingml_ta
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_shorthand_styles_convert() -> None:
+    svg = """<svg width="120" height="50">
+      <foreignObject x="10" y="8" width="100" height="24">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table>
+            <tr>
+              <td style="background: padding-box #dbeafe; color: rgb(30 58 138); border: solid 2px rgb(37, 99, 235)">Styled</td>
+              <td style="background: #f8fafc; color: #111827; border: none">Plain</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+
+    assert "<a:tbl>" in dml
+    assert 'val="DBEAFE"' in dml
+    assert 'val="1E3A8A"' in dml
+    assert 'val="2563EB"' in dml
+    assert 'w="19050"' in dml
+    assert "<a:noFill/>" in dml
+    assert "<a:t>Styled</a:t>" in dml
+    assert "<a:t>Plain</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+
 def test_foreign_object_html_table_spans_convert_to_native_table_merges() -> None:
     svg = """<svg width="120" height="60">
       <foreignObject x="10" y="8" width="100" height="40">
