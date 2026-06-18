@@ -476,9 +476,6 @@ def _inspect_tspan_run_attributes(
         and not _tspan_text_anchor_has_no_effect(element, specified_style)
     ):
         stats.add_unsupported_attribute("text-anchor")
-    if _word_spacing_is_supported(element, specified_style):
-        stats.add_unsupported_attribute("word-spacing")
-
 
 def _first_positioned_tspan_text_anchor_is_supported(
     element: ET.Element,
@@ -986,9 +983,14 @@ def _word_spacing_has_no_effect(element: ET.Element, style: dict[str, str]) -> b
 
 
 def _word_spacing_is_supported(element: ET.Element, style: dict[str, str]) -> bool:
-    if _local_name(element.tag) != "text":
+    tag = _local_name(element.tag)
+    if tag == "text":
+        text = _svg_text_content(element)
+    elif tag == "tspan":
+        text = "".join(element.itertext())
+    else:
         return False
-    return _svg_word_spacing_is_supported(style, _svg_text_content(element), (0.0, 0.0))
+    return _svg_word_spacing_is_supported(style, text, (0.0, 0.0))
 
 
 def _mix_blend_mode_has_no_effect(

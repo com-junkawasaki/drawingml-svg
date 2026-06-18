@@ -1295,6 +1295,20 @@ def test_word_spacing_accepts_normal_letter_spacing_values() -> None:
     assert analyze_svg(source).unsupported_attributes == {}
 
 
+def test_tspan_word_spacing_maps_to_run_character_spacing() -> None:
+    source = '<svg><text x="10" y="20" font-size="10" fill="#111">A <tspan word-spacing="6px">Hi all</tspan></text></svg>'
+    dml = svg_to_drawingml(source)
+
+    root = ET.fromstring(dml)
+    run_prs = root.findall(".//{http://schemas.openxmlformats.org/drawingml/2006/main}rPr")
+    assert run_prs[-1].get("spc") == "90"
+    assert analyze_svg(source).unsupported_attributes == {}
+
+    svg = drawingml_to_svg(dml)
+    assert 'letter-spacing="1.2"' in svg
+    assert ">Hi all</tspan>" in svg
+
+
 def test_text_small_caps_maps_to_drawingml_caps() -> None:
     source = '<svg><text x="10" y="20" font-variant="small-caps" font-size="10" fill="#111">Caps</text></svg>'
     dml = svg_to_drawingml(source)
