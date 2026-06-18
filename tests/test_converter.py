@@ -1176,6 +1176,38 @@ def test_foreign_object_html_table_colgroup_backgrounds_convert_to_cell_fills() 
     assert analyze_svg(svg).unsupported_elements == {}
 
 
+def test_foreign_object_html_table_header_cells_default_to_center_alignment() -> None:
+    svg = """<svg width="160" height="60">
+      <foreignObject x="10" y="8" width="130" height="36">
+        <body xmlns="http://www.w3.org/1999/xhtml">
+          <table>
+            <tr>
+              <th>Default</th>
+              <th style="text-align:left">Left</th>
+            </tr>
+            <tr>
+              <td>Body</td>
+              <td>Cell</td>
+            </tr>
+          </table>
+        </body>
+      </foreignObject>
+    </svg>"""
+
+    dml = svg_to_drawingml(svg)
+    root = ET.fromstring(dml)
+    ns = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+    cells = root.findall(".//a:tc", ns)
+
+    assert "<a:tbl>" in dml
+    assert cells[0].find(".//a:pPr", ns).get("algn") == "ctr"
+    assert cells[1].find(".//a:pPr", ns).get("algn") == "l"
+    assert cells[2].find(".//a:pPr", ns) is None
+    assert "<a:t>Default</a:t>" in dml
+    assert "<a:t>Body</a:t>" in dml
+    assert analyze_svg(svg).unsupported_elements == {}
+
+
 def test_foreign_object_html_table_first_row_cell_widths_convert_to_native_grid() -> None:
     svg = """<svg width="150" height="60">
       <foreignObject x="10" y="8" width="120" height="36">

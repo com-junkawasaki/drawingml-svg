@@ -500,7 +500,7 @@ def _svg_foreign_object_table_shapes(
                         font_style=cell_style.get("font-style"),
                         font_family=_font_family(cell_style.get("font-family")),
                         font_variant=_font_variant(cell_style.get("font-variant")),
-                        text_anchor=_html_text_anchor(cell_style),
+                        text_anchor=_html_table_cell_text_anchor(cell, cell_style),
                         text_baseline=_html_vertical_align(cell_style) or "middle",
                         text_direction=_text_direction(cell_style.get("direction")),
                         text_wrap=_html_text_wrap(cell_style),
@@ -1082,6 +1082,13 @@ def _html_text_anchor(style: dict[str, str]) -> str | None:
         "left": "start",
         "start": "start",
     }.get(normalized)
+
+
+def _html_table_cell_text_anchor(cell: ET.Element, style: dict[str, str]) -> str | None:
+    anchor = _html_text_anchor(style)
+    if anchor is not None:
+        return anchor
+    return "middle" if _local_name(cell.tag) == "th" else None
 
 
 def _html_vertical_align(style: dict[str, str]) -> str | None:
