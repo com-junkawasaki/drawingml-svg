@@ -11,6 +11,7 @@ from .converter import (
     _collect_css,
     _collect_refs,
     _computed_style,
+    _css_value_tokens,
     _data_image_dimensions,
     _clip_path_is_supported,
     _dominant_baseline,
@@ -891,7 +892,7 @@ def _text_decoration_shorthand_is_supported_or_noop(
 def _text_decoration_shorthand_line_is_supported_or_noop(value: str | None) -> bool:
     if value is None:
         return False
-    tokens = [part.lower() for part in value.strip().split()]
+    tokens = [part.lower() for part in _css_value_tokens(value)]
     known = TEXT_DECORATION_LINE_TOKENS | TEXT_DECORATION_STYLE_TOKENS
     if any(token not in known and not _text_decoration_color_token(token) for token in tokens):
         return False
@@ -910,7 +911,7 @@ def _text_decoration_shorthand_color_has_no_effect(
     value = style.get("text-decoration")
     if value is None:
         return False
-    color_tokens = [_text_decoration_color_token(part) for part in value.strip().split()]
+    color_tokens = [_text_decoration_color_token(part) for part in _css_value_tokens(value)]
     color_tokens = [token for token in color_tokens if token is not None]
     if not color_tokens:
         return True
@@ -939,7 +940,7 @@ def _text_decoration_color_token(value: str) -> str | None:
 def _text_decoration_shorthand_style(value: str | None) -> str | None:
     if value is None:
         return None
-    for part in value.strip().split():
+    for part in _css_value_tokens(value):
         normalized = part.lower()
         if normalized in TEXT_DECORATION_STYLE_TOKENS:
             return normalized
