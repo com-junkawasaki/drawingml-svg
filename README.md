@@ -130,6 +130,7 @@ This is intended as the stable handoff layer for expanding one SVG source into d
 The `pptxsvg` command and `svg_to_pptx_ir()` API expose just the presentation/package view. Slide boundaries are inferred from elements with `data-kind="slide"`, `data-role="slide"`, or `data-slide`; if none are present, the root SVG becomes a single slide. Slide size is taken from root `<metadata>` `{"presentation": {"slideSize": {"width": 1280, "height": 720}}}`, then root `viewBox`, then the first slide viewBox. The view also includes a package part blueprint for `/ppt/presentation.xml`, slide master/layout/theme parts, and generated `/ppt/slides/slideN.xml` parts.
 
 See [docs/adr/0001-svg-semantic-ir.md](docs/adr/0001-svg-semantic-ir.md) for the design contract.
+See [docs/pptxsvg-web-editor.md](docs/pptxsvg-web-editor.md) for the browser editor and WebGPU LLM integration design.
 
 ## Scope
 
