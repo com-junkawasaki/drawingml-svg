@@ -98,6 +98,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <path id="box-path" d="M 690 170 L 900 170 L 900 315 L 690 315 Z" style="fill:#dcfce7;stroke:#15803d"/>
     <path id="curve-path" d="M 120 520 C 190 430 260 610 330 520 Q 390 445 450 520 T 570 520" style="fill:none;stroke:#ea580c;stroke-width:6"/>
     <path id="arc-path" d="M 640 520 A 90 55 0 0 1 820 520 A 90 55 0 0 1 640 520" style="fill:#fef3c7;stroke:#a16207;stroke-width:5"/>
+    <rect id="geometry-lengths" x="calc(50% - 80px)" y="42%" width="10%" height="8%" style="fill:#ecfccb;stroke:#4d7c0f;stroke-width:2pt"/>
     <line id="marked-line" x1="980" y1="185" x2="1130" y2="260" style="stroke:#7c3aed;stroke-width:8;marker-end:url(#arrow)"/>
     <image id="pixel" x="980" y="340" width="96" height="96" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="/>
     <circle class="css-circle" cx="1130" cy="388" r="48"/>
@@ -419,25 +420,26 @@ function extractShapes(root) {
     const scopeRoot = root.ownerDocument?.documentElement ?? root;
     const css = collectCss(scopeRoot);
     const refs = collectRefs(scopeRoot);
+    const viewport = svgViewport(scopeRoot);
     let nextId = 2;
     const walk = (element, matrix, inheritedStyle, refStack) => {
         const tag = localName(element);
         if (tag === "metadata" || tag === "defs" || tag === "style")
             return;
         const ownStyle = computedStyle(element, inheritedStyle, css, refs);
-        const ownMatrix = multiply(matrix, styleTransformMatrix(element, ownStyle));
+        const ownMatrix = multiply(matrix, styleTransformMatrix(element, ownStyle, viewport));
         if (tag === "use") {
             const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
             const refId = href.startsWith("#") ? href.slice(1) : "";
             const ref = refs.get(refId);
             if (ref && !refStack.has(refId)) {
-                const useMatrix = multiply(ownMatrix, [1, 0, 0, 1, num(element, "x"), num(element, "y")]);
+                const useMatrix = multiply(ownMatrix, [1, 0, 0, 1, geom(element, "x", "x", viewport), geom(element, "y", "y", viewport)]);
                 walk(ref, useMatrix, ownStyle, new Set([...refStack, refId]));
             }
             return;
         }
         if (tag === "g" && (element.getAttribute("data-kind") === "table" || element.getAttribute("data-role") === "table")) {
-            const table = tableFromGroup(element, ownMatrix, nextId, ownStyle, css);
+            const table = tableFromGroup(element, ownMatrix, nextId, ownStyle, css, viewport);
             if (table) {
                 shapes.push(table);
                 nextId += 1;
@@ -445,15 +447,15 @@ function extractShapes(root) {
             return;
         }
         if (tag === "foreignObject") {
-            const tableShapes = shapesFromForeignObject(element, ownMatrix, nextId, ownStyle, css);
+            const tableShapes = shapesFromForeignObject(element, ownMatrix, nextId, ownStyle, css, viewport);
             if (tableShapes.length) {
                 shapes.push(...tableShapes);
                 nextId += tableShapes.length;
             }
             return;
         }
-        const rawShape = elementToShape(element, ownMatrix, ownStyle, nextId);
-        const clip = rectClipBounds(rawShape, ownStyle, refs, ownMatrix);
+        const rawShape = elementToShape(element, ownMatrix, ownStyle, nextId, viewport);
+        const clip = rectClipBounds(rawShape, ownStyle, refs, ownMatrix, viewport);
         const shape = applyClip(rawShape, clip);
         if (shape) {
             shapes.push(shape);
@@ -468,12 +470,12 @@ function extractShapes(root) {
         walk(child, [1, 0, 0, 1, 0, 0], rootStyle, new Set());
     return shapes;
 }
-function elementToShape(element, matrix, style, id) {
+function elementToShape(element, matrix, style, id, viewport) {
     const tag = localName(element);
     const data = dataAttrs(attrs(element));
     const name = element.getAttribute("id") || tag;
     if (tag === "rect") {
-        const box = transformedBox(matrix, num(element, "x"), num(element, "y"), num(element, "width"), num(element, "height"));
+        const box = transformedBox(matrix, geom(element, "x", "x", viewport), geom(element, "y", "y", viewport), geom(element, "width", "x", viewport), geom(element, "height", "y", viewport));
         return {
             id,
             kind: "rect",
@@ -483,7 +485,7 @@ function elementToShape(element, matrix, style, id) {
             y: box.y,
             width: box.width,
             height: box.height,
-            rx: num(element, "rx"),
+            rx: geom(element, "rx", "x", viewport),
             fill: style.fill ?? "#000000",
             fillAlpha: style.fillAlpha ?? null,
             stroke: style.stroke ?? null,
@@ -493,10 +495,10 @@ function elementToShape(element, matrix, style, id) {
         };
     }
     if (tag === "circle" || tag === "ellipse") {
-        const cx = num(element, "cx");
-        const cy = num(element, "cy");
-        const rx = tag === "circle" ? num(element, "r") : num(element, "rx");
-        const ry = tag === "circle" ? num(element, "r") : num(element, "ry");
+        const cx = geom(element, "cx", "x", viewport);
+        const cy = geom(element, "cy", "y", viewport);
+        const rx = tag === "circle" ? geom(element, "r", "diag", viewport) : geom(element, "rx", "x", viewport);
+        const ry = tag === "circle" ? geom(element, "r", "diag", viewport) : geom(element, "ry", "y", viewport);
         const box = transformedBox(matrix, cx - rx, cy - ry, rx * 2, ry * 2);
         return {
             id,
@@ -516,8 +518,8 @@ function elementToShape(element, matrix, style, id) {
         };
     }
     if (tag === "line") {
-        const [x1, y1] = point(matrix, num(element, "x1"), num(element, "y1"));
-        const [x2, y2] = point(matrix, num(element, "x2"), num(element, "y2"));
+        const [x1, y1] = point(matrix, geom(element, "x1", "x", viewport), geom(element, "y1", "y", viewport));
+        const [x2, y2] = point(matrix, geom(element, "x2", "x", viewport), geom(element, "y2", "y", viewport));
         return {
             id,
             kind: "line",
@@ -540,7 +542,7 @@ function elementToShape(element, matrix, style, id) {
     }
     if (tag === "text") {
         const fontSize = style.fontSize ?? 18;
-        const [x, y] = point(matrix, num(element, "x"), num(element, "y"));
+        const [x, y] = point(matrix, geom(element, "x", "x", viewport), geom(element, "y", "y", viewport));
         const runs = textRuns(element, style);
         const text = runs.map((run) => run.text).join("").trim();
         const width = Math.max(80, style.textLength ?? text.length * fontSize * 0.62 + wordSpacingExtra(style, text));
@@ -620,7 +622,7 @@ function elementToShape(element, matrix, style, id) {
     if (tag === "image") {
         const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
         if (supportedDataImage(href)) {
-            const box = transformedBox(matrix, num(element, "x"), num(element, "y"), num(element, "width"), num(element, "height"));
+            const box = transformedBox(matrix, geom(element, "x", "x", viewport), geom(element, "y", "y", viewport), geom(element, "width", "x", viewport), geom(element, "height", "y", viewport));
             return {
                 id,
                 kind: "image",
@@ -636,13 +638,13 @@ function elementToShape(element, matrix, style, id) {
     }
     return null;
 }
-function tableFromGroup(group, matrix, id, inheritedStyle, css = []) {
+function tableFromGroup(group, matrix, id, inheritedStyle, css = [], viewport = defaultViewport()) {
     const rects = Array.from(group.querySelectorAll("rect")).filter((rect) => rect.getAttribute("data-kind") === "cell" || rect.getAttribute("data-role") === "cell");
     if (!rects.length)
         return null;
     const cells = rects.map((rect) => {
         const style = computedStyle(rect, inheritedStyle, css);
-        const [x, y] = point(matrix, num(rect, "x"), num(rect, "y"));
+        const [x, y] = point(matrix, geom(rect, "x", "x", viewport), geom(rect, "y", "y", viewport));
         return {
             row: Number(rect.getAttribute("data-row") || 0),
             col: Number(rect.getAttribute("data-col") || 0),
@@ -651,8 +653,8 @@ function tableFromGroup(group, matrix, id, inheritedStyle, css = []) {
             text: rect.getAttribute("data-text") || rect.getAttribute("aria-label") || "",
             x,
             y,
-            width: num(rect, "width"),
-            height: num(rect, "height"),
+            width: geom(rect, "width", "x", viewport),
+            height: geom(rect, "height", "y", viewport),
             fill: style.fill ?? "#ffffff",
             ...tableCellStyle(style, false),
         };
@@ -698,7 +700,7 @@ function tableFromGroup(group, matrix, id, inheritedStyle, css = []) {
         cells: tableCells,
     };
 }
-function shapesFromForeignObject(element, matrix, id, inheritedStyle, css = []) {
+function shapesFromForeignObject(element, matrix, id, inheritedStyle, css = [], viewport = defaultViewport()) {
     const table = Array.from(element.querySelectorAll("table")).find((item) => localName(item) === "table");
     if (!table)
         return [];
@@ -708,7 +710,7 @@ function shapesFromForeignObject(element, matrix, id, inheritedStyle, css = []) 
     const columnCount = htmlTableColumnCount(rows);
     if (columnCount <= 0)
         return [];
-    const box = transformedBox(matrix, num(element, "x"), num(element, "y"), num(element, "width"), num(element, "height"));
+    const box = transformedBox(matrix, geom(element, "x", "x", viewport), geom(element, "y", "y", viewport), geom(element, "width", "x", viewport), geom(element, "height", "y", viewport));
     if (box.width <= 0 || box.height <= 0)
         return [];
     const tableStyle = htmlElementStyle(table, inheritedStyle, css);
@@ -1483,7 +1485,7 @@ function shapeBox(shape) {
     }
     return { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
 }
-function rectClipBounds(shape, style, refs, matrix) {
+function rectClipBounds(shape, style, refs, matrix, viewport = defaultViewport()) {
     if (!style.clipPath || style.clipPath === "none")
         return null;
     const refId = urlRef(style.clipPath);
@@ -1496,8 +1498,8 @@ function rectClipBounds(shape, style, refs, matrix) {
     const rect = Array.from(clip.children).find((child) => localName(child) === "rect");
     if (!rect)
         return null;
-    const width = num(rect, "width");
-    const height = num(rect, "height");
+    const width = units === "objectboundingbox" ? num(rect, "width") : geom(rect, "width", "x", viewport);
+    const height = units === "objectboundingbox" ? num(rect, "height") : geom(rect, "height", "y", viewport);
     if (width <= 0 || height <= 0)
         return null;
     if (units === "objectboundingbox") {
@@ -1514,7 +1516,7 @@ function rectClipBounds(shape, style, refs, matrix) {
     if (units !== "userspaceonuse")
         return null;
     const clipMatrix = multiply(multiply(matrix, transformMatrix(clip.getAttribute("transform"))), transformMatrix(rect.getAttribute("transform")));
-    const box = transformedBox(clipMatrix, num(rect, "x"), num(rect, "y"), width, height);
+    const box = transformedBox(clipMatrix, geom(rect, "x", "x", viewport), geom(rect, "y", "y", viewport), width, height);
     return box.width > 0 && box.height > 0 ? box : null;
 }
 function clipTargetBox(shape) {
@@ -2152,6 +2154,32 @@ function asObject(value) {
 function num(element, name, fallback = 0) {
     const value = Number(element.getAttribute(name));
     return Number.isFinite(value) ? value : fallback;
+}
+function geom(element, name, axis, viewport, fallback = 0) {
+    const value = element.getAttribute(name);
+    return parseCssLength(value, percentageBasis(axis, viewport), fallback);
+}
+function percentageBasis(axis, viewport) {
+    if (axis === "x")
+        return viewport.width;
+    if (axis === "y")
+        return viewport.height;
+    return Math.hypot(viewport.width, viewport.height) / Math.SQRT2;
+}
+function svgViewport(root) {
+    const viewBox = root.getAttribute("viewBox");
+    if (viewBox) {
+        const values = viewBox.match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
+        if (values.length >= 4 && Number.isFinite(values[2]) && Number.isFinite(values[3]) && values[2] > 0 && values[3] > 0) {
+            return { width: values[2], height: values[3] };
+        }
+    }
+    const width = parseCssLength(root.getAttribute("width"), Number.NaN, 0);
+    const height = parseCssLength(root.getAttribute("height"), Number.NaN, 0);
+    return { width: width > 0 ? width : defaultViewport().width, height: height > 0 ? height : defaultViewport().height };
+}
+function defaultViewport() {
+    return { width: 1280, height: 720 };
 }
 function computedStyle(element, inherited, css = [], refs = new Map()) {
     const declarations = resolvedCascadedDeclarations(element, css, inherited);
@@ -3322,9 +3350,9 @@ function supportedDataImage(value) {
 function edges(values) {
     return [...new Set(values.map((value) => Math.round(value * 1000) / 1000))].sort((a, b) => a - b);
 }
-function styleTransformMatrix(element, style) {
+function styleTransformMatrix(element, style, viewport = defaultViewport()) {
     const matrix = transformMatrix(style.transform);
-    const origin = transformOriginPoint(element, style.transformOrigin);
+    const origin = transformOriginPoint(element, style.transformOrigin, viewport);
     if (!origin)
         return matrix;
     return multiply(multiply([1, 0, 0, 1, origin[0], origin[1]], matrix), [1, 0, 0, 1, -origin[0], -origin[1]]);
@@ -3402,13 +3430,13 @@ function parseTransformAngleArg(value) {
         return (number * 180) / Math.PI;
     return number;
 }
-function transformOriginPoint(element, value) {
+function transformOriginPoint(element, value, viewport = defaultViewport()) {
     if (!value)
         return null;
     const parts = transformOriginParts(value);
     if (!parts)
         return null;
-    const box = elementReferenceBox(element);
+    const box = elementReferenceBox(element, viewport);
     const x = originLength(parts[0], "x", box);
     const y = originLength(parts[1], "y", box);
     if (x == null || y == null)
@@ -3476,27 +3504,27 @@ function originLength(value, axis, box) {
     const length = parseAbsoluteLength(trimmed);
     return Number.isFinite(length) ? length : null;
 }
-function elementReferenceBox(element) {
+function elementReferenceBox(element, viewport = defaultViewport()) {
     const tag = localName(element);
     if (tag === "rect" || tag === "image" || tag === "foreignObject") {
-        const width = num(element, "width");
-        const height = num(element, "height");
-        return width >= 0 && height >= 0 ? { x: num(element, "x"), y: num(element, "y"), width, height } : null;
+        const width = geom(element, "width", "x", viewport);
+        const height = geom(element, "height", "y", viewport);
+        return width >= 0 && height >= 0 ? { x: geom(element, "x", "x", viewport), y: geom(element, "y", "y", viewport), width, height } : null;
     }
     if (tag === "circle") {
-        const r = num(element, "r");
-        return r >= 0 ? { x: num(element, "cx") - r, y: num(element, "cy") - r, width: r * 2, height: r * 2 } : null;
+        const r = geom(element, "r", "diag", viewport);
+        return r >= 0 ? { x: geom(element, "cx", "x", viewport) - r, y: geom(element, "cy", "y", viewport) - r, width: r * 2, height: r * 2 } : null;
     }
     if (tag === "ellipse") {
-        const rx = num(element, "rx");
-        const ry = num(element, "ry");
-        return rx >= 0 && ry >= 0 ? { x: num(element, "cx") - rx, y: num(element, "cy") - ry, width: rx * 2, height: ry * 2 } : null;
+        const rx = geom(element, "rx", "x", viewport);
+        const ry = geom(element, "ry", "y", viewport);
+        return rx >= 0 && ry >= 0 ? { x: geom(element, "cx", "x", viewport) - rx, y: geom(element, "cy", "y", viewport) - ry, width: rx * 2, height: ry * 2 } : null;
     }
     if (tag === "line") {
-        const x1 = num(element, "x1");
-        const y1 = num(element, "y1");
-        const x2 = num(element, "x2");
-        const y2 = num(element, "y2");
+        const x1 = geom(element, "x1", "x", viewport);
+        const y1 = geom(element, "y1", "y", viewport);
+        const x2 = geom(element, "x2", "x", viewport);
+        const y2 = geom(element, "y2", "y", viewport);
         return { x: Math.min(x1, x2), y: Math.min(y1, y2), width: Math.abs(x2 - x1), height: Math.abs(y2 - y1) };
     }
     const points = tag === "polygon" || tag === "polyline" ? parsePoints(element.getAttribute("points") || "") : tag === "path" ? parseBasicPath(element.getAttribute("d") || "", [1, 0, 0, 1, 0, 0])?.points ?? [] : [];
