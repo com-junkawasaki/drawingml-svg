@@ -123,6 +123,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
       <rect id="reused-chip" width="170" height="70" rx="14"/>
       <clipPath id="bar-clip"><rect style="x:950px;y:500px;width:150px;height:70px;transform:translate(10px,0)"/></clipPath>
       <clipPath id="bbox-clip" clipPathUnits="objectBoundingBox"><rect style="x:0.15;y:0.15;width:0.7;height:0.7"/></clipPath>
+      <clipPath id="group-clip"><rect x="1150" y="615" width="70" height="50"/></clipPath>
       <linearGradient id="linear-fallback"><stop offset="0" stop-color="#ef4444"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
       <radialGradient id="radial-fallback"><stop offset="0" stop-color="#fef08a"/><stop offset="1" stop-color="#16a34a"/></radialGradient>
       <pattern id="pattern-fallback" width="12" height="12" patternUnits="userSpaceOnUse">
@@ -209,6 +210,10 @@ line</text>
     </g>
     <rect id="gradient-fill" x="900" y="615" width="120" height="50" style="fill:url(#linear-fallback);stroke:url(#radial-fallback)"/>
     <circle id="pattern-fill" cx="1080" cy="640" r="32" style="fill:url(#pattern-fallback);stroke:#334155"/>
+    <g id="group-clipped-shapes" clip-path="url(#group-clip)">
+      <rect x="1130" y="615" width="90" height="50" fill="#fef9c3" stroke="#a16207"/>
+      <line x1="1130" y1="665" x2="1220" y2="615" stroke="#92400e" stroke-width="5"/>
+    </g>
     <use href="#reused-chip" class="accent-use" x="360" y="400"/>
     <use id="symbol-viewbox-use" class="css-use-frame" href="#viewbox-icon" preserveAspectRatio="xMaxYMax slice"/>
     <use id="context-paint-use" href="#context-badge" x="455" y="600" width="80" height="40" fill="#123456" stroke="#abcdef"/>
@@ -1607,6 +1612,8 @@ function extractShapes(root) {
             childClip = combineClips(activeClip, svgViewportClip(element, ownStyle, positionedMatrix, childViewport));
             ownMatrix = multiply(positionedMatrix, viewBoxMatrix(element, childViewport));
         }
+        const ownContainerClip = rectClipBounds(null, ownStyle, refs, ownMatrix, childViewport, css);
+        childClip = combineClips(childClip, ownContainerClip);
         if (tag === "use") {
             const href = hrefValue(element);
             const refId = href.startsWith("#") ? href.slice(1) : "";
@@ -1619,7 +1626,7 @@ function extractShapes(root) {
                     refViewport = useViewport(ref, element, currentViewport, css, ownStyle);
                     useMatrix = multiply(useMatrix, viewBoxMatrix(ref, refViewport, element.getAttribute("preserveAspectRatio")));
                 }
-                walk(ref, useMatrix, ownStyle, new Set([...refStack, refId]), refViewport, activeClip);
+                walk(ref, useMatrix, ownStyle, new Set([...refStack, refId]), refViewport, childClip);
             }
             return;
         }
