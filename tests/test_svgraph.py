@@ -376,7 +376,20 @@ def test_svgraph_presentation_json_cli_payload_is_serializable() -> None:
     assert data["kind"] == "svgraph-presentation"
     assert data["slide_size"] == [16.0, 9.0]
     assert data["slides"][0]["slide_id"] == "1"
-    assert data["parts"][-1]["kind"] == "slide"
+    part_types = {part["kind"]: part["content_type"] for part in data["parts"]}
+    assert part_types == {
+        "presentation": "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+        "slide-master": "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
+        "slide-layout": "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml",
+        "theme": "application/vnd.openxmlformats-officedocument.theme+xml",
+        "slide": "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
+    }
+    assert data["parts"][-1] == {
+        "content_type": "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
+        "kind": "slide",
+        "part_name": "/ppt/slides/slide1.xml",
+        "source_node_id": "n0.0",
+    }
 
 
 def test_legacy_pptx_ir_alias_matches_svgraph_presentation_payload() -> None:
