@@ -1229,6 +1229,12 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "`svgraph-sidecar.json` source restoration",
         "browser Open flow error reporting",
         "web editor design package part schema documentation",
+        "compatibility submodule public-surface guards",
+        "installed compatibility submodules prove their canonical `__all__` and callable parity",
+        "retained legacy executable aliases, including `dml2svg`, verify their deprecation warnings",
+        "canonical GitHub repository and issue tracker links to the published SVGraph Pages editor header",
+        "release checklist HTTP smoke coverage for the canonical GitHub repository, issue tracker, and CI workflow URLs",
+        "canonical GitHub repository link to the README project links section",
     ]:
         assert expected in changelog
 
