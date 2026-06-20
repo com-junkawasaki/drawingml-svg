@@ -214,6 +214,25 @@ def test_release_checklist_keeps_legacy_console_alias_smoke() -> None:
     assert "drawingml-svg --version" in release
 
 
+def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
+    root = Path(__file__).resolve().parents[1]
+    release = (root / "RELEASE.md").read_text(encoding="utf-8")
+    workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+    for source in [release, workflow]:
+        assert "tmp/dist/svgraph-*.whl" in source
+        assert "tmp/dist/svgraph-*.tar.gz" in source
+        assert "tmp/dist/drawingml_svg-" not in source
+        assert "tmp/dist/drawingml-svg-" not in source
+
+    assert "tmp/release-svgraph.json" in release
+    assert "tmp/release-svgraph-presentation.json" in release
+    assert "tmp/release-legacy-svgraph.json" in release
+    assert "tmp/wheel-svgraph.json" in workflow
+    assert "tmp/wheel-svgraph-presentation.json" in workflow
+    assert "tmp/wheel-legacy-svgraph.json" in workflow
+
+
 def test_pptx_exporter_uses_only_svgraph_internal_shape_prefix() -> None:
     pptx_source = (Path(__file__).resolve().parents[1] / "src" / "svgraph" / "pptx.py").read_text(encoding="utf-8")
 

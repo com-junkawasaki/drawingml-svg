@@ -20,6 +20,8 @@ python -m zipfile --test tmp/svgraph-complex.pptx
 
 ```bash
 python -m build --sdist --wheel -o tmp/dist
+test -f tmp/dist/svgraph-*.tar.gz
+test -f tmp/dist/svgraph-*.whl
 ```
 
 - Install the wheel in a clean virtual environment and run CLI smoke checks:
