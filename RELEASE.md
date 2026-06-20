@@ -77,6 +77,7 @@ assert pyproject["project"]["name"] == "svgraph"
 assert pyproject["project"]["description"] == "Small, dependency-free SVG presentation graph toolkit for SVGraph, DrawingML, PresentationML/PPTX, and browser-only web editing."
 assert {"svg", "svgraph", "drawingml", "presentationml", "pptx", "web"} <= set(pyproject["project"]["keywords"])
 assert web_package["name"] == "svgraph-web"
+assert web_package["version"] == pyproject["project"]["version"]
 assert web_package["description"] == "Browser-only SVGraph editor and SVG to PresentationML/PPTX converter."
 assert {"svg", "svgraph", "presentationml", "pptx", "web"} <= set(web_package["keywords"])
 assert web_package["homepage"] == "https://com-junkawasaki.github.io/svgraph/"

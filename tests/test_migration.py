@@ -522,6 +522,7 @@ def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
         assert 'pyproject["project"]["description"] == "Small, dependency-free SVG presentation graph toolkit' in source
         assert '"presentationml", "pptx", "web"' in source
         assert 'web_package["name"] == "svgraph-web"' in source
+        assert 'web_package["version"] == pyproject["project"]["version"]' in source
         assert (
             'web_package["description"] == "Browser-only SVGraph editor and SVG to PresentationML/PPTX converter."'
         ) in source
