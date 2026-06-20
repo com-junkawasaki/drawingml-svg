@@ -104,6 +104,13 @@ type BaseShape = {
   data: Record<string, string>;
 };
 
+type Box = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 type RectShape = BaseShape & {
   kind: "rect";
   x: number;
@@ -202,6 +209,7 @@ type SvgStyle = {
   fontWeight?: string;
   markerStart?: boolean;
   markerEnd?: boolean;
+  clipPath?: string | null;
 };
 
 type CssRule = {
@@ -240,6 +248,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
   <g id="coverage-slide" data-kind="slide" data-title="Browser SVG Coverage" style="stroke:#334155;stroke-width:4;fill:#fde68a">
     <defs>
       <rect id="reused-chip" width="170" height="70" rx="14"/>
+      <clipPath id="bar-clip"><rect x="960" y="500" width="150" height="70"/></clipPath>
     </defs>
     <style>
       .accent-use { fill: #fce7f3; stroke: #be185d; stroke-width: 5; }
@@ -255,6 +264,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <line id="marked-line" x1="980" y1="185" x2="1130" y2="260" style="stroke:#7c3aed;stroke-width:8;marker-end:url(#arrow)"/>
     <image id="pixel" x="980" y="340" width="96" height="96" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="/>
     <circle class="css-circle" cx="1130" cy="388" r="48"/>
+    <rect id="clipped-bar" x="930" y="500" width="250" height="70" style="fill:#fecaca;stroke:#991b1b;clip-path:url(#bar-clip)"/>
     <use href="#reused-chip" class="accent-use" x="360" y="400"/>
     <g transform="translate(90 390) scale(1.5)">
       <rect id="scaled" width="160" height="80" style="fill:#dbeafe;stroke:#2563eb"/>
@@ -599,7 +609,8 @@ function extractShapes(root: Element): Shape[] {
       }
       return;
     }
-    const shape = elementToShape(element, ownMatrix, ownStyle, nextId);
+    const clip = rectClipBounds(ownStyle, refs, ownMatrix);
+    const shape = applyClip(elementToShape(element, ownMatrix, ownStyle, nextId), clip);
     if (shape) {
       shapes.push(shape);
       nextId += 1;
@@ -808,7 +819,7 @@ function nearestShapeId(x: number, y: number, shapes: (RectShape | EllipseShape 
     .sort((a, b) => a.distance - b.distance)[0]?.id ?? null;
 }
 
-function shapeBox(shape: RectShape | EllipseShape | TextShape | FreeformShape): { x: number; y: number; width: number; height: number } {
+function shapeBox(shape: RectShape | EllipseShape | TextShape | FreeformShape): Box {
   if (shape.kind === "freeform") {
     const xs = shape.points.map(([x]) => x);
     const ys = shape.points.map(([, y]) => y);
@@ -817,6 +828,93 @@ function shapeBox(shape: RectShape | EllipseShape | TextShape | FreeformShape): 
     return { x: minX, y: minY, width: Math.max(...xs) - minX, height: Math.max(...ys) - minY };
   }
   return { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
+}
+
+function rectClipBounds(style: SvgStyle, refs: Map<string, Element>, matrix: Matrix): Box | null {
+  if (!style.clipPath || style.clipPath === "none") return null;
+  const refId = urlRef(style.clipPath);
+  if (!refId) return null;
+  const clip = refs.get(refId);
+  if (!clip || localName(clip) !== "clipPath") return null;
+  const units = (clip.getAttribute("clipPathUnits") || "userSpaceOnUse").toLowerCase();
+  if (units !== "userspaceonuse") return null;
+  const rect = Array.from(clip.children).find((child) => localName(child) === "rect");
+  if (!rect) return null;
+  const width = num(rect, "width");
+  const height = num(rect, "height");
+  if (width <= 0 || height <= 0) return null;
+  const clipMatrix = multiply(multiply(matrix, transformMatrix(clip.getAttribute("transform"))), transformMatrix(rect.getAttribute("transform")));
+  const box = transformedBox(clipMatrix, num(rect, "x"), num(rect, "y"), width, height);
+  return box.width > 0 && box.height > 0 ? box : null;
+}
+
+function applyClip(shape: Shape | null, clip: Box | null): Shape | null {
+  if (!shape || !clip) return shape;
+  if (shape.kind === "rect") {
+    const box = intersectBox(shape, clip);
+    return box ? { ...shape, ...box, rx: Math.min(shape.rx, box.width / 2, box.height / 2) } : null;
+  }
+  if (shape.kind === "ellipse" || shape.kind === "text" || shape.kind === "image") {
+    const box = intersectBox(shape, clip);
+    return box ? { ...shape, ...box } : null;
+  }
+  if (shape.kind === "line") {
+    const clipped = clipSegmentToBox([shape.x1, shape.y1], [shape.x2, shape.y2], clip);
+    return clipped ? { ...shape, x1: clipped[0][0], y1: clipped[0][1], x2: clipped[1][0], y2: clipped[1][1] } : null;
+  }
+  if (shape.kind === "freeform") {
+    const bounds = shapeBox(shape);
+    if (!intersectBox(bounds, clip)) return null;
+    if (!shape.closed && shape.points.length === 2) {
+      const clipped = clipSegmentToBox(shape.points[0]!, shape.points[1]!, clip);
+      return clipped ? { ...shape, points: clipped } : null;
+    }
+    return { ...shape, points: shape.points.map(([x, y]) => [clamp(x, clip.x, clip.x + clip.width), clamp(y, clip.y, clip.y + clip.height)]) };
+  }
+  return shape;
+}
+
+function intersectBox(a: Box, b: Box): Box | null {
+  const x1 = Math.max(a.x, b.x);
+  const y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.width, b.x + b.width);
+  const y2 = Math.min(a.y + a.height, b.y + b.height);
+  if (x2 <= x1 || y2 <= y1) return null;
+  return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
+}
+
+function clipSegmentToBox(start: [number, number], end: [number, number], box: Box): [[number, number], [number, number]] | null {
+  const dx = end[0] - start[0];
+  const dy = end[1] - start[1];
+  let t0 = 0;
+  let t1 = 1;
+  const checks: [number, number][] = [
+    [-dx, start[0] - box.x],
+    [dx, box.x + box.width - start[0]],
+    [-dy, start[1] - box.y],
+    [dy, box.y + box.height - start[1]],
+  ];
+  for (const [p, q] of checks) {
+    if (p === 0 && q < 0) return null;
+    if (p === 0) continue;
+    const r = q / p;
+    if (p < 0) t0 = Math.max(t0, r);
+    else t1 = Math.min(t1, r);
+    if (t0 > t1) return null;
+  }
+  return [
+    [start[0] + t0 * dx, start[1] + t0 * dy],
+    [start[0] + t1 * dx, start[1] + t1 * dy],
+  ];
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function urlRef(value: string): string | null {
+  const match = value.match(/^url\(\s*['"]?#([^'")\s]+)['"]?\s*\)$/);
+  return match?.[1] ?? null;
 }
 
 function shapeToXml(shape: Shape): string {
@@ -1195,6 +1293,7 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   const fontSize = value("font-size");
   const fontFamily = value("font-family");
   const fontWeight = value("font-weight");
+  const clipPath = value("clip-path");
   const marker = value("marker");
   const markerStart = value("marker-start");
   const markerEnd = value("marker-end");
@@ -1204,6 +1303,7 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   if (fontSize != null) next.fontSize = parseLength(fontSize, next.fontSize ?? 18);
   if (fontFamily != null) next.fontFamily = fontFamily.replace(/^['"]|['"]$/g, "");
   if (fontWeight != null) next.fontWeight = fontWeight;
+  if (clipPath != null) next.clipPath = clipPath.trim();
   if (marker != null) {
     const enabled = marker !== "none";
     next.markerStart = enabled;
