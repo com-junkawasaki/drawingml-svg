@@ -17,6 +17,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Strengthened release and CI source distribution checks so `svgraph-web` and Python package versions stay synchronized.
 - Strengthened web editor artifact-name guards for SVGraph JSON, presentation JSON, and PPTX downloads.
 - Strengthened wheel metadata regression coverage so canonical SVGraph distribution identity is verified from a freshly built wheel.
+- Strengthened compatibility entry point regression coverage so retained legacy aliases are verified from freshly built SVGraph wheel metadata.
 - Accepted canonical snake_case SVGraph presentation metadata keys such as `slide_size` and `text_styles` in both Python and browser runtimes, while continuing to read SVG-authored `slideSize` and `textStyles`.
 - Switched direct Python CLI entry calls to use `svgraph` as the program name, while preserving legacy executable names for compatibility aliases.
 - Added deprecation warnings that point retained legacy executable aliases to their canonical `svgraph` commands.

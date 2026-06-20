@@ -5,8 +5,11 @@ from email.parser import Parser
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
+import sys
 import tomllib
+import zipfile
 
 
 LEGACY_TERMS = (
@@ -471,17 +474,36 @@ def test_readme_cli_block_covers_every_visible_svgraph_command() -> None:
     assert "pptxsvg" not in cli_section
 
 
-def test_generated_distribution_metadata_preserves_legacy_compatibility_entry_points() -> None:
+def test_generated_distribution_metadata_preserves_legacy_compatibility_entry_points(tmp_path) -> None:
     root = Path(__file__).resolve().parents[1]
-    pkg_info = root / "src" / "svgraph.egg-info" / "PKG-INFO"
-    entry_points = root / "src" / "svgraph.egg-info" / "entry_points.txt"
-    top_level = root / "src" / "svgraph.egg-info" / "top_level.txt"
-    if not pkg_info.exists() or not entry_points.exists() or not top_level.exists():
-        return
+    egg_info = root / "src" / "svgraph.egg-info"
+    build_dir = root / "build"
+    had_egg_info = egg_info.exists()
+    had_build_dir = build_dir.exists()
 
-    metadata = Parser().parsestr(pkg_info.read_text(encoding="utf-8"))
-    entry_point_text = entry_points.read_text(encoding="utf-8")
-    top_level_names = set(top_level.read_text(encoding="utf-8").splitlines())
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "wheel", ".", "--no-deps", "-w", str(tmp_path)],
+            check=True,
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        wheel_path = next(tmp_path.glob("svgraph-*.whl"))
+        with zipfile.ZipFile(wheel_path) as wheel:
+            wheel_names = set(wheel.namelist())
+            metadata_name = next(name for name in wheel_names if name.endswith(".dist-info/METADATA"))
+            entry_points_name = next(name for name in wheel_names if name.endswith(".dist-info/entry_points.txt"))
+            top_level_name = next(name for name in wheel_names if name.endswith(".dist-info/top_level.txt"))
+            metadata = Parser().parsestr(wheel.read(metadata_name).decode("utf-8"))
+            entry_point_text = wheel.read(entry_points_name).decode("utf-8")
+            top_level_names = set(wheel.read(top_level_name).decode("utf-8").splitlines())
+    finally:
+        if not had_egg_info:
+            shutil.rmtree(egg_info, ignore_errors=True)
+        if not had_build_dir:
+            shutil.rmtree(build_dir, ignore_errors=True)
 
     assert metadata["Name"] == "svgraph"
     assert metadata["Summary"] == (
