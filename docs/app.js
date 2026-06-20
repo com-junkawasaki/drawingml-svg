@@ -982,7 +982,7 @@ function analyzeSvgCoverage(root) {
         const tag = localName(element);
         stats.total_elements += 1;
         const style = computedStyle(element, inheritedStyle, css, refs, currentViewport);
-        const ignored = inDefs || coverageIgnoredElements.has(tag) || style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse";
+        const ignored = coverageElementIsIgnored(element, tag, style, refs, css, currentViewport, inDefs);
         const supportedElement = coverageElementIsSupported(element, tag, refs);
         if (ignored) {
             stats.ignored_elements += 1;
@@ -1028,6 +1028,67 @@ function coverageElementIsSupported(element, tag, refs) {
     if (tag === "switch")
         return switchSelectedChild(element) != null || element.children.length === 0;
     return true;
+}
+function coverageElementIsIgnored(element, tag, style, refs, css, viewport, inDefs) {
+    return (inDefs ||
+        coverageIgnoredElements.has(tag) ||
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.visibility === "collapse" ||
+        coverageHasNonRenderingGeometry(element, tag, style, viewport) ||
+        coverageHasNoVisiblePaint(element, tag, style, refs, css, viewport));
+}
+function coverageHasNonRenderingGeometry(element, tag, style, viewport) {
+    if (tag === "foreignObject" || tag === "rect" || tag === "image")
+        return geom(element, "width", "x", viewport) <= 0 || geom(element, "height", "y", viewport) <= 0;
+    if (tag === "circle")
+        return geom(element, "r", "diag", viewport) <= 0;
+    if (tag === "ellipse")
+        return geom(element, "rx", "x", viewport) <= 0 || geom(element, "ry", "y", viewport) <= 0;
+    return false;
+}
+function coverageHasNoVisiblePaint(element, tag, style, refs, css, viewport, refStack = new Set()) {
+    if (tag === "image")
+        return style.imageAlpha === 0;
+    if (tag === "use") {
+        const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
+        const refId = href.startsWith("#") ? href.slice(1) : "";
+        const ref = refId ? refs.get(refId) : null;
+        if (!ref || refStack.has(refId))
+            return false;
+        const refViewport = ["svg", "symbol"].includes(localName(ref)) ? useViewport(ref, element, viewport) : viewport;
+        return !coverageSubtreeHasVisibleRendering(ref, style, refs, css, refViewport, new Set([...refStack, refId]));
+    }
+    if (!["circle", "ellipse", "line", "path", "polygon", "polyline", "rect", "text", "tspan"].includes(tag))
+        return false;
+    if ((tag === "text" || tag === "tspan") && !(element.textContent || "").trim())
+        return true;
+    const hasFill = tag !== "line" && style.fill !== "none" && style.fillAlpha !== 0;
+    const hasStroke = !!style.stroke && style.stroke !== "none" && style.strokeAlpha !== 0 && (style.strokeWidth ?? 1) > 0;
+    return !(hasFill || hasStroke);
+}
+function coverageSubtreeHasVisibleRendering(element, inheritedStyle, refs, css, viewport, refStack) {
+    const tag = localName(element);
+    const style = computedStyle(element, inheritedStyle, css, refs, viewport);
+    if (style.display === "none")
+        return false;
+    if (tag === "use") {
+        const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
+        const refId = href.startsWith("#") ? href.slice(1) : "";
+        const ref = refId ? refs.get(refId) : null;
+        if (!ref || refStack.has(refId))
+            return false;
+        const refViewport = ["svg", "symbol"].includes(localName(ref)) ? useViewport(ref, element, viewport) : viewport;
+        return coverageSubtreeHasVisibleRendering(ref, style, refs, css, refViewport, new Set([...refStack, refId]));
+    }
+    if (style.visibility !== "hidden" && style.visibility !== "collapse" && coverageSupportedElements.has(tag) && !coverageHasNonRenderingGeometry(element, tag, style, viewport) && !coverageHasNoVisiblePaint(element, tag, style, refs, css, viewport, refStack))
+        return true;
+    const childViewport = tag === "svg" ? renderedSvgViewport(element, viewport) : viewport;
+    if (tag === "switch") {
+        const selected = switchSelectedChild(element);
+        return selected ? coverageSubtreeHasVisibleRendering(selected, style, refs, css, childViewport, refStack) : false;
+    }
+    return Array.from(element.children).some((child) => coverageSubtreeHasVisibleRendering(child, style, refs, css, childViewport, refStack));
 }
 function coverageSupportedElementIssue(tag) {
     if (tag === "path")

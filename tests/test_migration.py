@@ -1070,6 +1070,10 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "function subtreeHasVisibleText" in generated
         assert "coverageTextLayoutAttributes.has(name)" in generated
         assert "function coverageAttributeHasNoEffect" in generated
+        assert "function coverageElementIsIgnored" in generated
+        assert "function coverageHasNonRenderingGeometry" in generated
+        assert "function coverageHasNoVisiblePaint" in generated
+        assert "function coverageSubtreeHasVisibleRendering" in generated
         assert "function zeroAngle" in generated
         assert "function textHasNoKerningPairs" in generated
         assert 'name === "font-kerning"' in generated
@@ -1305,6 +1309,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser coverage analyzer with CSS declaration diagnostics for supported SVG text, stroke, transform, and opacity attributes",
         "browser coverage analyzer text-layout no-op handling for non-text SVG subtrees",
         "browser coverage analyzer attribute-specific no-op handling for SVG font, glyph, bidi, writing-mode, and text-decoration controls",
+        "browser coverage analyzer ignored-element handling for non-rendering geometry and no visible paint",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",
