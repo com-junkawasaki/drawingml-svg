@@ -874,6 +874,8 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
 
 def test_drawingml_svg_modules_are_compatibility_wrappers() -> None:
     root = Path(__file__).resolve().parents[1]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    migration = (root / "MIGRATION.md").read_text(encoding="utf-8")
     unexpected: list[str] = []
     assert COMPATIBILITY_WRAPPER_MODULES == {
         "src/drawingml_svg/__init__.py": "from svgraph import",
@@ -890,6 +892,9 @@ def test_drawingml_svg_modules_are_compatibility_wrappers() -> None:
         if "def " in text or "class " in text:
             unexpected.append(f"{relative}: contains implementation definitions")
 
+    assert "compatibility import path whose main modules are wrappers over `svgraph`" in readme
+    assert "new code should import `svgraph`" in readme
+    assert "main modules are compatibility wrappers over `svgraph`" in migration
     assert unexpected == []
 
 

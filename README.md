@@ -142,7 +142,7 @@ from svgraph import svg_to_svgraph_presentation
 presentation = svg_to_svgraph_presentation(svg_text)
 ```
 
-`drawingml_svg` remains available as a compatibility import path.
+`drawingml_svg` remains available as a compatibility import path whose main modules are wrappers over `svgraph`; new code should import `svgraph`.
 See [MIGRATION.md](MIGRATION.md) for the old-to-new surface mapping.
 
 ## SVGraph
