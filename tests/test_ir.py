@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 
-from drawingml_svg import svg_to_ir, svg_to_pptx_ir, svg_to_svgraph
-from drawingml_svg.ir import svg_ir_to_json, svg_pptx_ir_to_json, svg_svgraph_to_json
+from drawingml_svg import svg_to_ir, svg_to_pptx_ir, svg_to_svgraph, svg_to_svgraph_presentation
+from drawingml_svg.ir import svg_ir_to_json, svg_pptx_ir_to_json, svg_svgraph_presentation_to_json, svg_svgraph_to_json
 
 
 def test_svg_ir_preserves_metadata_data_attributes_and_dependencies() -> None:
@@ -23,7 +24,7 @@ def test_svg_ir_preserves_metadata_data_attributes_and_dependencies() -> None:
     assert ir.kind == "svgraph"
     assert ir.version == "0.1"
     assert ir.metadata["json"] == {"title": "System", "relations": [{"from": "api", "to": "db"}]}
-    assert ir.presentation.kind == "pptxsvg"
+    assert ir.presentation.kind == "svgraph-presentation"
     assert ir.presentation.slide_size == (100.0, 50.0)
     assert ir.presentation.slides[0].slide_id == "slide-1"
     assert ir.presentation.parts[-1].part_name == "/ppt/slides/slide1.xml"
@@ -48,7 +49,7 @@ def test_svg_ir_json_cli_payload_is_serializable() -> None:
 
     assert data["root"]["children"][0]["data"] == {"kind": "table"}
     assert data["kind"] == "svgraph"
-    assert data["presentation"]["kind"] == "pptxsvg"
+    assert data["presentation"]["kind"] == "svgraph-presentation"
 
 
 def test_svgraph_alias_matches_svg_ir_payload() -> None:
@@ -61,7 +62,7 @@ def test_svgraph_alias_matches_svg_ir_payload() -> None:
     assert payload["root"]["children"][0]["data"] == {"kind": "table"}
 
 
-def test_svg_pptx_ir_discovers_declared_slides() -> None:
+def test_svgraph_presentation_discovers_declared_slides() -> None:
     svg = """\
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
   <metadata>{"presentation": {"slideSize": {"width": 1280, "height": 720}}}</metadata>
@@ -76,9 +77,9 @@ def test_svg_pptx_ir_discovers_declared_slides() -> None:
 </svg>
 """
 
-    presentation = svg_to_pptx_ir(svg)
+    presentation = svg_to_svgraph_presentation(svg)
 
-    assert presentation.kind == "pptxsvg"
+    assert presentation.kind == "svgraph-presentation"
     assert presentation.slide_size == (1280.0, 720.0)
     assert [slide.slide_id for slide in presentation.slides] == ["intro", "detail"]
     assert [slide.title for slide in presentation.slides] == ["Intro", "Detail"]
@@ -87,7 +88,7 @@ def test_svg_pptx_ir_discovers_declared_slides() -> None:
     assert [part.source_node_id for part in presentation.parts[-2:]] == ["n0.0", "n0.1"]
 
 
-def test_svg_pptx_ir_preserves_presentation_templates_guides_rulers_and_text_styles() -> None:
+def test_svgraph_presentation_preserves_presentation_templates_guides_rulers_and_text_styles() -> None:
     svg = """\
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
   <metadata>{
@@ -112,7 +113,7 @@ def test_svg_pptx_ir_preserves_presentation_templates_guides_rulers_and_text_sty
 </svg>
 """
 
-    presentation = svg_to_pptx_ir(svg)
+    presentation = svg_to_svgraph_presentation(svg)
 
     assert [master.template_id for master in presentation.masters] == ["brand-master", "master-node"]
     assert [layout.template_id for layout in presentation.layouts] == ["title-content", "layout-node"]
@@ -133,14 +134,24 @@ def test_svg_pptx_ir_preserves_presentation_templates_guides_rulers_and_text_sty
     assert presentation.text_styles[0].properties["fontSize"] == 48
 
 
-def test_svg_pptx_ir_json_cli_payload_is_serializable() -> None:
-    payload = svg_pptx_ir_to_json(
+def test_svgraph_presentation_json_cli_payload_is_serializable() -> None:
+    payload = svg_svgraph_presentation_to_json(
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><g data-slide="1"/></svg>"""
     )
 
     data = json.loads(payload)
 
-    assert data["kind"] == "pptxsvg"
+    assert data["kind"] == "svgraph-presentation"
     assert data["slide_size"] == [16.0, 9.0]
     assert data["slides"][0]["slide_id"] == "1"
     assert data["parts"][-1]["kind"] == "slide"
+
+
+def test_legacy_pptx_ir_alias_matches_svgraph_presentation_payload() -> None:
+    svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><g data-slide="1"/></svg>"""
+
+    legacy = svg_to_pptx_ir(svg)
+    legacy_payload = json.loads(svg_pptx_ir_to_json(svg))
+
+    assert legacy.kind == "svgraph-presentation"
+    assert legacy_payload == json.loads(json.dumps(asdict(legacy)))

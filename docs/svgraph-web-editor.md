@@ -1,8 +1,8 @@
-# PPTXSVG Web Editor Design
+# SVGraph Web Editor Design
 
 ## Goal
 
-Build a browser-based editor for `pptxsvg`: an SVG-first presentation format where SVG remains the editable source of truth, `svg_to_svgraph()` exposes SVGraph semantic structure, and `svg_to_pptx_ir()` provides the package-level plan for `.pptx` export.
+Build a browser-based editor for SVGraph: an SVG-first semantic graph where SVG remains the editable source of truth, `svg_to_svgraph()` exposes SVGraph structure, and `svg_to_svgraph_presentation()` provides the package-level plan for `.pptx` export.
 
 The app should support:
 
@@ -16,7 +16,7 @@ Current implementation status:
 
 - `web/app.ts` is the TypeScript browser runtime.
 - GitHub Pages loads the compiled `docs/app.js`.
-- The browser can export `.pptx` without Python for the PPTXSVG MVP subset: multi-slide SVG groups, editable rect/ellipse/line/text shapes with inline `tspan` rich text runs and basic `text-anchor`/baseline alignment, polygon/polyline/quadratic/cubic/arc path custom geometry, embedded data URI images, marker arrows, local `defs`/`use`, linear/radial gradient and pattern fallback colors, named colors, CSS `rgb()`/`hsl()` colors, `currentColor`, fill/stroke alpha from opacity properties and alpha colors, stroke dash/cap/join styles, transform-scaled strokes, line/polyline/basic path `pathLength` dash scaling, `vector-effect="non-scaling-stroke"`, rectangular `clipPath` in user-space and object bounding-box units, nested SVG `overflow="hidden"` viewport clipping, simple selector styles, inline style/inherited paint, basic transforms, relation connectors, inferred rect/text and line/text SVG grid tables, semantic tables, and `foreignObject` table frame sizing/alignment plus alpha fills and text runs.
+- The browser can export `.pptx` without Python for the SVGraph presentation MVP subset: multi-slide SVG groups, editable rect/ellipse/line/text shapes with inline `tspan` rich text runs and basic `text-anchor`/baseline alignment, polygon/polyline/quadratic/cubic/arc path custom geometry, embedded data URI images, marker arrows, local `defs`/`use`, linear/radial gradient and pattern fallback colors, named colors, CSS `rgb()`/`hsl()` colors, `currentColor`, fill/stroke alpha from opacity properties and alpha colors, stroke dash/cap/join styles, transform-scaled strokes, line/polyline/basic path `pathLength` dash scaling, `vector-effect="non-scaling-stroke"`, rectangular `clipPath` in user-space and object bounding-box units, nested SVG `overflow="hidden"` viewport clipping, simple selector styles, inline style/inherited paint, basic transforms, relation connectors, inferred rect/text and line/text SVG grid tables, semantic tables, and `foreignObject` table frame sizing/alignment plus alpha fills and text runs.
 - The Python converter remains the fuller reference implementation for complex SVG features such as paths, images, advanced CSS, clipping, markers, and richer table extraction.
 
 ## Product Shape
@@ -28,7 +28,7 @@ Primary panes:
 - Canvas: live SVG rendering with slide overlays, selection handles, guides, connectors, and table/cell hints.
 - Structure: SVGraph tree, node ids, `id`, `data-kind`, `data-role`, `data-bind`, dependencies, and warnings.
 - Properties: geometry, paint, text, metadata, accessibility, table semantics, and slide settings.
-- Slides: `pptxsvg` slide list, slide size, titles, notes, and package part mapping.
+- Slides: SVGraph presentation slide list, slide size, titles, notes, and package part mapping.
 - Assistant: local WebGPU LLM panel for semantic suggestions and batch edits.
 - Export: DrawingML fragment, PresentationML package plan, `.pptx`, SVG, and sidecar JSON.
 
@@ -41,7 +41,7 @@ Browser UI
   |     |-- raw SVG text
   |     |-- DOM tree
   |     |-- SVGraph JSON
-  |     |-- PPTXSVG presentation JSON
+  |     |-- SVGraph presentation JSON
   |
   |-- Workers
   |     |-- parser/analyzer worker
@@ -63,7 +63,7 @@ Client-side state should keep four synchronized layers:
 1. Raw SVG source.
 2. Parsed SVG DOM.
 3. `SVGraphDocument`.
-4. `PPTXSVG presentation projection`.
+4. `SVGraphPresentation` projection.
 
 The app treats SVG as canonical. SVGraph is derived and cached. UI actions should preferably emit structured edit operations and then serialize back to SVG:
 
@@ -92,14 +92,14 @@ Recommended operation groups:
 
 Every operation should be reversible for undo/redo.
 
-## PPTXSVG Workflow
+## SVGraph Presentation Workflow
 
 ### Import
 
 1. User opens `.svg` or pastes SVG.
 2. Parser validates XML and normalizes namespaces.
 3. Analyzer reports unsupported visual features.
-4. SVGraph builder extracts metadata, `data-*`, dependencies, and `pptxsvg` presentation view.
+4. SVGraph builder extracts metadata, `data-*`, dependencies, and `svgraph-presentation` view.
 5. UI overlays slide boundaries.
 
 ### Edit
@@ -121,7 +121,7 @@ Export targets:
 
 - `svg`: canonical source.
 - `svgraph.json`: full SVGraph.
-- `pptxsvg.json`: presentation/package projection.
+- `svgraph-presentation.json`: presentation/package projection.
 - `drawingml.xml`: current fragment converter output.
 - `pptx`: full package emitter output.
 
@@ -246,7 +246,7 @@ Important states:
 
 - SVG load/save
 - SVGraph tree view
-- `pptxsvg` slide list
+- SVGraph presentation slide list
 - analyzer warnings
 - metadata/data-* inspector
 

@@ -23,15 +23,15 @@ It targets the practical subset needed for generated Office graphics and simple 
 - Reuse: local `defs`/`use` expansion for referenced shapes, groups, and basic `symbol viewBox` scaling, including legacy `xlink:href`, with unsupported missing/external use references reported by the analyzer
 - Text: basic font size, weight, italic style, font family, `small-caps` and `all-small-caps` font variants, inherited and per-`tspan` `text-transform`, run-level `tspan` fill/font/outline/decoration/letter-spacing/word-spacing/baseline styling, DrawingML rich text runs as SVG `tspan` styles, text fill/no-fill, text outline color/width/cap/join/dash/miter, underline/strike decoration including `text-decoration-line`, `text-decoration` shorthand, and dashed/dotted/double/wavy underline styles, horizontal/vertical anchor including supported first-`tspan` `text-anchor`/baseline and `alignment-baseline` fallbacks, simple `direction="rtl"` paragraph direction, text-level `baseline-shift` `super`/`sub`, `xml:space="preserve"`, single-value `rotate` including CSS angle units, `letter-spacing`, simple `word-spacing`, `textLength` spacing adjustment, approximate `spacingAndGlyphs`, `dx`/`dy` positioning, first-`tspan` positioning fallback, multi-line `tspan` extraction, and multiple DrawingML paragraph extraction
 
-The converter supports DrawingML shape fragments and can also emit complete `.pptx` packages from PPTXSVG slide metadata. It does not read complete `.pptx` or `.docx` packages yet.
+The converter supports DrawingML shape fragments and can also emit complete `.pptx` packages from SVGraph presentation metadata. It does not read complete `.pptx` or `.docx` packages yet.
 
-## Browser-only PPTXSVG
+## Browser-only SVGraph
 
 The GitHub Pages editor runs a TypeScript converter entirely in the browser:
 
-- `web/app.ts` builds SVGraph, browser-local coverage diagnostics, a PPTXSVG package projection, PresentationML slide XML, and a `.pptx` ZIP without Python or server APIs.
+- `web/app.ts` builds SVGraph, browser-local coverage diagnostics, an SVGraph presentation package projection, PresentationML slide XML, and a `.pptx` ZIP without Python or server APIs.
 - `docs/app.js` is the compiled Pages artifact.
-- Current browser export coverage is still narrower than the Python converter, but supports `rect`, `circle`/`ellipse`, `line`, `polygon`, `polyline`, `M/L/H/V/Z`, quadratic/cubic `Q/T/C/S`, and arc `A` paths as custom geometry, embedded data URI images with intrinsic-size `preserveAspectRatio` meet/slice handling and `opacity` as picture alpha, marker arrows, `defs`/local `use` expansion plus root, nested `svg`, and `symbol` viewBox scaling with `preserveAspectRatio`, linear/radial gradient and pattern paint-server fallback colors, named colors, CSS `rgb()`/`hsl()` colors, `currentColor`, `context-fill`/`context-stroke`, fill/stroke alpha from opacity properties and alpha colors, stroke dash/cap/join styles including `stroke-dashoffset` phase approximation, miterlimit export, transform-scaled strokes, line/polyline/basic path `pathLength` dash scaling, and `vector-effect="non-scaling-stroke"`, `display:none` subtree skipping and inherited `visibility:hidden`/`collapse` with visible-descendant recovery, simple `<style>` selector rules plus screen-compatible `@media` blocks with specificity plus `!important` cascade priority, CSS custom properties with `var()` fallbacks, and `inherit`/`initial`/`unset` on converted properties, geometry and text metrics with absolute/relative CSS length units including `em`, `%`, `rem`, and basic `calc()`/`min()`/`max()`/`clamp()` expressions, `text` plus inline `tspan` rich text runs, first-`tspan` position fallback, positioned `tspan` line-break fallback, `text-transform` literal text mapping, `xml:space="preserve"` whitespace retention, CSS/presentation `font` shorthand expansion, font-size keywords, `font-variant` small/all caps, run-level text outline stroke, underline/strike decoration including underline color and thickness, `baseline-shift` super/sub, `letter-spacing`, simple `word-spacing`, `textLength` spacing approximation, single-value text `rotate`, simple RTL paragraph direction, text line breaks, and basic `text-anchor`/baseline alignment, inline `style`/basic inherited paint and text styles, CSS/SVG `matrix`/`translate`/`scale`/`rotate`/`skewX`/`skewY` transforms with common angle and absolute length units plus absolute, keyword, and reference-box percentage `transform-origin`, rectangular `clipPath` bounds in user space and object bounding-box units, nested SVG `overflow="hidden"` viewport clipping, PPTXSVG multi-slide groups, semantic relation connectors, rect/text SVG grids, line/text SVG grids, and rect background plus line-border SVG grids inferred as native PowerPoint tables, semantic table groups as native PowerPoint tables with `data-text`, `data-colspan`, `data-rowspan`, rect fills, and rect stroke borders including dash/cap/join/miterlimit styles, and simple `foreignObject` HTML tables as native PowerPoint tables with editable captions, table `width`/`height`, `align`, and margin frame offsets, `colgroup` widths and col/colgroup background fills, alpha colors for cell fills, text runs, and borders, `colspan`/`rowspan`, `cellspacing`/`border-spacing` spacer cells, inline rich text runs, fill, text color, bold headers, uniform and per-side cell padding, RTL/nowrap cell text, alignment, and shorthand/separate/side border styles.
+- Current browser export coverage is still narrower than the Python converter, but supports `rect`, `circle`/`ellipse`, `line`, `polygon`, `polyline`, `M/L/H/V/Z`, quadratic/cubic `Q/T/C/S`, and arc `A` paths as custom geometry, embedded data URI images with intrinsic-size `preserveAspectRatio` meet/slice handling and `opacity` as picture alpha, marker arrows, `defs`/local `use` expansion plus root, nested `svg`, and `symbol` viewBox scaling with `preserveAspectRatio`, linear/radial gradient and pattern paint-server fallback colors, named colors, CSS `rgb()`/`hsl()` colors, `currentColor`, `context-fill`/`context-stroke`, fill/stroke alpha from opacity properties and alpha colors, stroke dash/cap/join styles including `stroke-dashoffset` phase approximation, miterlimit export, transform-scaled strokes, line/polyline/basic path `pathLength` dash scaling, and `vector-effect="non-scaling-stroke"`, `display:none` subtree skipping and inherited `visibility:hidden`/`collapse` with visible-descendant recovery, simple `<style>` selector rules plus screen-compatible `@media` blocks with specificity plus `!important` cascade priority, CSS custom properties with `var()` fallbacks, and `inherit`/`initial`/`unset` on converted properties, geometry and text metrics with absolute/relative CSS length units including `em`, `%`, `rem`, and basic `calc()`/`min()`/`max()`/`clamp()` expressions, `text` plus inline `tspan` rich text runs, first-`tspan` position fallback, positioned `tspan` line-break fallback, `text-transform` literal text mapping, `xml:space="preserve"` whitespace retention, CSS/presentation `font` shorthand expansion, font-size keywords, `font-variant` small/all caps, run-level text outline stroke, underline/strike decoration including underline color and thickness, `baseline-shift` super/sub, `letter-spacing`, simple `word-spacing`, `textLength` spacing approximation, single-value text `rotate`, simple RTL paragraph direction, text line breaks, and basic `text-anchor`/baseline alignment, inline `style`/basic inherited paint and text styles, CSS/SVG `matrix`/`translate`/`scale`/`rotate`/`skewX`/`skewY` transforms with common angle and absolute length units plus absolute, keyword, and reference-box percentage `transform-origin`, rectangular `clipPath` bounds in user space and object bounding-box units, nested SVG `overflow="hidden"` viewport clipping, SVGraph multi-slide groups, semantic relation connectors, rect/text SVG grids, line/text SVG grids, and rect background plus line-border SVG grids inferred as native PowerPoint tables, semantic table groups as native PowerPoint tables with `data-text`, `data-colspan`, `data-rowspan`, rect fills, and rect stroke borders including dash/cap/join/miterlimit styles, and simple `foreignObject` HTML tables as native PowerPoint tables with editable captions, table `width`/`height`, `align`, and margin frame offsets, `colgroup` widths and col/colgroup background fills, alpha colors for cell fills, text runs, and borders, `colspan`/`rowspan`, `cellspacing`/`border-spacing` spacer cells, inline rich text runs, fill, text color, bold headers, uniform and per-side cell padding, RTL/nowrap cell text, alignment, and shorthand/separate/side border styles.
 
 ```bash
 npm ci
@@ -46,7 +46,7 @@ npm run build:web
 - Security policy: [SECURITY.md](SECURITY.md)
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Issue tracker: <https://github.com/com-junkawasaki/drawingml-svg/issues>
-- PPTXSVG web editor: <https://com-junkawasaki.github.io/drawingml-svg/>
+- SVGraph web editor: <https://com-junkawasaki.github.io/drawingml-svg/>
 
 ## Install
 
@@ -60,7 +60,7 @@ pip install -e .
 # SVG -> DrawingML
 drawingml-svg svg2dml input.svg -o shape.xml
 
-# SVG/PPTXSVG -> complete PPTX package
+# SVG/SVGraph presentation -> complete PPTX package
 drawingml-svg svg2pptx deck.svg -o deck.pptx
 
 # DrawingML -> SVG
@@ -78,7 +78,10 @@ drawingml-svg svgraph input.svg
 # legacy alias for SVGraph
 drawingml-svg ir input.svg
 
-# PPTX/package-oriented SVGraph projection
+# PPTX/package-oriented SVGraph presentation projection
+drawingml-svg svgraph-presentation input.svg
+
+# legacy alias for SVGraph presentation
 drawingml-svg pptxsvg input.svg
 
 # installed package version
@@ -95,7 +98,7 @@ The repository includes examples that embed converted DrawingML shapes into `.pp
 PYTHONPATH=src python examples/make_pptx.py examples/sample.svg -o tmp/drawingml-svg-sample.pptx
 PYTHONPATH=src python examples/make_pptx.py examples/coverage.svg -o tmp/drawingml-svg-coverage.pptx
 PYTHONPATH=src python examples/make_pptx.py examples/complex.svg -o tmp/drawingml-svg-complex.pptx
-PYTHONPATH=src python examples/make_pptx.py examples/pptxsvg.svg -o tmp/drawingml-svg-pptxsvg.pptx
+PYTHONPATH=src python examples/make_pptx.py examples/svgraph.svg -o tmp/drawingml-svg-svgraph.pptx
 ```
 
 ## Supported DrawingML presets
@@ -134,9 +137,9 @@ svgraph = svg_to_svgraph(svg_text).to_dict()
 ```
 
 ```python
-from drawingml_svg import svg_to_pptx_ir
+from drawingml_svg import svg_to_svgraph_presentation
 
-pptx_ir = svg_to_pptx_ir(svg_text)
+presentation = svg_to_svgraph_presentation(svg_text)
 ```
 
 ## SVGraph
@@ -149,10 +152,10 @@ This is intended as the stable handoff layer for expanding one SVG source into d
 - DrawingML: editable shapes, text, and native tables can be emitted where the target supports them.
 - PresentationML: slide-level structure, connectors, reading order, notes, tags, or custom XML can be derived from the same SVGraph document.
 
-The `pptxsvg` command and `svg_to_pptx_ir()` API expose just the presentation/package view. Slide boundaries are inferred from elements with `data-kind="slide"`, `data-role="slide"`, or `data-slide`; if none are present, the root SVG becomes a single slide. Slide size is taken from root `<metadata>` `{"presentation": {"slideSize": {"width": 1280, "height": 720}}}`, then root `viewBox`, then the first slide viewBox. The view also includes a package part blueprint for `/ppt/presentation.xml`, slide master/layout/theme parts, and generated `/ppt/slides/slideN.xml` parts. Presentation metadata can also carry `masters`, `layouts`, `guides`, `rulers`, and `textStyles` templates for title, lead, body, caption, and other PresentationML text roles.
+The `svgraph-presentation` command and `svg_to_svgraph_presentation()` API expose just the presentation/package view. The legacy `pptxsvg` command and `svg_to_pptx_ir()` API remain aliases. Slide boundaries are inferred from elements with `data-kind="slide"`, `data-role="slide"`, or `data-slide`; if none are present, the root SVG becomes a single slide. Slide size is taken from root `<metadata>` `{"presentation": {"slideSize": {"width": 1280, "height": 720}}}`, then root `viewBox`, then the first slide viewBox. The view also includes a package part blueprint for `/ppt/presentation.xml`, slide master/layout/theme parts, and generated `/ppt/slides/slideN.xml` parts. Presentation metadata can also carry `masters`, `layouts`, `guides`, `rulers`, and `textStyles` templates for title, lead, body, caption, and other PresentationML text roles.
 
-See [docs/adr/0001-svg-semantic-ir.md](docs/adr/0001-svg-semantic-ir.md) for the design contract.
-See [docs/pptxsvg-web-editor.md](docs/pptxsvg-web-editor.md) for the browser editor and WebGPU LLM integration design.
+See [docs/adr/0001-svgraph.md](docs/adr/0001-svgraph.md) for the design contract.
+See [docs/svgraph-web-editor.md](docs/svgraph-web-editor.md) for the browser editor and WebGPU LLM integration design.
 
 ## Scope
 

@@ -542,7 +542,7 @@ def test_make_pptx_cli_embeds_native_table_frames(tmp_path) -> None:
     assert "<p:sp>" not in slide
 
 
-def test_svg_to_pptx_bytes_creates_multi_slide_package_from_pptxsvg() -> None:
+def test_svg_to_pptx_bytes_creates_multi_slide_package_from_svgraph() -> None:
     pptx_data = svg_to_pptx_bytes(
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
           <metadata>{"presentation": {"slideSize": {"width": 1280, "height": 720}}}</metadata>
@@ -578,8 +578,8 @@ def test_svg_to_pptx_bytes_creates_multi_slide_package_from_pptxsvg() -> None:
     assert "<a:t>Detail</a:t>" in slide2
 
 
-def test_pptxsvg_semantic_relation_and_table_export_as_native_pptx_objects() -> None:
-    pptx_data = svg_to_pptx_bytes((_project_root() / "examples" / "pptxsvg.svg").read_text(encoding="utf-8"))
+def test_svgraph_semantic_relation_and_table_export_as_native_pptx_objects() -> None:
+    pptx_data = svg_to_pptx_bytes((_project_root() / "examples" / "svgraph.svg").read_text(encoding="utf-8"))
 
     with zipfile.ZipFile(io.BytesIO(pptx_data)) as pptx:
         slide1 = pptx.read("ppt/slides/slide1.xml").decode("utf-8")

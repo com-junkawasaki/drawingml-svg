@@ -25,10 +25,10 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     .cascade-table tr > * { background-color: #fee2e2; color: #991b1b; }
     table.col-fill col.hot { background-color: #dbeafe; }
   </style>
-  <g id="cover" data-kind="slide" data-title="PPTXSVG Cover">
+  <g id="cover" data-kind="slide" data-title="SVGraph Cover">
     <rect width="1280" height="720" fill="#f8fafc"/>
     <rect x="90" y="96" width="500" height="210" rx="22" fill="#ccfbf1" stroke="#0f766e" stroke-width="4"/>
-    <text x="128" y="184" font-size="54" font-family="Arial" font-weight="700" fill="#134e4a">PPTXSVG</text>
+    <text x="128" y="184" font-size="54" font-family="Arial" font-weight="700" fill="#134e4a">SVGraph</text>
     <text x="130" y="248" font-size="28" font-family="Arial" fill="#334155">SVG as editable SVGraph presentation</text>
     <circle id="api" data-kind="service" cx="770" cy="230" r="70" fill="#dbeafe" stroke="#2563eb" stroke-width="4"/>
     <rect id="deck" data-kind="presentation" x="910" y="160" width="190" height="140" rx="16" fill="#fee2e2" stroke="#b42318" stroke-width="4"/>
@@ -212,7 +212,7 @@ line</text>
 const state = {
     tab: "summary",
     svgraph: null,
-    pptxsvg: null,
+    presentation: null,
     webgpu: false,
 };
 const source = mustElement("source");
@@ -263,11 +263,11 @@ function dependencies(element, attributes) {
     }
     return deps;
 }
-function nodeToSvgraph(element, nodeId) {
+function nodeToSVGraph(element, nodeId) {
     const attributes = attrs(element);
     const children = Array.from(element.children)
         .filter((child) => localName(child) !== "metadata")
-        .map((child, index) => nodeToSvgraph(child, `${nodeId}.${index}`));
+        .map((child, index) => nodeToSVGraph(child, `${nodeId}.${index}`));
     const text = Array.from(element.childNodes)
         .filter((node) => node.nodeType === Node.TEXT_NODE)
         .map((node) => (node.textContent || "").trim())
@@ -309,7 +309,7 @@ function nodeTitle(node) {
 function isSlide(node) {
     return node.data.kind === "slide" || node.data.role === "slide" || Object.hasOwn(node.data, "slide");
 }
-function buildPptxsvg(root) {
+function buildSVGraphPresentation(root) {
     const nodes = flatten(root);
     const slides = nodes.filter(isSlide);
     const selectedSlides = slides.length ? slides : [root];
@@ -334,7 +334,7 @@ function buildPptxsvg(root) {
         ["/ppt/theme/theme1.xml", "theme", null],
     ];
     return {
-        kind: "pptxsvg",
+        kind: "svgraph-presentation",
         slide_size: slideSize,
         slides: slideItems,
         parts: [
@@ -442,15 +442,15 @@ function textStyles(nodes, metadataStyles) {
     }));
     return [...fromMeta, ...fromNodes];
 }
-function buildSvgraph(svgText) {
+function buildSVGraph(svgText) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(svgText, "image/svg+xml");
     const error = doc.querySelector("parsererror");
     if (error)
         throw new Error((error.textContent || "").trim());
-    const root = nodeToSvgraph(doc.documentElement, "n0");
+    const root = nodeToSVGraph(doc.documentElement, "n0");
     const dependencies = flatten(root).flatMap((node) => node.dependencies);
-    const presentation = buildPptxsvg(root);
+    const presentation = buildSVGraphPresentation(root);
     const coverage = analyzeSvgCoverage(doc.documentElement);
     return {
         kind: "svgraph",
@@ -469,7 +469,7 @@ function svgToPptx(svgText) {
     if (error)
         throw new Error((error.textContent || "").trim());
     const root = doc.documentElement;
-    const ir = buildSvgraph(svgText);
+    const ir = buildSVGraph(svgText);
     const slides = declaredSlides(root);
     const selectedSlides = slides.length ? slides : [root];
     const slideXmls = selectedSlides.map((slide, index) => buildSlideXml(slide, index + 1));
@@ -632,6 +632,7 @@ function inspectCoverageAttributes(element, style, tag, stats, refs, css, viewpo
     inspectCoveragePaintServers(element, style, tag, stats, refs, css);
     if (tag === "use")
         inspectCoverageUseReference(element, style, stats, refs, css, viewport, refStack);
+    inspectCoverageMarkerMid(element, style, tag, stats);
     if (tag === "path") {
         for (const command of unsupportedPathCommands(element.getAttribute("d") || ""))
             addCoverageCount(stats.unsupported_path_commands, command);
@@ -763,6 +764,24 @@ function coverageAttributeIsSupportedOrNoop(element, tag, name, value, style, re
         return normalizeVectorEffect(value) != null;
     if (name === "word-spacing")
         return normalizeSpacingLength(value, style.fontSize ?? rootFontSize) != null;
+    return false;
+}
+function inspectCoverageMarkerMid(element, style, tag, stats) {
+    if (!style.markerMid || !style.markerMidSource)
+        return;
+    if (!style.stroke || style.strokeAlpha === 0 || (style.strokeWidth ?? 1) === 0)
+        return;
+    if (!coverageMarkerMidIsUnsupported(element, tag))
+        return;
+    addCoverageCount(stats.unsupported_attributes, style.markerMidSource);
+}
+function coverageMarkerMidIsUnsupported(element, tag) {
+    if (tag === "polyline")
+        return parsePoints(element.getAttribute("points") || "").length > 2;
+    if (tag === "path") {
+        const parsed = parseBasicPath(element.getAttribute("d") || "", [1, 0, 0, 1, 0, 0]);
+        return !!parsed && parsed.points.length > 2;
+    }
     return false;
 }
 function unsupportedPathCommands(value) {
@@ -3204,14 +3223,14 @@ function concat(chunks) {
 function render() {
     try {
         const text = source.value;
-        state.svgraph = buildSvgraph(text);
-        state.pptxsvg = state.svgraph.presentation;
+        state.svgraph = buildSVGraph(text);
+        state.presentation = state.svgraph.presentation;
         preview.innerHTML = text;
     }
     catch (error) {
         preview.innerHTML = "";
         state.svgraph = null;
-        state.pptxsvg = null;
+        state.presentation = null;
         panel.innerHTML = `<div class="notice">${escapeHtml(error instanceof Error ? error.message : String(error))}</div>`;
         return;
     }
@@ -3221,25 +3240,25 @@ function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] || char);
 }
 function renderPanel() {
-    if (!state.svgraph || !state.pptxsvg)
+    if (!state.svgraph || !state.presentation)
         return;
     const nodes = flatten(state.svgraph.root);
     const semantic = nodes.filter((node) => Object.keys(node.data).length > 0).length;
     const deps = state.svgraph.dependencies.length;
-    const templatesCount = state.pptxsvg.masters.length + state.pptxsvg.layouts.length + state.pptxsvg.text_styles.length;
+    const templatesCount = state.presentation.masters.length + state.presentation.layouts.length + state.presentation.text_styles.length;
     const coverage = state.svgraph.coverage;
     const warningCount = coverageCount(coverage.unsupported_elements) + coverageCount(coverage.unsupported_attributes) + coverageCount(coverage.unsupported_path_commands);
     if (state.tab === "summary") {
         panel.innerHTML = `
       <div class="metrics">
         <div class="metric"><strong>${nodes.length}</strong><span>SVGraph nodes</span></div>
-        <div class="metric"><strong>${state.pptxsvg.slides.length}</strong><span>PPTXSVG slides</span></div>
+        <div class="metric"><strong>${state.presentation.slides.length}</strong><span>presentation slides</span></div>
         <div class="metric"><strong>${Math.round(coverage.estimated_element_coverage * 100)}%</strong><span>coverage</span></div>
         <div class="metric"><strong>${warningCount}</strong><span>warnings</span></div>
         <div class="metric"><strong>${semantic}</strong><span>semantic nodes</span></div>
         <div class="metric"><strong>${templatesCount}</strong><span>templates</span></div>
         <div class="metric"><strong>${deps}</strong><span>dependencies</span></div>
-        <div class="metric"><strong>${state.pptxsvg.guides.length + state.pptxsvg.rulers.length}</strong><span>guides/rulers</span></div>
+        <div class="metric"><strong>${state.presentation.guides.length + state.presentation.rulers.length}</strong><span>guides/rulers</span></div>
       </div>
       ${warningCount ? `<div class="notice">${escapeHtml(coverageSummary(coverage))}</div>` : ""}
       <div class="list">
@@ -3247,7 +3266,7 @@ function renderPanel() {
       </div>`;
     }
     else if (state.tab === "slides") {
-        panel.innerHTML = `<div class="list">${state.pptxsvg.slides.map((slide) => `<div class="item"><div class="item-title">${escapeHtml(slide.slide_id)}${slide.title ? ` · ${escapeHtml(slide.title)}` : ""}</div><div class="item-meta">${escapeHtml(slide.node_id)} · viewBox ${slide.view_box.join(" ")}</div></div>`).join("")}</div>`;
+        panel.innerHTML = `<div class="list">${state.presentation.slides.map((slide) => `<div class="item"><div class="item-title">${escapeHtml(slide.slide_id)}${slide.title ? ` · ${escapeHtml(slide.title)}` : ""}</div><div class="item-meta">${escapeHtml(slide.node_id)} · viewBox ${slide.view_box.join(" ")}</div></div>`).join("")}</div>`;
     }
     else if (state.tab === "assistant") {
         panel.innerHTML = `
@@ -3309,14 +3328,14 @@ mustElement("downloadIrBtn").addEventListener("click", () => {
         downloadText("svgraph.json", JSON.stringify(state.svgraph, null, 2));
 });
 mustElement("downloadPptxsvgBtn").addEventListener("click", () => {
-    if (state.pptxsvg)
-        downloadText("pptxsvg.json", JSON.stringify(state.pptxsvg, null, 2));
+    if (state.presentation)
+        downloadText("svgraph-presentation.json", JSON.stringify(state.presentation, null, 2));
 });
 mustElement("downloadPptxBtn").addEventListener("click", () => {
     const bytes = svgToPptx(source.value);
     const data = new Uint8Array(bytes.byteLength);
     data.set(bytes);
-    downloadBlob("pptxsvg-web.pptx", new Blob([data], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }));
+    downloadBlob("svgraph-web.pptx", new Blob([data], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }));
 });
 fileInput.addEventListener("change", async () => {
     const file = fileInput.files?.[0];
@@ -3497,6 +3516,7 @@ function computedStyle(element, inherited, css = [], refs = new Map(), viewport 
     const vectorEffect = value("vector-effect");
     const marker = value("marker");
     const markerStart = value("marker-start");
+    const markerMid = value("marker-mid");
     const markerEnd = value("marker-end");
     delete next.display;
     delete next.transform;
@@ -3602,10 +3622,16 @@ function computedStyle(element, inherited, css = [], refs = new Map(), viewport 
     if (marker != null) {
         const enabled = marker !== "none";
         next.markerStart = enabled;
+        next.markerMid = enabled;
+        next.markerMidSource = enabled ? "marker" : null;
         next.markerEnd = enabled;
     }
     if (markerStart != null)
         next.markerStart = markerStart !== "none";
+    if (markerMid != null) {
+        next.markerMid = markerMid !== "none";
+        next.markerMidSource = next.markerMid ? "marker-mid" : null;
+    }
     if (markerEnd != null)
         next.markerEnd = markerEnd !== "none";
     return next;
@@ -5543,7 +5569,7 @@ function presentationRels(slideCount) {
     return xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>${slides}<Relationship Id="rId${slideCount + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>`);
 }
 const rootRels = xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>`);
-const coreProps = xmlDecl(`<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>PPTXSVG web export</dc:title><dc:creator>drawingml-svg web</dc:creator><cp:lastModifiedBy>drawingml-svg web</cp:lastModifiedBy></cp:coreProperties>`);
+const coreProps = xmlDecl(`<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>SVGraph web export</dc:title><dc:creator>drawingml-svg web</dc:creator><cp:lastModifiedBy>drawingml-svg web</cp:lastModifiedBy></cp:coreProperties>`);
 const slideLayoutRel = `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>`;
 const slideMasterRels = xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/></Relationships>`);
 const slideLayoutRels = xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/></Relationships>`);

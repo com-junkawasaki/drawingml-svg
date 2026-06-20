@@ -17,7 +17,7 @@ Introduce SVGraph, an SVG-based semantic graph model exposed as `svg_to_svgraph(
 - `data-*` attributes as application data
 - local `<metadata>` text, XML, and JSON payloads
 - dependencies such as `href`, `xlink:href`, `url(#id)` paint servers, markers, clipping, masks, symbols, and other local references
-- a presentation/package view named `pptxsvg`
+- a presentation/package view named `svgraph-presentation`
 
 SVGraph is intentionally independent of a specific output format. Target emitters consume the graph and decide whether a node maps to a native object, a grouped shape, a raster fallback, or an application sidecar.
 
@@ -30,7 +30,7 @@ SVGraph is intentionally independent of a specific output format. Target emitter
   "metadata": {},
   "dependencies": [],
   "presentation": {
-    "kind": "pptxsvg",
+    "kind": "svgraph-presentation",
     "slide_size": [1280, 720],
     "slides": [],
     "parts": [],
@@ -85,9 +85,9 @@ Recommended fields:
 - `data-kind="ruler"`: editor ruler definition, usually with `data-origin`, `data-spacing`, and `data-unit`
 - `data-kind="style-template"`: PresentationML text style template for roles such as `title`, `lead`, `body`, `caption`, `label`, and `footer`
 
-## PPTXSVG Presentation View
+## SVGraph Presentation View
 
-`pptxsvg` is the SVGraph projection for creating a full `.pptx` package rather than a single DrawingML shape fragment. It is not a new rendering format; it is a package intent over the same SVG source.
+`svgraph-presentation` is the SVGraph projection for creating a full `.pptx` package rather than a single DrawingML shape fragment. It is not a new rendering format; it is a package intent over the same SVG source.
 
 Slide boundaries are discovered in this order:
 
@@ -175,7 +175,7 @@ PresentationML can add slide-level structure beyond DrawingML fragments. Emitter
 - map SVGraph groups to slide shape trees
 - map relationships to connectors when they are visually represented
 - map `data-order` and metadata to animation, reading order, notes, custom XML, or tags when the package writer supports it
-- use `pptxsvg` as the package-level contract instead of treating `svg_to_drawingml()` output as a whole deck
+- use `svgraph-presentation` as the package-level contract instead of treating `svg_to_drawingml()` output as a whole deck
 
 ## Consequences
 

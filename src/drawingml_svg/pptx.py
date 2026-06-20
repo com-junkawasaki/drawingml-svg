@@ -9,7 +9,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from .converter import EMU_PER_PX, NS_A, NS_P, svg_to_drawingml, qn
-from .ir import svg_to_pptx_ir
+from .ir import svg_to_svgraph_presentation
 
 PRESENTATION_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
 REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -18,7 +18,7 @@ SHAPE_TAGS = {qn(NS_P, "sp"), qn(NS_P, "cxnSp"), qn(NS_P, "pic"), qn(NS_P, "grap
 
 
 def svg_to_pptx(svg_text: str, output: str | Path) -> None:
-    """Convert an SVG or PPTXSVG document to a complete .pptx package."""
+    """Convert an SVG or SVGraph presentation document to a complete .pptx package."""
 
     output_path = Path(output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -26,19 +26,19 @@ def svg_to_pptx(svg_text: str, output: str | Path) -> None:
 
 
 def svg_to_pptx_bytes(svg_text: str) -> bytes:
-    """Convert an SVG or PPTXSVG document to .pptx bytes."""
+    """Convert an SVG or SVGraph presentation document to .pptx bytes."""
 
     slides = svg_to_slide_xmls(svg_text)
     if not slides:
         raise ValueError("input did not produce any DrawingML shapes")
-    size = svg_to_pptx_ir(svg_text).slide_size
+    size = svg_to_svgraph_presentation(svg_text).slide_size
     with io.BytesIO() as buffer:
         write_pptx(buffer, slides, slide_size=size)
         return buffer.getvalue()
 
 
 def svg_to_slide_xmls(svg_text: str) -> list[bytes]:
-    """Convert declared PPTXSVG slides to PresentationML slide XML documents."""
+    """Convert declared SVGraph presentation slides to PresentationML slide XML documents."""
 
     slide_xmls: list[bytes] = []
     slide_svgs = _split_svg_slides(svg_text)
