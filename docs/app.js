@@ -15,10 +15,10 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <rect width="1280" height="720" fill="#ffffff"/>
     <text x="90" y="90" font-size="40" font-family="Arial" font-weight="700" fill="#17202a">Table semantics stay in IR</text>
     <g id="table" data-kind="table" transform="translate(90 150)">
-      <rect data-kind="cell" data-row="0" data-col="0" width="260" height="80" fill="#e6f4f1" stroke="#0f766e"/>
-      <rect data-kind="cell" data-row="0" data-col="1" x="260" width="260" height="80" fill="#e6f4f1" stroke="#0f766e"/>
-      <rect data-kind="cell" data-row="1" data-col="0" y="80" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
-      <rect data-kind="cell" data-row="1" data-col="1" x="260" y="80" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
+      <rect data-kind="cell" data-row="0" data-col="0" data-colspan="2" data-text="Merged header" width="520" height="80" fill="#e6f4f1" stroke="#0f766e"/>
+      <rect data-kind="cell" data-row="1" data-col="0" data-rowspan="2" data-text="Tall label" y="80" width="260" height="160" fill="#f0fdf4" stroke="#0f766e"/>
+      <rect data-kind="cell" data-row="1" data-col="1" data-text="Value" x="260" y="80" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
+      <rect data-kind="cell" data-row="2" data-col="1" data-text="Total" x="260" y="160" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
     </g>
   </g>
   <g id="coverage-slide" data-kind="slide" data-title="Browser SVG Coverage" style="stroke:#334155;stroke-width:4;fill:#fde68a">
@@ -575,6 +575,9 @@ function tableFromGroup(group, matrix, id, inheritedStyle, css = []) {
         return {
             row: Number(rect.getAttribute("data-row") || 0),
             col: Number(rect.getAttribute("data-col") || 0),
+            colSpan: Math.max(1, Number(rect.getAttribute("data-colspan") || rect.getAttribute("data-col-span") || 1) || 1),
+            rowSpan: Math.max(1, Number(rect.getAttribute("data-rowspan") || rect.getAttribute("data-row-span") || 1) || 1),
+            text: rect.getAttribute("data-text") || rect.getAttribute("aria-label") || "",
             x,
             y,
             width: num(rect, "width"),
@@ -591,7 +594,9 @@ function tableFromGroup(group, matrix, id, inheritedStyle, css = []) {
     const tableCells = cells.map((cell) => ({
         row: cell.row,
         col: cell.col,
-        text: "",
+        colSpan: cell.colSpan,
+        rowSpan: cell.rowSpan,
+        text: cell.text,
         fill: cell.fill,
     }));
     return {
@@ -1024,14 +1029,37 @@ function tableXml(shape) {
         .map((height, rowIndex) => {
         const cells = shape.columns
             .map((_, colIndex) => {
-            const cell = shape.cells.find((item) => item.row === rowIndex && item.col === colIndex);
-            return `<a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p>${cell?.text ? `<a:r><a:t>${xml(cell.text)}</a:t></a:r>` : ""}</a:p></a:txBody><a:tcPr>${fillXml(cell?.fill || "#ffffff")}</a:tcPr></a:tc>`;
+            const cell = tableCellAt(shape.cells, rowIndex, colIndex);
+            const attrs = tableCellAttrs(cell, rowIndex, colIndex);
+            const text = cell && cell.row === rowIndex && cell.col === colIndex && cell.text ? `<a:r><a:t>${xml(cell.text)}</a:t></a:r>` : "";
+            return `<a:tc${attrs}><a:txBody><a:bodyPr/><a:lstStyle/><a:p>${text}</a:p></a:txBody><a:tcPr>${fillXml(cell?.fill || "#ffffff")}</a:tcPr></a:tc>`;
         })
             .join("");
         return `<a:tr h="${emu(height)}">${cells}</a:tr>`;
     })
         .join("");
     return `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="${emu(shape.x)}" y="${emu(shape.y)}"/><a:ext cx="${emu(shape.columns.reduce((a, b) => a + b, 0))}" cy="${emu(shape.rows.reduce((a, b) => a + b, 0))}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1" bandRow="1"/><a:tblGrid>${grid}</a:tblGrid>${rows}</a:tbl></a:graphicData></a:graphic></p:graphicFrame>`;
+}
+function tableCellAt(cells, row, col) {
+    return cells.find((cell) => row >= cell.row && row < cell.row + cell.rowSpan && col >= cell.col && col < cell.col + cell.colSpan) ?? null;
+}
+function tableCellAttrs(cell, row, col) {
+    if (!cell)
+        return "";
+    const attrs = [];
+    if (cell.row === row && cell.col === col) {
+        if (cell.colSpan > 1)
+            attrs.push(`gridSpan="${cell.colSpan}"`);
+        if (cell.rowSpan > 1)
+            attrs.push(`rowSpan="${cell.rowSpan}"`);
+    }
+    else if (col > cell.col) {
+        attrs.push('hMerge="1"');
+    }
+    else if (row > cell.row) {
+        attrs.push('vMerge="1"');
+    }
+    return attrs.length ? ` ${attrs.join(" ")}` : "";
 }
 function freeformXml(shape) {
     const box = shapeBox(shape);
