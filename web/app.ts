@@ -244,6 +244,8 @@ type TableCell = {
   rowSpan: number;
   text: string;
   fill: string | null;
+  textFill: string | null;
+  textBold: boolean;
   stroke: string | null;
   strokeAlpha: number | null;
   strokeWidth: number;
@@ -317,6 +319,34 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
       <rect data-kind="cell" data-row="1" data-col="1" data-text="Value" x="260" y="80" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
       <rect data-kind="cell" data-row="2" data-col="1" data-text="Total" x="260" y="160" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
     </g>
+  </g>
+  <g id="html-table-slide" data-kind="slide" data-title="HTML Table Candidate">
+    <rect width="1280" height="720" fill="#ffffff"/>
+    <text x="90" y="90" font-size="40" font-family="Arial" font-weight="700" fill="#17202a">foreignObject table becomes native</text>
+    <foreignObject id="html-table" x="90" y="150" width="620" height="250">
+      <body xmlns="http://www.w3.org/1999/xhtml">
+        <table>
+          <colgroup>
+            <col style="width:35%"/>
+            <col style="width:25%"/>
+            <col style="width:40%"/>
+          </colgroup>
+          <tr style="height:70px">
+            <th colspan="2" style="background-color:#dbeafe;color:#1e3a8a;border:2px dashed #2563eb">Merged HTML header</th>
+            <th style="background-color:#e0f2fe;color:#0c4a6e;border:2px solid #0284c7">Owner</th>
+          </tr>
+          <tr>
+            <td rowspan="2" style="background-color:#dcfce7;color:#14532d;border:2px solid #16a34a;font-weight:700">Roadmap</td>
+            <td style="background-color:#ffffff;color:#111827;border:1px solid #94a3b8">IR</td>
+            <td style="background-color:#f8fafc;color:#111827;border:1px solid #94a3b8">Browser</td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;color:#111827;border:1px solid #94a3b8">PPTX</td>
+            <td style="background-color:#f8fafc;color:#111827;border:1px solid #94a3b8">Pages</td>
+          </tr>
+        </table>
+      </body>
+    </foreignObject>
   </g>
   <g id="coverage-slide" data-kind="slide" data-title="Browser SVG Coverage" style="stroke:#334155;stroke-width:4;fill:#fde68a">
     <defs>
@@ -701,6 +731,14 @@ function extractShapes(root: Element): Shape[] {
       }
       return;
     }
+    if (tag === "foreignObject") {
+      const table = tableFromForeignObject(element, ownMatrix, nextId, ownStyle, css);
+      if (table) {
+        shapes.push(table);
+        nextId += 1;
+      }
+      return;
+    }
     const rawShape = elementToShape(element, ownMatrix, ownStyle, nextId);
     const clip = rectClipBounds(rawShape, ownStyle, refs, ownMatrix);
     const shape = applyClip(rawShape, clip);
@@ -901,10 +939,7 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedSty
       width: num(rect, "width"),
       height: num(rect, "height"),
       fill: style.fill ?? "#ffffff",
-      stroke: style.stroke ?? null,
-      strokeAlpha: style.strokeAlpha ?? null,
-      strokeWidth: style.strokeWidth ?? 1,
-      ...strokeStyle(style),
+      ...tableCellStyle(style, false),
     };
   });
   const xEdges = edges(cells.flatMap((cell) => [cell.x, cell.x + cell.width]));
@@ -919,6 +954,8 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedSty
     rowSpan: cell.rowSpan,
     text: cell.text,
     fill: cell.fill,
+    textFill: cell.textFill,
+    textBold: cell.textBold,
     stroke: cell.stroke,
     strokeAlpha: cell.strokeAlpha,
     strokeWidth: cell.strokeWidth,
@@ -937,6 +974,192 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedSty
     rows: yEdges.slice(1).map((edge, index) => edge - (yEdges[index] || 0)),
     cells: tableCells,
   };
+}
+
+function tableFromForeignObject(element: Element, matrix: Matrix, id: number, inheritedStyle: SvgStyle, css: CssRule[] = []): TableShape | null {
+  const table = Array.from(element.querySelectorAll("table")).find((item) => localName(item) === "table");
+  if (!table) return null;
+  const rows = htmlTableRows(table);
+  if (!rows.length) return null;
+  const columnCount = htmlTableColumnCount(rows);
+  if (columnCount <= 0) return null;
+  const box = transformedBox(matrix, num(element, "x"), num(element, "y"), num(element, "width"), num(element, "height"));
+  if (box.width <= 0 || box.height <= 0) return null;
+  const columns = htmlTableColumns(table, columnCount, box.width);
+  const rowHeights = htmlTableRowHeights(rows, box.height);
+  const occupied = Array.from({ length: rows.length }, () => Array<boolean>(columnCount).fill(false));
+  const cells: TableCell[] = [];
+  rows.forEach((row, rowIndex) => {
+    let column = 0;
+    for (const cellElement of htmlRowCells(row)) {
+      while (column < columnCount && occupied[rowIndex]?.[column]) column += 1;
+      if (column >= columnCount) break;
+      const colSpan = Math.min(Math.max(1, htmlSpan(cellElement, "colspan")), columnCount - column);
+      const rowSpan = Math.min(Math.max(1, htmlSpan(cellElement, "rowspan")), rows.length - rowIndex);
+      for (let r = rowIndex; r < rowIndex + rowSpan; r += 1) {
+        for (let c = column; c < column + colSpan; c += 1) {
+          if (occupied[r]) occupied[r]![c] = true;
+        }
+      }
+      const style = htmlTableCellStyle(cellElement, table, inheritedStyle, css);
+      cells.push({
+        row: rowIndex,
+        col: column,
+        colSpan,
+        rowSpan,
+        text: htmlCellText(cellElement),
+        fill: style.fill ?? "#ffffff",
+        ...tableCellStyle(style, localName(cellElement) === "th"),
+      });
+      column += colSpan;
+    }
+  });
+  if (!cells.length) return null;
+  return {
+    id,
+    kind: "table",
+    name: element.getAttribute("id") || table.getAttribute("id") || "foreignObject-table",
+    data: dataAttrs(attrs(element)),
+    x: box.x,
+    y: box.y,
+    columns,
+    rows: rowHeights,
+    cells,
+  };
+}
+
+function tableCellStyle(style: SvgStyle, header: boolean): Omit<TableCell, "row" | "col" | "colSpan" | "rowSpan" | "text" | "fill"> {
+  return {
+    textFill: style.color ?? style.fill ?? "#111827",
+    textBold: header || ["bold", "700", "800", "900"].includes(style.fontWeight || ""),
+    stroke: style.stroke ?? null,
+    strokeAlpha: style.strokeAlpha ?? null,
+    strokeWidth: style.strokeWidth ?? 1,
+    ...strokeStyle(style),
+  };
+}
+
+function htmlTableRows(table: Element): Element[] {
+  return Array.from(table.querySelectorAll("tr")).filter((item) => localName(item) === "tr");
+}
+
+function htmlRowCells(row: Element): Element[] {
+  return Array.from(row.children).filter((item) => ["td", "th"].includes(localName(item)));
+}
+
+function htmlTableColumnCount(rows: Element[]): number {
+  const occupancy: boolean[][] = [];
+  let max = 0;
+  rows.forEach((row, rowIndex) => {
+    occupancy[rowIndex] ||= [];
+    let column = 0;
+    for (const cell of htmlRowCells(row)) {
+      while (occupancy[rowIndex]![column]) column += 1;
+      const colSpan = Math.max(1, htmlSpan(cell, "colspan"));
+      const rowSpan = Math.max(1, htmlSpan(cell, "rowspan"));
+      for (let r = rowIndex; r < rowIndex + rowSpan; r += 1) {
+        occupancy[r] ||= [];
+        for (let c = column; c < column + colSpan; c += 1) occupancy[r]![c] = true;
+      }
+      column += colSpan;
+    }
+    max = Math.max(max, occupancy[rowIndex]?.length || 0, column);
+  });
+  return max;
+}
+
+function htmlSpan(element: Element, name: string): number {
+  const value = Number.parseInt(element.getAttribute(name) || "1", 10);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function htmlTableColumns(table: Element, count: number, width: number): number[] {
+  const cols = Array.from(table.querySelectorAll("col")).filter((item) => localName(item) === "col");
+  const explicit = cols.slice(0, count).map((col) => htmlCssLength(htmlStyleValue(col, "width") ?? col.getAttribute("width"), width));
+  const fixedTotal = explicit.reduce<number>((sum, item) => sum + (item ?? 0), 0);
+  const missing = Math.max(0, count - explicit.filter((item) => item != null).length);
+  const fallback = missing ? Math.max(1, (width - fixedTotal) / missing) : Math.max(1, width / count);
+  return Array.from({ length: count }, (_, index) => explicit[index] ?? fallback);
+}
+
+function htmlTableRowHeights(rows: Element[], height: number): number[] {
+  const explicit = rows.map((row) => htmlCssLength(htmlStyleValue(row, "height") ?? row.getAttribute("height"), height));
+  const fixedTotal = explicit.reduce<number>((sum, item) => sum + (item ?? 0), 0);
+  const missing = Math.max(0, rows.length - explicit.filter((item) => item != null).length);
+  const fallback = missing ? Math.max(1, (height - fixedTotal) / missing) : Math.max(1, height / Math.max(1, rows.length));
+  return explicit.map((item) => item ?? fallback);
+}
+
+function htmlTableCellStyle(cell: Element, table: Element, inheritedStyle: SvgStyle, css: CssRule[]): SvgStyle {
+  const tableStyle = htmlElementStyle(table, inheritedStyle, css);
+  const rowStyle = cell.parentElement ? htmlElementStyle(cell.parentElement, tableStyle, css) : tableStyle;
+  return htmlElementStyle(cell, rowStyle, css);
+}
+
+function htmlElementStyle(element: Element, inheritedStyle: SvgStyle, css: CssRule[]): SvgStyle {
+  const cssDeclarations = matchingCssDeclarations(element, css);
+  const inlineDeclarations = styleDeclarations(element.getAttribute("style"));
+  const value = (name: string): string | null => inlineDeclarations[name] ?? element.getAttribute(name) ?? cssDeclarations[name] ?? null;
+  const next: SvgStyle = { ...inheritedStyle };
+  const color = value("color");
+  const background = value("background-color") ?? value("background");
+  const border = value("border");
+  const borderColor = value("border-color") ?? element.getAttribute("bordercolor");
+  const borderWidth = value("border-width") ?? element.getAttribute("border");
+  const fontWeight = value("font-weight");
+  if (color != null) next.color = parseCssColor(color, next) ?? next.color ?? null;
+  if (background != null) {
+    next.fill = parseCssColor(background, next);
+    next.fillAlpha = cssColorAlpha(background);
+  }
+  const parsedBorder = parseHtmlBorder(border, next);
+  if (parsedBorder.color != null) next.stroke = parsedBorder.color;
+  if (parsedBorder.alpha != null) next.strokeAlpha = parsedBorder.alpha;
+  if (parsedBorder.width != null) next.strokeWidth = parsedBorder.width;
+  if (parsedBorder.dasharray != null) next.strokeDasharray = parsedBorder.dasharray;
+  if (borderColor != null) {
+    next.stroke = parseCssColor(borderColor, next);
+    next.strokeAlpha = cssColorAlpha(borderColor);
+  }
+  if (borderWidth != null) next.strokeWidth = htmlCssLength(borderWidth, 1) ?? next.strokeWidth ?? 1;
+  if (fontWeight != null) next.fontWeight = fontWeight;
+  return next;
+}
+
+function parseHtmlBorder(value: string | null, style: SvgStyle): { color: string | null; alpha: number | null; width: number | null; dasharray: string | null } {
+  if (!value || value.trim().toLowerCase() === "none") return { color: null, alpha: null, width: null, dasharray: null };
+  const parts = value.trim().split(/\s+/);
+  const width = parts.map((part) => htmlCssLength(part, 1)).find((item): item is number => item != null) ?? null;
+  const colorPart = parts.find((part) => parseCssColor(part, style));
+  const stylePart = parts.find((part) => ["dashed", "dotted", "double"].includes(part.toLowerCase()))?.toLowerCase() || null;
+  const borderWidth = width ?? 1;
+  const dasharray = stylePart === "dashed" ? `${borderWidth * 3} ${borderWidth * 2}` : stylePart === "dotted" ? `${borderWidth} ${borderWidth}` : stylePart === "double" ? `${borderWidth * 3} ${borderWidth}` : null;
+  return {
+    color: colorPart ? parseCssColor(colorPart, style) : null,
+    alpha: colorPart ? cssColorAlpha(colorPart) : null,
+    width,
+    dasharray,
+  };
+}
+
+function htmlCssLength(value: string | null, basis: number): number | null {
+  if (!value) return null;
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed || trimmed === "auto") return null;
+  if (trimmed.endsWith("%")) {
+    const percent = Number.parseFloat(trimmed);
+    return Number.isFinite(percent) ? (basis * percent) / 100 : null;
+  }
+  const parsed = Number.parseFloat(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function htmlStyleValue(element: Element, name: string): string | null {
+  return styleDeclarations(element.getAttribute("style"))[name] ?? null;
+}
+
+function htmlCellText(cell: Element): string {
+  return (cell.textContent || "").replace(/\s+/g, " ").trim();
 }
 
 function textRuns(element: Element, inheritedStyle: SvgStyle): TextRun[] {
@@ -1343,7 +1566,7 @@ function tableXml(shape: TableShape): string {
           const cell = tableCellAt(shape.cells, rowIndex, colIndex);
           const attrs = tableCellAttrs(cell, rowIndex, colIndex);
           const origin = Boolean(cell && cell.row === rowIndex && cell.col === colIndex);
-          const text = origin && cell?.text ? `<a:r><a:t>${xml(cell.text)}</a:t></a:r>` : "";
+          const text = origin && cell?.text ? tableCellTextXml(cell) : "";
           const borders = origin ? tableBorderXml(cell) : "";
           return `<a:tc${attrs}><a:txBody><a:bodyPr/><a:lstStyle/><a:p>${text}</a:p></a:txBody><a:tcPr>${fillXml(cell?.fill || "#ffffff")}${borders}</a:tcPr></a:tc>`;
         })
@@ -1370,6 +1593,12 @@ function tableCellAttrs(cell: TableCell | null, row: number, col: number): strin
     attrs.push('vMerge="1"');
   }
   return attrs.length ? ` ${attrs.join(" ")}` : "";
+}
+
+function tableCellTextXml(cell: TableCell): string {
+  const attrs = ` lang="en-US" sz="1400"${cell.textBold ? ' b="1"' : ""}`;
+  const fill = solidColorXml(cell.textFill || "#111827");
+  return `<a:r><a:rPr${attrs}>${fill}</a:rPr><a:t>${xml(cell.text)}</a:t></a:r>`;
 }
 
 function tableBorderXml(cell: TableCell | null): string {
