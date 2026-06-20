@@ -2,7 +2,7 @@
 
 import warnings
 
-from .svgraph import (
+from svgraph.model import (
     SVGraphDependency as _SVGraphDependency,
     SVGraphDocument as _SVGraphDocument,
     SVGraphGuide as _SVGraphGuide,
@@ -32,26 +32,26 @@ SvgIRTextStyle = _SVGraphTextStyle
 
 
 def svg_to_ir(svg_text: str) -> _SVGraphDocument:
-    """Legacy alias for :func:`drawingml_svg.svgraph.svg_to_svgraph`."""
+    """Legacy alias for :func:`svgraph.model.svg_to_svgraph`."""
 
-    _warn_legacy("svg_to_ir()", "drawingml_svg.svgraph.svg_to_svgraph()")
+    _warn_legacy("svg_to_ir()", "svgraph.model.svg_to_svgraph()")
     return _svg_to_svgraph(svg_text)
 
 
 def svg_to_pptx_ir(svg_text: str) -> _SVGraphPresentation:
-    """Legacy alias for :func:`drawingml_svg.svgraph.svg_to_svgraph_presentation`."""
+    """Legacy alias for :func:`svgraph.model.svg_to_svgraph_presentation`."""
 
-    _warn_legacy("svg_to_pptx_ir()", "drawingml_svg.svgraph.svg_to_svgraph_presentation()")
+    _warn_legacy("svg_to_pptx_ir()", "svgraph.model.svg_to_svgraph_presentation()")
     return _svg_to_svgraph_presentation(svg_text)
 
 
 def svg_ir_to_json(svg_text: str) -> str:
-    _warn_legacy("svg_ir_to_json()", "drawingml_svg.svgraph.svg_svgraph_to_json()")
+    _warn_legacy("svg_ir_to_json()", "svgraph.model.svg_svgraph_to_json()")
     return _svg_svgraph_to_json(svg_text)
 
 
 def svg_pptx_ir_to_json(svg_text: str) -> str:
-    _warn_legacy("svg_pptx_ir_to_json()", "drawingml_svg.svgraph.svg_svgraph_presentation_to_json()")
+    _warn_legacy("svg_pptx_ir_to_json()", "svgraph.model.svg_svgraph_presentation_to_json()")
     return _svg_svgraph_presentation_to_json(svg_text)
 
 
