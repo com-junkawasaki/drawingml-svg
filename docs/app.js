@@ -27,6 +27,8 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <polygon id="tri" points="120,170 300,170 210,315"/>
     <polyline id="zig" points="390,170 460,250 530,170 600,250" style="fill:none;stroke:#dc2626"/>
     <path id="box-path" d="M 690 170 L 900 170 L 900 315 L 690 315 Z" style="fill:#dcfce7;stroke:#15803d"/>
+    <line id="marked-line" x1="980" y1="185" x2="1130" y2="260" style="stroke:#7c3aed;stroke-width:8;marker-end:url(#arrow)"/>
+    <image id="pixel" x="980" y="340" width="96" height="96" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="/>
     <g transform="translate(90 390) scale(1.5)">
       <rect id="scaled" width="160" height="80" style="fill:#dbeafe;stroke:#2563eb"/>
     </g>
@@ -407,6 +409,8 @@ function elementToShape(element, matrix, style, id) {
             relation: data.kind === "relation" || data.role === "relation",
             startId: null,
             endId: null,
+            markerStart: style.markerStart ?? false,
+            markerEnd: style.markerEnd ?? false,
         };
     }
     if (tag === "text") {
@@ -441,6 +445,8 @@ function elementToShape(element, matrix, style, id) {
                 fill: tag === "polygon" ? (style.fill ?? "#000000") : null,
                 stroke: style.stroke ?? "#111827",
                 strokeWidth: style.strokeWidth ?? 1,
+                markerStart: style.markerStart ?? false,
+                markerEnd: style.markerEnd ?? false,
             };
         }
     }
@@ -457,6 +463,25 @@ function elementToShape(element, matrix, style, id) {
                 fill: parsed.closed ? (style.fill ?? "#000000") : null,
                 stroke: style.stroke ?? "#111827",
                 strokeWidth: style.strokeWidth ?? 1,
+                markerStart: style.markerStart ?? false,
+                markerEnd: style.markerEnd ?? false,
+            };
+        }
+    }
+    if (tag === "image") {
+        const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
+        if (supportedDataImage(href)) {
+            const box = transformedBox(matrix, num(element, "x"), num(element, "y"), num(element, "width"), num(element, "height"));
+            return {
+                id,
+                kind: "image",
+                name,
+                data,
+                x: box.x,
+                y: box.y,
+                width: box.width,
+                height: box.height,
+                href,
             };
         }
     }
@@ -543,6 +568,8 @@ function shapeToXml(shape) {
         return textXml(shape);
     if (shape.kind === "freeform")
         return freeformXml(shape);
+    if (shape.kind === "image")
+        return imageXml(shape);
     return tableXml(shape);
 }
 function rectXml(shape) {
@@ -556,7 +583,7 @@ function lineXml(shape) {
     const y = Math.min(shape.y1, shape.y2);
     const width = Math.max(Math.abs(shape.x2 - shape.x1), 1);
     const height = Math.max(Math.abs(shape.y2 - shape.y1), 1);
-    return spXml(shape.id, shape.name, x, y, width, height, "line", `<a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth)}`, "");
+    return spXml(shape.id, shape.name, x, y, width, height, "line", `<a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, { head: shape.markerEnd, tail: shape.markerStart })}`, "");
 }
 function connectorXml(shape) {
     const x = Math.min(shape.x1, shape.x2);
@@ -564,7 +591,7 @@ function connectorXml(shape) {
     const width = Math.max(Math.abs(shape.x2 - shape.x1), 1);
     const height = Math.max(Math.abs(shape.y2 - shape.y1), 1);
     const cxn = `${shape.startId ? `<a:stCxn id="${shape.startId}" idx="0"/>` : ""}${shape.endId ? `<a:endCxn id="${shape.endId}" idx="0"/>` : ""}`;
-    return `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvCxnSpPr>${cxn}</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, true)}</p:spPr></p:cxnSp>`;
+    return `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvCxnSpPr>${cxn}</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, { head: true, tail: shape.markerStart })}</p:spPr></p:cxnSp>`;
 }
 function textXml(shape) {
     const body = `<p:txBody><a:bodyPr wrap="none"/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="${Math.round(shape.fontSize * 100)}"${shape.bold ? ' b="1"' : ""}>${solidColorXml(shape.fill)}<a:latin typeface="${xml(shape.fontFamily)}"/></a:rPr><a:t>${xml(shape.text)}</a:t></a:r></a:p></p:txBody>`;
@@ -598,7 +625,10 @@ function freeformXml(shape) {
         .concat(shape.closed ? ["<a:close/>"] : [])
         .join("");
     const geom = `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst><a:path w="${emu(width)}" h="${emu(height)}">${commands}</a:path></a:pathLst></a:custGeom>`;
-    return `<p:sp><p:nvSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(box.x)}" y="${emu(box.y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm>${geom}${fillXml(shape.fill)}${lineStyleXml(shape.stroke, shape.strokeWidth)}</p:spPr></p:sp>`;
+    return `<p:sp><p:nvSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(box.x)}" y="${emu(box.y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm>${geom}${fillXml(shape.fill)}${lineStyleXml(shape.stroke, shape.strokeWidth, { head: shape.markerEnd, tail: shape.markerStart })}</p:spPr></p:sp>`;
+}
+function imageXml(shape) {
+    return `<p:pic><p:nvPicPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${xml(shape.href)}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="${emu(shape.x)}" y="${emu(shape.y)}"/><a:ext cx="${emu(shape.width)}" cy="${emu(shape.height)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`;
 }
 function spXml(id, name, x, y, width, height, prst, style, body) {
     return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${xml(name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${style}</p:spPr>${body}</p:sp>`;
@@ -609,10 +639,10 @@ function fillXml(color) {
 function solidColorXml(color) {
     return color ? `<a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill>` : "";
 }
-function lineStyleXml(color, width, arrow = false) {
+function lineStyleXml(color, width, arrows = {}) {
     if (!color || width <= 0)
         return "<a:ln><a:noFill/></a:ln>";
-    return `<a:ln w="${emu(width)}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill>${arrow ? '<a:headEnd type="triangle"/>' : ""}</a:ln>`;
+    return `<a:ln w="${emu(width)}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill>${arrows.tail ? '<a:tailEnd type="triangle"/>' : ""}${arrows.head ? '<a:headEnd type="triangle"/>' : ""}</a:ln>`;
 }
 function writePptx(slideXmls, slideSize) {
     const files = {
@@ -628,11 +658,44 @@ function writePptx(slideXmls, slideSize) {
         "ppt/slideLayouts/_rels/slideLayout1.xml.rels": slideLayoutRels,
         "ppt/theme/theme1.xml": themeXml,
     };
+    let nextMediaIndex = 1;
     slideXmls.forEach((slide, index) => {
-        files[`ppt/slides/slide${index + 1}.xml`] = slide;
-        files[`ppt/slides/_rels/slide${index + 1}.xml.rels`] = slideRels;
+        const prepared = prepareSlideMedia(slide, nextMediaIndex);
+        nextMediaIndex += Object.keys(prepared.media).length;
+        files[`ppt/slides/slide${index + 1}.xml`] = prepared.xml;
+        files[`ppt/slides/_rels/slide${index + 1}.xml.rels`] = prepared.rels;
+        Object.assign(files, prepared.media);
     });
     return zipStore(files);
+}
+function prepareSlideMedia(slideXml, firstMediaIndex) {
+    const media = {};
+    const relationships = [slideLayoutRel];
+    let nextRelId = 2;
+    let nextMediaIndex = firstMediaIndex;
+    const xml = slideXml.replace(/r:embed="(data:image\/(png|jpeg|jpg|gif|webp);base64,([^"]+))"/gi, (_match, _uri, kind, payload) => {
+        const extension = kind.toLowerCase() === "jpeg" ? "jpg" : kind.toLowerCase();
+        const relId = `rId${nextRelId}`;
+        const path = `ppt/media/image${nextMediaIndex}.${extension}`;
+        media[path] = base64Bytes(payload);
+        relationships.push(`<Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${nextMediaIndex}.${extension}"/>`);
+        nextRelId += 1;
+        nextMediaIndex += 1;
+        return `r:embed="${relId}"`;
+    });
+    return {
+        xml,
+        rels: xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relationships.join("")}</Relationships>`),
+        media,
+    };
+}
+function base64Bytes(value) {
+    const binary = atob(value.replace(/\s+/g, ""));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
 }
 function zipStore(files) {
     const encoder = new TextEncoder();
@@ -853,6 +916,9 @@ function computedStyle(element, inherited) {
     const fontSize = value("font-size");
     const fontFamily = value("font-family");
     const fontWeight = value("font-weight");
+    const marker = value("marker");
+    const markerStart = value("marker-start");
+    const markerEnd = value("marker-end");
     if (fill != null)
         next.fill = normalizePaint(fill);
     if (stroke != null)
@@ -865,6 +931,15 @@ function computedStyle(element, inherited) {
         next.fontFamily = fontFamily.replace(/^['"]|['"]$/g, "");
     if (fontWeight != null)
         next.fontWeight = fontWeight;
+    if (marker != null) {
+        const enabled = marker !== "none";
+        next.markerStart = enabled;
+        next.markerEnd = enabled;
+    }
+    if (markerStart != null)
+        next.markerStart = markerStart !== "none";
+    if (markerEnd != null)
+        next.markerEnd = markerEnd !== "none";
     return next;
 }
 function styleDeclarations(style) {
@@ -887,6 +962,9 @@ function parseLength(value, fallback = 0) {
         return fallback;
     const parsed = Number.parseFloat(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+}
+function supportedDataImage(value) {
+    return /^data:image\/(?:png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(value);
 }
 function edges(values) {
     return [...new Set(values.map((value) => Math.round(value * 1000) / 1000))].sort((a, b) => a - b);
@@ -1029,7 +1107,7 @@ const nsP = "http://schemas.openxmlformats.org/presentationml/2006/main";
 const nsR = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 function contentTypes(slideCount) {
     const slides = Array.from({ length: slideCount }, (_, index) => `  <Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join("\n");
-    return xmlDecl(`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/><Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/><Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/><Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>${slides}</Types>`);
+    return xmlDecl(`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="gif" ContentType="image/gif"/><Default Extension="webp" ContentType="image/webp"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/><Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/><Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/><Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>${slides}</Types>`);
 }
 function appProps(slideCount) {
     return xmlDecl(`<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>drawingml-svg web</Application><PresentationFormat>On-screen Show (16:9)</PresentationFormat><Slides>${slideCount}</Slides></Properties>`);
@@ -1044,7 +1122,7 @@ function presentationRels(slideCount) {
 }
 const rootRels = xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>`);
 const coreProps = xmlDecl(`<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>PPTXSVG web export</dc:title><dc:creator>drawingml-svg web</dc:creator><cp:lastModifiedBy>drawingml-svg web</cp:lastModifiedBy></cp:coreProperties>`);
-const slideRels = xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>`);
+const slideLayoutRel = `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>`;
 const slideMasterRels = xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/></Relationships>`);
 const slideLayoutRels = xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/></Relationships>`);
 const slideMaster = xmlDecl(`<p:sldMaster xmlns:a="${nsA}" xmlns:r="${nsR}" xmlns:p="${nsP}"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst><p:txStyles><p:titleStyle/><p:bodyStyle/><p:otherStyle/></p:txStyles></p:sldMaster>`);
