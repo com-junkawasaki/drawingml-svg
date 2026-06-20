@@ -4,6 +4,7 @@ import io
 import re
 import tomllib
 import zipfile
+from email.parser import Parser
 from importlib import resources
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -75,12 +76,31 @@ def test_project_metadata_exposes_public_repository_links() -> None:
     metadata = tomllib.loads((_project_root() / "pyproject.toml").read_text(encoding="utf-8"))
     project = metadata["project"]
 
+    assert project["scripts"]["svgraph"] == "drawingml_svg.cli:main"
+    assert project["scripts"]["drawingml-svg"] == "drawingml_svg.cli:main"
     assert "Typing :: Typed" in project["classifiers"]
     assert project["urls"] == {
         "Homepage": "https://github.com/com-junkawasaki/svgraph",
         "Repository": "https://github.com/com-junkawasaki/svgraph",
         "Issues": "https://github.com/com-junkawasaki/svgraph/issues",
     }
+
+
+def test_generated_distribution_metadata_preserves_svgraph_identity() -> None:
+    pkg_info = _project_root() / "src" / "drawingml_svg.egg-info" / "PKG-INFO"
+    entry_points = _project_root() / "src" / "drawingml_svg.egg-info" / "entry_points.txt"
+    if not pkg_info.exists() or not entry_points.exists():
+        pytest.skip("egg-info metadata has not been generated")
+
+    metadata = Parser().parsestr(pkg_info.read_text(encoding="utf-8"))
+    project_urls = metadata.get_all("Project-URL") or []
+    entry_point_text = entry_points.read_text(encoding="utf-8")
+
+    assert "Homepage, https://github.com/com-junkawasaki/svgraph" in project_urls
+    assert "Repository, https://github.com/com-junkawasaki/svgraph" in project_urls
+    assert "Issues, https://github.com/com-junkawasaki/svgraph/issues" in project_urls
+    assert "svgraph = drawingml_svg.cli:main" in entry_point_text
+    assert "drawingml-svg = drawingml_svg.cli:main" in entry_point_text
 
 
 def test_readme_documents_supported_drawingml_presets() -> None:

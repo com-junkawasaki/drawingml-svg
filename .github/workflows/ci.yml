@@ -187,9 +187,16 @@ jobs:
           sdist_path = glob.glob("tmp/dist/drawingml_svg-*.tar.gz")[0]
           with zipfile.ZipFile(wheel_path) as wheel:
               wheel_names = set(wheel.namelist())
+              metadata_name = next(name for name in wheel_names if name.endswith(".dist-info/METADATA"))
+              entry_points_name = next(name for name in wheel_names if name.endswith(".dist-info/entry_points.txt"))
+              wheel_metadata = wheel.read(metadata_name).decode("utf-8")
+              entry_points = wheel.read(entry_points_name).decode("utf-8")
           assert "drawingml_svg/py.typed" in wheel_names
-          dist_info = next(name.rsplit("/", 1)[0] for name in wheel_names if name.endswith(".dist-info/METADATA"))
-          assert f"{dist_info}/entry_points.txt" in wheel_names
+          assert "Project-URL: Homepage, https://github.com/com-junkawasaki/svgraph" in wheel_metadata
+          assert "Project-URL: Repository, https://github.com/com-junkawasaki/svgraph" in wheel_metadata
+          assert "Project-URL: Issues, https://github.com/com-junkawasaki/svgraph/issues" in wheel_metadata
+          assert "svgraph = drawingml_svg.cli:main" in entry_points
+          assert "drawingml-svg = drawingml_svg.cli:main" in entry_points
 
           with tarfile.open(sdist_path) as sdist:
               sdist_names = set(sdist.getnames())
