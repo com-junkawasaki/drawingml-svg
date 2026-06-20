@@ -109,6 +109,30 @@ def test_legacy_names_are_limited_to_compatibility_surfaces() -> None:
     assert unexpected == []
 
 
+def test_legacy_name_allowlist_is_explicitly_scoped_to_compatibility_docs_and_tests() -> None:
+    assert ALLOWED_LEGACY_TERMS == {
+        "MIGRATION.md": {"pptxsvg", "SvgIR", "svg_to_ir", "svg_to_pptx_ir", "svg_ir", "pptx_ir"},
+        "README.md": {"pptxsvg", "svg_to_ir", "svg_to_pptx_ir", "pptx_ir"},
+        "docs/adr/0001-svgraph.md": {"svg_to_ir"},
+        "src/drawingml_svg/cli.py": {"pptxsvg"},
+        "src/drawingml_svg/ir.py": {"SvgIR", "svg_to_ir", "svg_to_pptx_ir", "svg_ir", "pptx_ir"},
+        "src/svgraph/cli.py": {"pptxsvg"},
+        "tests/test_migration.py": set(LEGACY_TERMS),
+        "tests/test_svgraph.py": {"SvgIR", "pptxsvg", "svg_to_ir", "svg_to_pptx_ir", "svg_ir", "pptx_ir", "Svgraph"},
+    }
+    for allowed_path in ALLOWED_LEGACY_TERMS:
+        assert allowed_path in {
+            "MIGRATION.md",
+            "README.md",
+            "docs/adr/0001-svgraph.md",
+            "src/drawingml_svg/cli.py",
+            "src/drawingml_svg/ir.py",
+            "src/svgraph/cli.py",
+            "tests/test_migration.py",
+            "tests/test_svgraph.py",
+        }
+
+
 def test_public_surfaces_use_svgraph_repo_and_artifact_names() -> None:
     root = Path(__file__).resolve().parents[1]
     unexpected: list[str] = []
