@@ -1110,6 +1110,9 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "useViewport(ref, element, currentViewport, css, ownStyle)" in generated
         assert "rectClipBounds(rawShape, ownStyle, refs, ownMatrix, childViewport, css)" in generated
         assert "bboxCascadedGeom" in generated
+        assert "computedStyle(clip, style, css, refs, viewport)" in generated
+        assert "computedStyle(rect, clipStyle, css, refs, viewport)" in generated
+        assert "transformMatrix(rectStyle.transform ?? rect.getAttribute(\"transform\"))" in generated
         assert "css-use-frame" in generated
         assert "css-nested-frame" in generated
         assert "svgTextPosition(element, viewport, css, paintStyle)" in generated
@@ -1365,6 +1368,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser frame geometry export with CSS cascade rules for embedded images and `foreignObject` HTML tables",
         "browser geometry-dependent analysis and transform calculations with CSS cascade rules for non-rendering checks, reference boxes, and line `pathLength` scaling",
         "browser nested SVG, `use`, and rectangular `clipPath` geometry with CSS cascade rules",
+        "browser rectangular `clipPath` transforms with CSS cascade rules",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",

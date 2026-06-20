@@ -121,7 +121,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
   <g id="coverage-slide" data-kind="slide" data-title="Browser SVG Coverage" style="stroke:#334155;stroke-width:4;fill:#fde68a">
     <defs>
       <rect id="reused-chip" width="170" height="70" rx="14"/>
-      <clipPath id="bar-clip"><rect style="x:960px;y:500px;width:150px;height:70px"/></clipPath>
+      <clipPath id="bar-clip"><rect style="x:950px;y:500px;width:150px;height:70px;transform:translate(10px,0)"/></clipPath>
       <clipPath id="bbox-clip" clipPathUnits="objectBoundingBox"><rect style="x:0.15;y:0.15;width:0.7;height:0.7"/></clipPath>
       <linearGradient id="linear-fallback"><stop offset="0" stop-color="#ef4444"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
       <radialGradient id="radial-fallback"><stop offset="0" stop-color="#fef08a"/><stop offset="1" stop-color="#16a34a"/></radialGradient>
@@ -3349,14 +3349,16 @@ function rectClipBounds(shape, style, refs, matrix, viewport = defaultViewport()
     const rect = Array.from(clip.children).find((child) => localName(child) === "rect");
     if (!rect)
         return null;
-    const declarations = resolvedCascadedDeclarations(rect, css, style);
+    const clipStyle = computedStyle(clip, style, css, refs, viewport);
+    const rectStyle = computedStyle(rect, clipStyle, css, refs, viewport);
+    const declarations = resolvedCascadedDeclarations(rect, css, rectStyle);
     const width = units === "objectboundingbox" ? bboxCascadedGeom(rect, declarations, "width") : cascadedGeom(rect, declarations, "width", "x", viewport);
     const height = units === "objectboundingbox" ? bboxCascadedGeom(rect, declarations, "height") : cascadedGeom(rect, declarations, "height", "y", viewport);
     if (width <= 0 || height <= 0)
         return null;
     if (units === "objectboundingbox") {
         const box = clipTargetBox(shape);
-        if (!box || clip.getAttribute("transform") || rect.getAttribute("transform"))
+        if (!box || clipStyle.transform || rectStyle.transform)
             return null;
         return {
             x: box.x + bboxCascadedGeom(rect, declarations, "x") * box.width,
@@ -3367,7 +3369,7 @@ function rectClipBounds(shape, style, refs, matrix, viewport = defaultViewport()
     }
     if (units !== "userspaceonuse")
         return null;
-    const clipMatrix = multiply(multiply(matrix, transformMatrix(clip.getAttribute("transform"))), transformMatrix(rect.getAttribute("transform")));
+    const clipMatrix = multiply(multiply(matrix, transformMatrix(clipStyle.transform ?? clip.getAttribute("transform"))), transformMatrix(rectStyle.transform ?? rect.getAttribute("transform")));
     if (!matrixKeepsRectAxisAligned(clipMatrix))
         return null;
     const box = transformedBox(clipMatrix, cascadedGeom(rect, declarations, "x", "x", viewport), cascadedGeom(rect, declarations, "y", "y", viewport), width, height);
