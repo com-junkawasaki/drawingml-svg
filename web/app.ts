@@ -244,6 +244,12 @@ type TableCell = {
   rowSpan: number;
   text: string;
   fill: string | null;
+  stroke: string | null;
+  strokeAlpha: number | null;
+  strokeWidth: number;
+  strokeLineCap: string | null;
+  strokeLineJoin: string | null;
+  strokeDasharray: string | null;
 };
 
 type Matrix = [number, number, number, number, number, number];
@@ -306,8 +312,8 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <rect width="1280" height="720" fill="#ffffff"/>
     <text x="90" y="90" font-size="40" font-family="Arial" font-weight="700" fill="#17202a">Table semantics stay in IR</text>
     <g id="table" data-kind="table" transform="translate(90 150)">
-      <rect data-kind="cell" data-row="0" data-col="0" data-colspan="2" data-text="Merged header" width="520" height="80" fill="#e6f4f1" stroke="#0f766e"/>
-      <rect data-kind="cell" data-row="1" data-col="0" data-rowspan="2" data-text="Tall label" y="80" width="260" height="160" fill="#f0fdf4" stroke="#0f766e"/>
+      <rect data-kind="cell" data-row="0" data-col="0" data-colspan="2" data-text="Merged header" width="520" height="80" fill="#e6f4f1" stroke="#0f766e" stroke-width="2" stroke-dasharray="4 2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect data-kind="cell" data-row="1" data-col="0" data-rowspan="2" data-text="Tall label" y="80" width="260" height="160" fill="#f0fdf4" stroke="#0f766e" stroke-width="2"/>
       <rect data-kind="cell" data-row="1" data-col="1" data-text="Value" x="260" y="80" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
       <rect data-kind="cell" data-row="2" data-col="1" data-text="Total" x="260" y="160" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
     </g>
@@ -895,6 +901,10 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedSty
       width: num(rect, "width"),
       height: num(rect, "height"),
       fill: style.fill ?? "#ffffff",
+      stroke: style.stroke ?? null,
+      strokeAlpha: style.strokeAlpha ?? null,
+      strokeWidth: style.strokeWidth ?? 1,
+      ...strokeStyle(style),
     };
   });
   const xEdges = edges(cells.flatMap((cell) => [cell.x, cell.x + cell.width]));
@@ -909,6 +919,12 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedSty
     rowSpan: cell.rowSpan,
     text: cell.text,
     fill: cell.fill,
+    stroke: cell.stroke,
+    strokeAlpha: cell.strokeAlpha,
+    strokeWidth: cell.strokeWidth,
+    strokeLineCap: cell.strokeLineCap,
+    strokeLineJoin: cell.strokeLineJoin,
+    strokeDasharray: cell.strokeDasharray,
   }));
   return {
     id,
@@ -1326,8 +1342,10 @@ function tableXml(shape: TableShape): string {
         .map((_, colIndex) => {
           const cell = tableCellAt(shape.cells, rowIndex, colIndex);
           const attrs = tableCellAttrs(cell, rowIndex, colIndex);
-          const text = cell && cell.row === rowIndex && cell.col === colIndex && cell.text ? `<a:r><a:t>${xml(cell.text)}</a:t></a:r>` : "";
-          return `<a:tc${attrs}><a:txBody><a:bodyPr/><a:lstStyle/><a:p>${text}</a:p></a:txBody><a:tcPr>${fillXml(cell?.fill || "#ffffff")}</a:tcPr></a:tc>`;
+          const origin = Boolean(cell && cell.row === rowIndex && cell.col === colIndex);
+          const text = origin && cell?.text ? `<a:r><a:t>${xml(cell.text)}</a:t></a:r>` : "";
+          const borders = origin ? tableBorderXml(cell) : "";
+          return `<a:tc${attrs}><a:txBody><a:bodyPr/><a:lstStyle/><a:p>${text}</a:p></a:txBody><a:tcPr>${fillXml(cell?.fill || "#ffffff")}${borders}</a:tcPr></a:tc>`;
         })
         .join("");
       return `<a:tr h="${emu(height)}">${cells}</a:tr>`;
@@ -1352,6 +1370,19 @@ function tableCellAttrs(cell: TableCell | null, row: number, col: number): strin
     attrs.push('vMerge="1"');
   }
   return attrs.length ? ` ${attrs.join(" ")}` : "";
+}
+
+function tableBorderXml(cell: TableCell | null): string {
+  if (!cell || !cell.stroke || cell.strokeWidth <= 0) return "";
+  return ["lnL", "lnR", "lnT", "lnB"].map((tag) => tableBorderLineXml(tag, cell)).join("");
+}
+
+function tableBorderLineXml(tag: string, cell: TableCell): string {
+  const stroke = cell.stroke;
+  if (!stroke) return "";
+  const cap = svgLineCapToDml(cell.strokeLineCap);
+  const capAttr = cap ? ` cap="${xml(cap)}"` : "";
+  return `<a:${tag} w="${emu(cell.strokeWidth)}"${capAttr}><a:solidFill><a:srgbClr val="${hex(stroke)}">${alphaXml(cell.strokeAlpha)}</a:srgbClr></a:solidFill>${dashXml(cell.strokeDasharray, cell.strokeWidth)}${joinXml(cell.strokeLineJoin)}</a:${tag}>`;
 }
 
 function freeformXml(shape: FreeformShape): string {
