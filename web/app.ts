@@ -121,6 +121,9 @@ type RectShape = BaseShape & {
   fill: string | null;
   stroke: string | null;
   strokeWidth: number;
+  strokeLineCap: string | null;
+  strokeLineJoin: string | null;
+  strokeDasharray: string | null;
 };
 
 type EllipseShape = BaseShape & {
@@ -132,6 +135,9 @@ type EllipseShape = BaseShape & {
   fill: string | null;
   stroke: string | null;
   strokeWidth: number;
+  strokeLineCap: string | null;
+  strokeLineJoin: string | null;
+  strokeDasharray: string | null;
 };
 
 type LineShape = BaseShape & {
@@ -142,6 +148,9 @@ type LineShape = BaseShape & {
   y2: number;
   stroke: string | null;
   strokeWidth: number;
+  strokeLineCap: string | null;
+  strokeLineJoin: string | null;
+  strokeDasharray: string | null;
   relation: boolean;
   startId: number | null;
   endId: number | null;
@@ -169,6 +178,9 @@ type FreeformShape = BaseShape & {
   fill: string | null;
   stroke: string | null;
   strokeWidth: number;
+  strokeLineCap: string | null;
+  strokeLineJoin: string | null;
+  strokeDasharray: string | null;
   markerStart: boolean;
   markerEnd: boolean;
 };
@@ -205,6 +217,9 @@ type SvgStyle = {
   stroke?: string | null;
   strokeWidth?: number;
   color?: string | null;
+  strokeLineCap?: string | null;
+  strokeLineJoin?: string | null;
+  strokeDasharray?: string | null;
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: string;
@@ -275,6 +290,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <rect id="clipped-bar" x="930" y="500" width="250" height="70" style="fill:#fecaca;stroke:#991b1b;clip-path:url(#bar-clip)"/>
     <ellipse id="bbox-clipped-ellipse" cx="1090" cy="560" rx="80" ry="50" style="fill:#ede9fe;stroke:#6d28d9;clip-path:url(#bbox-clip)"/>
     <rect id="css-colors" x="740" y="615" width="120" height="50" style="color:orange;fill:currentColor;stroke:hsl(210 100% 50%)"/>
+    <line id="dash-line" x1="120" y1="650" x2="300" y2="650" style="stroke:#0f766e;stroke-width:8;stroke-dasharray:18 10;stroke-linecap:round;stroke-linejoin:bevel"/>
     <rect id="gradient-fill" x="900" y="615" width="120" height="50" style="fill:url(#linear-fallback);stroke:url(#radial-fallback)"/>
     <circle id="pattern-fill" cx="1080" cy="640" r="32" style="fill:url(#pattern-fallback);stroke:#334155"/>
     <use href="#reused-chip" class="accent-use" x="360" y="400"/>
@@ -654,6 +670,7 @@ function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: n
       fill: style.fill ?? "#000000",
       stroke: style.stroke ?? null,
       strokeWidth: style.strokeWidth ?? 1,
+      ...strokeStyle(style),
     };
   }
   if (tag === "circle" || tag === "ellipse") {
@@ -674,6 +691,7 @@ function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: n
       fill: style.fill ?? "#000000",
       stroke: style.stroke ?? null,
       strokeWidth: style.strokeWidth ?? 1,
+      ...strokeStyle(style),
     };
   }
   if (tag === "line") {
@@ -690,6 +708,7 @@ function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: n
       y2,
       stroke: style.stroke ?? "#111827",
       strokeWidth: style.strokeWidth ?? 1,
+      ...strokeStyle(style),
       relation: data.kind === "relation" || data.role === "relation",
       startId: null,
       endId: null,
@@ -729,6 +748,7 @@ function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: n
         fill: tag === "polygon" ? (style.fill ?? "#000000") : null,
         stroke: style.stroke ?? "#111827",
         strokeWidth: style.strokeWidth ?? 1,
+        ...strokeStyle(style),
         markerStart: style.markerStart ?? false,
         markerEnd: style.markerEnd ?? false,
       };
@@ -747,6 +767,7 @@ function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: n
         fill: style.fill ?? (parsed.closed ? "#000000" : null),
         stroke: style.stroke ?? "#111827",
         strokeWidth: style.strokeWidth ?? 1,
+        ...strokeStyle(style),
         markerStart: style.markerStart ?? false,
         markerEnd: style.markerEnd ?? false,
       };
@@ -965,11 +986,11 @@ function shapeToXml(shape: Shape): string {
 }
 
 function rectXml(shape: RectShape): string {
-  return spXml(shape.id, shape.name, shape.x, shape.y, shape.width, shape.height, shape.rx ? "roundRect" : "rect", fillXml(shape.fill) + lineStyleXml(shape.stroke, shape.strokeWidth), "");
+  return spXml(shape.id, shape.name, shape.x, shape.y, shape.width, shape.height, shape.rx ? "roundRect" : "rect", fillXml(shape.fill) + lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape)), "");
 }
 
 function ellipseXml(shape: EllipseShape): string {
-  return spXml(shape.id, shape.name, shape.x, shape.y, shape.width, shape.height, "ellipse", fillXml(shape.fill) + lineStyleXml(shape.stroke, shape.strokeWidth), "");
+  return spXml(shape.id, shape.name, shape.x, shape.y, shape.width, shape.height, "ellipse", fillXml(shape.fill) + lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape)), "");
 }
 
 function lineXml(shape: LineShape): string {
@@ -977,7 +998,7 @@ function lineXml(shape: LineShape): string {
   const y = Math.min(shape.y1, shape.y2);
   const width = Math.max(Math.abs(shape.x2 - shape.x1), 1);
   const height = Math.max(Math.abs(shape.y2 - shape.y1), 1);
-  return spXml(shape.id, shape.name, x, y, width, height, "line", `<a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, { head: shape.markerEnd, tail: shape.markerStart })}`, "");
+  return spXml(shape.id, shape.name, x, y, width, height, "line", `<a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape, { head: shape.markerEnd, tail: shape.markerStart }))}`, "");
 }
 
 function connectorXml(shape: LineShape): string {
@@ -986,7 +1007,7 @@ function connectorXml(shape: LineShape): string {
   const width = Math.max(Math.abs(shape.x2 - shape.x1), 1);
   const height = Math.max(Math.abs(shape.y2 - shape.y1), 1);
   const cxn = `${shape.startId ? `<a:stCxn id="${shape.startId}" idx="0"/>` : ""}${shape.endId ? `<a:endCxn id="${shape.endId}" idx="0"/>` : ""}`;
-  return `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvCxnSpPr>${cxn}</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, { head: true, tail: shape.markerStart })}</p:spPr></p:cxnSp>`;
+  return `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvCxnSpPr>${cxn}</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape, { head: true, tail: shape.markerStart }))}</p:spPr></p:cxnSp>`;
 }
 
 function textXml(shape: TextShape): string {
@@ -1022,7 +1043,7 @@ function freeformXml(shape: FreeformShape): string {
     .concat(shape.closed ? ["<a:close/>"] : [])
     .join("");
   const geom = `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst><a:path w="${emu(width)}" h="${emu(height)}">${commands}</a:path></a:pathLst></a:custGeom>`;
-  return `<p:sp><p:nvSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(box.x)}" y="${emu(box.y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm>${geom}${fillXml(shape.fill)}${lineStyleXml(shape.stroke, shape.strokeWidth, { head: shape.markerEnd, tail: shape.markerStart })}</p:spPr></p:sp>`;
+  return `<p:sp><p:nvSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(box.x)}" y="${emu(box.y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm>${geom}${fillXml(shape.fill)}${lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape, { head: shape.markerEnd, tail: shape.markerStart }))}</p:spPr></p:sp>`;
 }
 
 function imageXml(shape: ImageShape): string {
@@ -1041,9 +1062,51 @@ function solidColorXml(color: string | null): string {
   return color ? `<a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill>` : "";
 }
 
-function lineStyleXml(color: string | null, width: number, arrows: { head?: boolean; tail?: boolean } = {}): string {
+function lineStyleXml(color: string | null, width: number, options: LineOptions = {}): string {
   if (!color || width <= 0) return "<a:ln><a:noFill/></a:ln>";
-  return `<a:ln w="${emu(width)}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill>${arrows.tail ? '<a:tailEnd type="triangle"/>' : ""}${arrows.head ? '<a:headEnd type="triangle"/>' : ""}</a:ln>`;
+  const cap = options.cap ? ` cap="${xml(options.cap)}"` : "";
+  return `<a:ln w="${emu(width)}"${cap}><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill>${dashXml(options.dasharray, width)}${joinXml(options.join)}${options.tail ? '<a:tailEnd type="triangle"/>' : ""}${options.head ? '<a:headEnd type="triangle"/>' : ""}</a:ln>`;
+}
+
+type LineOptions = {
+  head?: boolean;
+  tail?: boolean;
+  cap?: string | null;
+  join?: string | null;
+  dasharray?: string | null;
+};
+
+function lineOptions(shape: { strokeLineCap: string | null; strokeLineJoin: string | null; strokeDasharray: string | null }, arrows: { head?: boolean; tail?: boolean } = {}): LineOptions {
+  return { ...arrows, cap: svgLineCapToDml(shape.strokeLineCap), join: shape.strokeLineJoin, dasharray: shape.strokeDasharray };
+}
+
+function dashXml(value: string | null | undefined, strokeWidth: number): string {
+  if (!value || value === "none") return "";
+  const nums = dasharrayNumbers(value);
+  if (!nums || nums.reduce((sum, item) => sum + item, 0) <= 0) return "";
+  if (strokeWidth > 0) {
+    const even = nums.length % 2 === 1 ? nums.concat(nums) : nums;
+    const parts: string[] = [];
+    for (let index = 0; index + 1 < even.length; index += 2) {
+      parts.push(`<a:ds d="${Math.round(Math.max(0, even[index]!) / strokeWidth * 100000)}" sp="${Math.round(Math.max(0, even[index + 1]!) / strokeWidth * 100000)}"/>`);
+    }
+    return `<a:custDash>${parts.join("")}</a:custDash>`;
+  }
+  return "";
+}
+
+function joinXml(value: string | null | undefined): string {
+  if (value === "round") return "<a:round/>";
+  if (value === "bevel") return "<a:bevel/>";
+  if (value === "miter") return "<a:miter/>";
+  return "";
+}
+
+function svgLineCapToDml(value: string | null | undefined): string | null {
+  if (value === "round") return "rnd";
+  if (value === "square") return "sq";
+  if (value === "butt") return "flat";
+  return null;
 }
 
 function writePptx(slideXmls: string[], slideSize: [number, number]): Uint8Array {
@@ -1328,6 +1391,9 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   const fill = value("fill");
   const stroke = value("stroke");
   const strokeWidth = value("stroke-width");
+  const strokeLineCap = value("stroke-linecap");
+  const strokeLineJoin = value("stroke-linejoin");
+  const strokeDasharray = value("stroke-dasharray");
   const fontSize = value("font-size");
   const fontFamily = value("font-family");
   const fontWeight = value("font-weight");
@@ -1339,6 +1405,9 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   if (fill != null) next.fill = normalizePaint(fill, refs, next);
   if (stroke != null) next.stroke = normalizePaint(stroke, refs, next);
   if (strokeWidth != null) next.strokeWidth = parseLength(strokeWidth, next.strokeWidth ?? 1);
+  if (strokeLineCap != null) next.strokeLineCap = normalizeStrokeLineCap(strokeLineCap);
+  if (strokeLineJoin != null) next.strokeLineJoin = normalizeStrokeLineJoin(strokeLineJoin);
+  if (strokeDasharray != null) next.strokeDasharray = normalizeStrokeDasharray(strokeDasharray);
   if (fontSize != null) next.fontSize = parseLength(fontSize, next.fontSize ?? 18);
   if (fontFamily != null) next.fontFamily = fontFamily.replace(/^['"]|['"]$/g, "");
   if (fontWeight != null) next.fontWeight = fontWeight;
@@ -1408,6 +1477,38 @@ function styleDeclarations(style: string | null): Record<string, string> {
       .filter((parts): parts is [string, string] => parts.length >= 2 && Boolean(parts[0]?.trim()))
       .map(([name, ...value]) => [name.trim(), value.join(":").trim()]),
   );
+}
+
+function strokeStyle(style: SvgStyle): { strokeLineCap: string | null; strokeLineJoin: string | null; strokeDasharray: string | null } {
+  return {
+    strokeLineCap: style.strokeLineCap ?? null,
+    strokeLineJoin: style.strokeLineJoin ?? null,
+    strokeDasharray: style.strokeDasharray ?? null,
+  };
+}
+
+function normalizeStrokeLineCap(value: string): string | null {
+  const normalized = value.trim().toLowerCase();
+  return ["butt", "round", "square"].includes(normalized) ? normalized : null;
+}
+
+function normalizeStrokeLineJoin(value: string): string | null {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "miter-clip") return "miter";
+  return ["miter", "round", "bevel"].includes(normalized) ? normalized : null;
+}
+
+function normalizeStrokeDasharray(value: string): string | null {
+  const normalized = value.trim();
+  if (!normalized || normalized === "none") return null;
+  return dasharrayNumbers(normalized) ? normalized : null;
+}
+
+function dasharrayNumbers(value: string): number[] | null {
+  const parts = value.replaceAll(",", " ").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return null;
+  const nums = parts.map((part) => Number.parseFloat(part));
+  return nums.every((item) => Number.isFinite(item) && item >= 0) ? nums : null;
 }
 
 function normalizePaint(value: string, refs: Map<string, Element> = new Map(), style: SvgStyle = {}): string | null {
