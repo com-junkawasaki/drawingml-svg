@@ -17,17 +17,6 @@ from .svgraph import (
     svg_to_svgraph_presentation,
 )
 
-SvgraphDocument = SVGraphDocument
-SvgraphNode = SVGraphNode
-SvgraphDependency = SVGraphDependency
-SvgraphPresentation = SVGraphPresentation
-SvgraphSlide = SVGraphSlide
-SvgraphPackagePart = SVGraphPackagePart
-SvgraphTemplate = SVGraphTemplate
-SvgraphGuide = SVGraphGuide
-SvgraphRuler = SVGraphRuler
-SvgraphTextStyle = SVGraphTextStyle
-
 SvgIRDocument = SVGraphDocument
 SvgIRNode = SVGraphNode
 SvgIRDependency = SVGraphDependency
@@ -81,16 +70,6 @@ __all__ = [
     "SvgIRSlide",
     "SvgIRTemplate",
     "SvgIRTextStyle",
-    "SvgraphDependency",
-    "SvgraphDocument",
-    "SvgraphGuide",
-    "SvgraphNode",
-    "SvgraphPackagePart",
-    "SvgraphPresentation",
-    "SvgraphRuler",
-    "SvgraphSlide",
-    "SvgraphTemplate",
-    "SvgraphTextStyle",
     "svg_ir_to_json",
     "svg_pptx_ir_to_json",
     "svg_svgraph_presentation_to_json",

@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict
 
 import drawingml_svg
+import drawingml_svg.ir
 from drawingml_svg import svg_to_svgraph, svg_to_svgraph_presentation
 from drawingml_svg.ir import svg_ir_to_json, svg_pptx_ir_to_json, svg_to_ir, svg_to_pptx_ir
 from drawingml_svg.svgraph import svg_svgraph_presentation_to_json, svg_svgraph_to_json
@@ -59,6 +60,13 @@ def test_legacy_ir_aliases_are_not_top_level_exports() -> None:
     assert not hasattr(drawingml_svg, "svg_to_pptx_ir")
     assert "svg_to_ir" not in drawingml_svg.__all__
     assert "svg_to_pptx_ir" not in drawingml_svg.__all__
+
+
+def test_legacy_ir_module_keeps_only_explicit_pre_svgraph_aliases() -> None:
+    assert hasattr(drawingml_svg.ir, "SvgIRDocument")
+    assert not hasattr(drawingml_svg.ir, "SvgraphDocument")
+    assert "SvgIRDocument" in drawingml_svg.ir.__all__
+    assert "SvgraphDocument" not in drawingml_svg.ir.__all__
 
 
 def test_legacy_svg_ir_alias_matches_svgraph_payload() -> None:
