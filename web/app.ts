@@ -131,6 +131,7 @@ type RectShape = BaseShape & {
   strokeLineCap: string | null;
   strokeLineJoin: string | null;
   strokeDasharray: string | null;
+  strokeDashoffset: number | null;
 };
 
 type EllipseShape = BaseShape & {
@@ -161,6 +162,7 @@ type LineShape = BaseShape & {
   strokeLineCap: string | null;
   strokeLineJoin: string | null;
   strokeDasharray: string | null;
+  strokeDashoffset: number | null;
   relation: boolean;
   startId: number | null;
   endId: number | null;
@@ -222,6 +224,7 @@ type FreeformShape = BaseShape & {
   strokeLineCap: string | null;
   strokeLineJoin: string | null;
   strokeDasharray: string | null;
+  strokeDashoffset: number | null;
   markerStart: boolean;
   markerEnd: boolean;
 };
@@ -291,6 +294,7 @@ type SvgStyle = {
   strokeLineCap?: string | null;
   strokeLineJoin?: string | null;
   strokeDasharray?: string | null;
+  strokeDashoffset?: number | null;
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: string;
@@ -458,7 +462,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <rect id="css-transform-origin" class="css-transform-origin" x="1035" y="88" width="105" height="52" style="fill:#f0fdf4;stroke:#16a34a"/>
     <rect id="media-rule" class="media-rule" x="1160" y="88" width="70" height="52"/>
     <rect id="alpha-shape" x="580" y="615" width="120" height="50" style="fill:rgba(239,68,68,0.5);stroke:#2563ebcc;stroke-width:6;fill-opacity:0.8;stroke-opacity:0.5"/>
-    <line id="dash-line" x1="120" y1="650" x2="300" y2="650" style="stroke:#0f766e;stroke-width:8;stroke-dasharray:18 10;stroke-linecap:round;stroke-linejoin:bevel"/>
+    <line id="dash-line" x1="120" y1="650" x2="300" y2="650" style="stroke:#0f766e;stroke-width:8;stroke-dasharray:18 10;stroke-dashoffset:5;stroke-linecap:round;stroke-linejoin:bevel"/>
     <text id="rich-text" x="330" y="660" rotate="6" style="font-size:24;font-family:Arial;fill:#111827;font-variant:small-caps;text-transform:capitalize">rich <tspan style="fill:#dc2626;font-weight:700;baseline-shift:super;text-transform:uppercase">red</tspan><tspan style="fill:#2563eb;font-style:italic;text-decoration:underline line-through;letter-spacing:2px;text-transform:none"> blue</tspan></text>
     <text id="anchored-text" x="680" y="660" style="font-size:24;font-family:Arial;fill:#0f172a;text-anchor:middle;dominant-baseline:middle">Centered</text>
     <text id="preserve-text" x="90" y="355" xml:space="preserve" style="font-size:22;font-family:Arial;fill:#64748b">  padded  <tspan style="fill:#0f766e"> kept </tspan></text>
@@ -800,7 +804,7 @@ function extractShapes(root: Element): Shape[] {
   const walk = (element: Element, matrix: Matrix, inheritedStyle: SvgStyle, refStack: Set<string>) => {
     const tag = localName(element);
     if (tag === "metadata" || tag === "defs" || tag === "style") return;
-    const ownStyle = computedStyle(element, inheritedStyle, css, refs);
+    const ownStyle = computedStyle(element, inheritedStyle, css, refs, viewport);
     const ownMatrix = multiply(matrix, styleTransformMatrix(element, ownStyle, viewport));
     if (tag === "use") {
       const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
@@ -840,8 +844,8 @@ function extractShapes(root: Element): Shape[] {
     }
     for (const child of Array.from(element.children)) walk(child, ownMatrix, ownStyle, refStack);
   };
-  const baseStyle = scopeRoot === root ? {} : computedStyle(scopeRoot, {}, css, refs);
-  const rootStyle = computedStyle(root, baseStyle, css, refs);
+  const baseStyle = scopeRoot === root ? {} : computedStyle(scopeRoot, {}, css, refs, viewport);
+  const rootStyle = computedStyle(root, baseStyle, css, refs, viewport);
   for (const child of Array.from(root.children)) walk(child, [1, 0, 0, 1, 0, 0], rootStyle, new Set());
   return shapes;
 }
@@ -1020,7 +1024,7 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedSty
   const rects = Array.from(group.querySelectorAll("rect")).filter((rect) => rect.getAttribute("data-kind") === "cell" || rect.getAttribute("data-role") === "cell");
   if (!rects.length) return null;
   const cells = rects.map((rect) => {
-    const style = computedStyle(rect, inheritedStyle, css);
+    const style = computedStyle(rect, inheritedStyle, css, new Map(), viewport);
     const [x, y] = point(matrix, geom(rect, "x", "x", viewport), geom(rect, "y", "y", viewport));
     return {
       row: Number(rect.getAttribute("data-row") || 0),
@@ -2629,7 +2633,7 @@ function aspectAlignmentOffset(part: string, extra: number): number {
   return 0;
 }
 
-function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [], refs: Map<string, Element> = new Map()): SvgStyle {
+function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [], refs: Map<string, Element> = new Map(), viewport: Viewport = defaultViewport()): SvgStyle {
   const declarations = resolvedCascadedDeclarations(element, css, inherited);
   const value = (name: string): string | null => declarations[name] ?? null;
   const next: SvgStyle = { ...inherited, customProperties: customPropertiesFromDeclarations(declarations, inherited) };
@@ -2643,6 +2647,7 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   const strokeLineCap = value("stroke-linecap");
   const strokeLineJoin = value("stroke-linejoin");
   const strokeDasharray = value("stroke-dasharray");
+  const strokeDashoffset = value("stroke-dashoffset");
   const fontSize = value("font-size");
   const fontFamily = value("font-family");
   const fontWeight = value("font-weight");
@@ -2692,7 +2697,12 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   if (strokeWidth != null) next.strokeWidth = parseCssLength(strokeWidth, next.fontSize ?? rootFontSize, next.strokeWidth ?? 1);
   if (strokeLineCap != null) next.strokeLineCap = normalizeStrokeLineCap(strokeLineCap);
   if (strokeLineJoin != null) next.strokeLineJoin = normalizeStrokeLineJoin(strokeLineJoin);
-  if (strokeDasharray != null) next.strokeDasharray = normalizeStrokeDasharray(strokeDasharray, next.fontSize ?? rootFontSize);
+  const dashBasis = percentageBasis("diag", viewport);
+  if (strokeDashoffset != null) next.strokeDashoffset = parseCssLength(strokeDashoffset, dashBasis, next.strokeDashoffset ?? 0);
+  if (strokeDasharray != null) next.strokeDasharray = normalizeStrokeDasharray(strokeDasharray, dashBasis);
+  if ((strokeDasharray != null || strokeDashoffset != null) && next.strokeDasharray && next.strokeDashoffset) {
+    next.strokeDasharray = normalizeStrokeDasharrayWithOffset(next.strokeDasharray, next.strokeDashoffset, dashBasis) ?? next.strokeDasharray;
+  }
   if (fontSize != null) next.fontSize = parseFontSize(fontSize, next.fontSize ?? 18);
   if (fontFamily != null) next.fontFamily = normalizeFontFamily(fontFamily);
   if (fontWeight != null) next.fontWeight = fontWeight;
@@ -2889,6 +2899,8 @@ function cssValueFromStyle(style: SvgStyle, name: string): string | null {
       return style.strokeLineJoin ?? null;
     case "stroke-dasharray":
       return style.strokeDasharray ?? null;
+    case "stroke-dashoffset":
+      return style.strokeDashoffset == null ? null : String(style.strokeDashoffset);
     case "font-size":
       return style.fontSize == null ? null : String(style.fontSize);
     case "font-family":
@@ -3304,11 +3316,12 @@ function fontWeightTokenIsSupported(value: string): boolean {
   return /^\d+$/.test(value) && weight >= 1 && weight <= 1000;
 }
 
-function strokeStyle(style: SvgStyle): { strokeLineCap: string | null; strokeLineJoin: string | null; strokeDasharray: string | null } {
+function strokeStyle(style: SvgStyle): { strokeLineCap: string | null; strokeLineJoin: string | null; strokeDasharray: string | null; strokeDashoffset: number | null } {
   return {
     strokeLineCap: style.strokeLineCap ?? null,
     strokeLineJoin: style.strokeLineJoin ?? null,
     strokeDasharray: style.strokeDasharray ?? null,
+    strokeDashoffset: style.strokeDashoffset ?? null,
   };
 }
 
@@ -3330,6 +3343,11 @@ function normalizeStrokeDasharray(value: string, basis = rootFontSize): string |
   return nums ? nums.map(formatNumber).join(" ") : null;
 }
 
+function normalizeStrokeDasharrayWithOffset(value: string, offset: number, basis = rootFontSize): string | null {
+  const nums = dasharrayWithOffset(value, offset, basis);
+  return nums ? nums.map(formatNumber).join(" ") : null;
+}
+
 function normalizeSpacingLength(value: string, basis = rootFontSize): number | null {
   const normalized = value.trim().toLowerCase();
   if (!normalized || normalized === "normal") return null;
@@ -3342,6 +3360,55 @@ function dasharrayNumbers(value: string, basis = rootFontSize): number[] | null 
   if (!parts.length) return null;
   const nums = parts.map((part) => parseCssLength(part, basis, Number.NaN));
   return nums.every((item) => Number.isFinite(item) && item >= 0) ? nums : null;
+}
+
+function dasharrayWithOffset(value: string, offset: number, basis = rootFontSize): number[] | null {
+  let nums = dasharrayNumbers(value, basis);
+  if (!nums?.length || nums.reduce((sum, item) => sum + item, 0) <= 0) return null;
+  if (nums.length % 2 === 1) nums = nums.concat(nums);
+  const period = nums.reduce((sum, item) => sum + item, 0);
+  if (period <= 0) return null;
+  const phase = ((offset % period) + period) % period;
+  if (numbersClose(phase, 0)) return nums;
+  let cursor = 0;
+  for (let index = 0; index < nums.length; index += 1) {
+    const length = nums[index]!;
+    const end = cursor + length;
+    if (phase < end || numbersClose(phase, end)) {
+      if (numbersClose(phase, end)) {
+        cursor = end;
+        continue;
+      }
+      if (index % 2 === 1) {
+        const remainingGap = end - phase;
+        if (numbersClose(remainingGap, 0)) {
+          cursor = end;
+          continue;
+        }
+        const shifted = [0, remainingGap, ...nums.slice(index + 1), ...nums.slice(0, index)];
+        const consumedGap = phase - cursor;
+        if (!numbersClose(consumedGap, 0)) shifted.push(consumedGap);
+        if (shifted.length % 2 === 1) shifted.push(0);
+        return shifted;
+      }
+      const remaining = end - phase;
+      if (numbersClose(remaining, 0)) {
+        cursor = end;
+        continue;
+      }
+      const shifted = [remaining, ...nums.slice(index + 1), ...nums.slice(0, index)];
+      const consumed = phase - cursor;
+      if (!numbersClose(consumed, 0)) shifted.push(consumed);
+      if (shifted.length % 2 === 1) shifted.push(0);
+      return shifted;
+    }
+    cursor = end;
+  }
+  return null;
+}
+
+function numbersClose(left: number, right: number, tolerance = 1e-9): boolean {
+  return Math.abs(left - right) < tolerance;
 }
 
 function normalizePaint(value: string, refs: Map<string, Element> = new Map(), style: SvgStyle = {}): string | null {
