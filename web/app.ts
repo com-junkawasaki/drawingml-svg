@@ -685,6 +685,9 @@ const panel = mustElement<HTMLElement>("panel");
 const fileInput = mustElement<HTMLInputElement>("fileInput");
 const undoButton = mustElement<HTMLButtonElement>("undoBtn");
 const redoButton = mustElement<HTMLButtonElement>("redoBtn");
+const documentDbName = "svgraph-documents";
+const documentStoreName = "documents";
+const activeDocumentKey = "active-svg";
 
 function mustElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -692,7 +695,7 @@ function mustElement<T extends HTMLElement>(id: string): T {
   return element as T;
 }
 
-function setSourceValue(value: string, options: { record: boolean } = { record: true }): void {
+function setSourceValue(value: string, options: { record: boolean; persist?: boolean } = { record: true, persist: true }): void {
   if (options.record && source.value !== value) {
     state.undoStack.push(source.value);
     state.redoStack = [];
@@ -701,6 +704,7 @@ function setSourceValue(value: string, options: { record: boolean } = { record: 
   state.lastSourceValue = value;
   updateHistoryButtons();
   render();
+  if (options.persist !== false) void saveSourceDocument(value);
 }
 
 function recordManualSourceEdit(): void {
@@ -710,6 +714,7 @@ function recordManualSourceEdit(): void {
   state.lastSourceValue = source.value;
   updateHistoryButtons();
   render();
+  void saveSourceDocument(source.value);
 }
 
 function undoSourceEdit(): void {
@@ -720,6 +725,7 @@ function undoSourceEdit(): void {
   state.lastSourceValue = previous;
   updateHistoryButtons();
   render();
+  void saveSourceDocument(previous);
 }
 
 function redoSourceEdit(): void {
@@ -730,11 +736,47 @@ function redoSourceEdit(): void {
   state.lastSourceValue = next;
   updateHistoryButtons();
   render();
+  void saveSourceDocument(next);
 }
 
 function updateHistoryButtons(): void {
   undoButton.disabled = state.undoStack.length === 0;
   redoButton.disabled = state.redoStack.length === 0;
+}
+
+function openDocumentDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(documentDbName, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(documentStoreName)) db.createObjectStore(documentStoreName);
+    };
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function saveSourceDocument(value: string): Promise<void> {
+  const db = await openDocumentDb();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(documentStoreName, "readwrite");
+    transaction.objectStore(documentStoreName).put(value, activeDocumentKey);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
+
+async function loadSourceDocument(): Promise<string | null> {
+  const db = await openDocumentDb();
+  const value = await new Promise<string | null>((resolve, reject) => {
+    const transaction = db.transaction(documentStoreName, "readonly");
+    const request = transaction.objectStore(documentStoreName).get(activeDocumentKey);
+    request.onsuccess = () => resolve(typeof request.result === "string" ? request.result : null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return value;
 }
 
 function localName(node: Element): string {
@@ -4049,7 +4091,10 @@ async function checkWebGpu(): Promise<void> {
   renderPanel();
 }
 
-setSourceValue(sampleSvg, { record: false });
+setSourceValue(sampleSvg, { record: false, persist: false });
+void loadSourceDocument().then((saved) => {
+  if (saved) setSourceValue(saved, { record: false, persist: false });
+});
 void checkWebGpu();
 
 function asObject(value: JsonValue | undefined): Record<string, JsonValue> {

@@ -906,6 +906,11 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "function undoSourceEdit" in generated
         assert "function redoSourceEdit" in generated
         assert "function updateHistoryButtons" in generated
+        assert "function openDocumentDb" in generated
+        assert "function saveSourceDocument" in generated
+        assert "function loadSourceDocument" in generated
+        assert '"svgraph-documents"' in generated
+        assert '"active-svg"' in generated
         assert 'downloadText("svgraph.json"' in generated
         assert 'downloadText("svgraph-sidecar.json"' in generated
         assert 'kind: "svgraph-sidecar"' in generated
@@ -1087,6 +1092,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser assistant patch diff preview",
         "browser assistant patch apply support",
         "browser SVG source undo/redo history",
+        "browser IndexedDB persistence",
         "web editor design package part schema documentation",
     ]:
         assert expected in changelog
@@ -1283,6 +1289,7 @@ def test_web_editor_design_uses_browser_only_svgraph_contract() -> None:
         "deterministic patch diff preview rows",
         "apply validated SVGraph patch operations back into the canonical SVG source",
         "SVG source undo/redo history",
+        "persists the active SVG source document in IndexedDB",
         "`SVGraphDocument`",
         "`SVGraphPresentation` projection",
         "`svgraph-presentation` view",

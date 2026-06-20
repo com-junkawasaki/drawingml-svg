@@ -225,13 +225,16 @@ const panel = mustElement("panel");
 const fileInput = mustElement("fileInput");
 const undoButton = mustElement("undoBtn");
 const redoButton = mustElement("redoBtn");
+const documentDbName = "svgraph-documents";
+const documentStoreName = "documents";
+const activeDocumentKey = "active-svg";
 function mustElement(id) {
     const element = document.getElementById(id);
     if (!element)
         throw new Error(`missing #${id}`);
     return element;
 }
-function setSourceValue(value, options = { record: true }) {
+function setSourceValue(value, options = { record: true, persist: true }) {
     if (options.record && source.value !== value) {
         state.undoStack.push(source.value);
         state.redoStack = [];
@@ -240,6 +243,8 @@ function setSourceValue(value, options = { record: true }) {
     state.lastSourceValue = value;
     updateHistoryButtons();
     render();
+    if (options.persist !== false)
+        void saveSourceDocument(value);
 }
 function recordManualSourceEdit() {
     if (source.value === state.lastSourceValue)
@@ -249,6 +254,7 @@ function recordManualSourceEdit() {
     state.lastSourceValue = source.value;
     updateHistoryButtons();
     render();
+    void saveSourceDocument(source.value);
 }
 function undoSourceEdit() {
     const previous = state.undoStack.pop();
@@ -259,6 +265,7 @@ function undoSourceEdit() {
     state.lastSourceValue = previous;
     updateHistoryButtons();
     render();
+    void saveSourceDocument(previous);
 }
 function redoSourceEdit() {
     const next = state.redoStack.pop();
@@ -269,10 +276,44 @@ function redoSourceEdit() {
     state.lastSourceValue = next;
     updateHistoryButtons();
     render();
+    void saveSourceDocument(next);
 }
 function updateHistoryButtons() {
     undoButton.disabled = state.undoStack.length === 0;
     redoButton.disabled = state.redoStack.length === 0;
+}
+function openDocumentDb() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(documentDbName, 1);
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(documentStoreName))
+                db.createObjectStore(documentStoreName);
+        };
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+    });
+}
+async function saveSourceDocument(value) {
+    const db = await openDocumentDb();
+    await new Promise((resolve, reject) => {
+        const transaction = db.transaction(documentStoreName, "readwrite");
+        transaction.objectStore(documentStoreName).put(value, activeDocumentKey);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+}
+async function loadSourceDocument() {
+    const db = await openDocumentDb();
+    const value = await new Promise((resolve, reject) => {
+        const transaction = db.transaction(documentStoreName, "readonly");
+        const request = transaction.objectStore(documentStoreName).get(activeDocumentKey);
+        request.onsuccess = () => resolve(typeof request.result === "string" ? request.result : null);
+        request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return value;
 }
 function localName(node) {
     return node.localName || node.nodeName.replace(/^.*:/, "");
@@ -3708,7 +3749,11 @@ async function checkWebGpu() {
     }
     renderPanel();
 }
-setSourceValue(sampleSvg, { record: false });
+setSourceValue(sampleSvg, { record: false, persist: false });
+void loadSourceDocument().then((saved) => {
+    if (saved)
+        setSourceValue(saved, { record: false, persist: false });
+});
 void checkWebGpu();
 function asObject(value) {
     if (!value || typeof value !== "object" || Array.isArray(value))
