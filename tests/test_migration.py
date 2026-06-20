@@ -1043,6 +1043,8 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "underlineStyle: underlineStyle(textStyle)" in generated
         assert "underlineStyle: underlineStyle(runStyle)" in generated
         assert "text-decoration-style:dashed" in generated
+        assert "text-decoration-style:wavy" in generated
+        assert 'return \' u="wavy"\'' in generated
         assert "const assistantAllowedOps" in generated
         assert "function assistantPatchProposal" in generated
         assert "function validateAssistantPatch" in generated
@@ -1233,7 +1235,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser storage status reporting",
         "`svgraph-sidecar.json` source restoration",
         "browser Open flow error reporting",
-        "browser PPTX export support for SVG `text-decoration-style` underline mapping",
+        "browser PPTX export support for SVG `text-decoration-style` underline mapping, including wavy underline",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",
