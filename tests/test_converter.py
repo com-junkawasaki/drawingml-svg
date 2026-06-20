@@ -97,6 +97,25 @@ def test_project_metadata_exposes_public_repository_links() -> None:
     }
 
 
+def test_readme_public_links_use_svgraph_repository_and_pages() -> None:
+    readme = (_project_root() / "README.md").read_text(encoding="utf-8")
+
+    assert "[![CI](https://github.com/com-junkawasaki/svgraph/actions/workflows/ci.yml/badge.svg)]" in readme
+    assert "(https://github.com/com-junkawasaki/svgraph/actions/workflows/ci.yml)" in readme
+    assert "- Issue tracker: <https://github.com/com-junkawasaki/svgraph/issues>" in readme
+    assert "- SVGraph web editor: <https://com-junkawasaki.github.io/svgraph/>" in readme
+
+
+def test_github_templates_use_svgraph_repository_links() -> None:
+    issue_config = (_project_root() / ".github" / "ISSUE_TEMPLATE" / "config.yml").read_text(encoding="utf-8")
+    pr_template = (_project_root() / ".github" / "pull_request_template.md").read_text(encoding="utf-8")
+
+    assert "https://github.com/com-junkawasaki/svgraph/security/advisories/new" in issue_config
+    assert "tmp/svgraph-coverage.pptx" in pr_template
+    assert "drawingml-svg" not in issue_config
+    assert "drawingml-svg" not in pr_template
+
+
 def test_generated_distribution_metadata_preserves_svgraph_identity() -> None:
     pkg_info = _project_root() / "src" / "svgraph.egg-info" / "PKG-INFO"
     entry_points = _project_root() / "src" / "svgraph.egg-info" / "entry_points.txt"
