@@ -3506,7 +3506,7 @@ function lineXml(shape) {
     const y = Math.min(shape.y1, shape.y2);
     const width = Math.max(Math.abs(shape.x2 - shape.x1), 1);
     const height = Math.max(Math.abs(shape.y2 - shape.y1), 1);
-    return spXml(shape.id, shape.name, x, y, width, height, "line", `<a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape, { head: shape.markerEnd, tail: shape.markerStart }))}`, "");
+    return spXml(shape.id, shape.name, x, y, width, height, "line", `<a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape, { head: shape.markerEnd, tail: shape.markerStart }))}`, "", null, lineXfrmAttrs(shape));
 }
 function connectorXml(shape) {
     const x = Math.min(shape.x1, shape.x2);
@@ -3514,7 +3514,12 @@ function connectorXml(shape) {
     const width = Math.max(Math.abs(shape.x2 - shape.x1), 1);
     const height = Math.max(Math.abs(shape.y2 - shape.y1), 1);
     const cxn = `${shape.startId ? `<a:stCxn id="${shape.startId}" idx="0"/>` : ""}${shape.endId ? `<a:endCxn id="${shape.endId}" idx="0"/>` : ""}`;
-    return `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvCxnSpPr>${cxn}</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape, { head: true, tail: shape.markerStart }))}</p:spPr></p:cxnSp>`;
+    return `<p:cxnSp><p:nvCxnSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvCxnSpPr>${cxn}</p:cNvCxnSpPr><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm${lineXfrmAttrs(shape)}><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${lineStyleXml(shape.stroke, shape.strokeWidth, lineOptions(shape, { head: true, tail: shape.markerStart }))}</p:spPr></p:cxnSp>`;
+}
+function lineXfrmAttrs(shape) {
+    const flipH = shape.x2 < shape.x1 ? ' flipH="1"' : "";
+    const flipV = shape.y2 < shape.y1 ? ' flipV="1"' : "";
+    return `${flipH}${flipV}`;
 }
 function textXml(shape) {
     const runs = (shape.runs.length ? shape.runs : [{
@@ -3748,9 +3753,9 @@ function srcRectXml(rect) {
     ].filter(Boolean).join(" ");
     return attrs ? `<a:srcRect ${attrs}/>` : "";
 }
-function spXml(id, name, x, y, width, height, prst, style, body, rotation = null) {
+function spXml(id, name, x, y, width, height, prst, style, body, rotation = null, xfrmAttrs = "") {
     const rot = rotation == null ? "" : ` rot="${Math.round(rotation * 60000)}"`;
-    return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${xml(name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm${rot}><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${style}</p:spPr>${body}</p:sp>`;
+    return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${xml(name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm${rot}${xfrmAttrs}><a:off x="${emu(x)}" y="${emu(y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm><a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${style}</p:spPr>${body}</p:sp>`;
 }
 function fillXml(color, alpha = null) {
     return color ? `<a:solidFill><a:srgbClr val="${hex(color)}">${alphaXml(alpha)}</a:srgbClr></a:solidFill>` : "<a:noFill/>";

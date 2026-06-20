@@ -1116,6 +1116,10 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "const ownContainerClip = rectClipBounds(null, ownStyle, refs, ownMatrix, childViewport, css)" in generated
         assert "childClip = combineClips(childClip, ownContainerClip)" in generated
         assert "walk(ref, useMatrix, ownStyle, new Set([...refStack, refId]), refViewport, childClip)" in generated
+        assert "function lineXfrmAttrs" in generated
+        assert 'shape.x2 < shape.x1 ? \' flipH="1"\'' in generated
+        assert 'shape.y2 < shape.y1 ? \' flipV="1"\'' in generated
+        assert 'spXml(shape.id, shape.name, x, y, width, height, "line"' in generated
         assert "css-use-frame" in generated
         assert "css-nested-frame" in generated
         assert "svgTextPosition(element, viewport, css, paintStyle)" in generated
@@ -1373,6 +1377,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser nested SVG, `use`, and rectangular `clipPath` geometry with CSS cascade rules",
         "browser rectangular `clipPath` transforms with CSS cascade rules",
         "browser rectangular `clipPath` container propagation",
+        "browser line direction with DrawingML `flipH`/`flipV` transforms",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",
