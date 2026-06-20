@@ -327,6 +327,10 @@ def test_svgraph_presentation_preserves_presentation_templates_guides_rulers_and
     assert [part.content_type for part in presentation.parts if part.kind == "theme"] == [
         "application/vnd.openxmlformats-officedocument.theme+xml",
     ]
+    assert [part.part_name for part in presentation.parts if part.kind == "custom-xml"] == [
+        "/customXml/item1.xml",
+    ]
+    assert [part.content_type for part in presentation.parts if part.kind == "custom-xml"] == ["application/xml"]
     assert [part.source_node_id for part in presentation.parts if part.kind == "slide-master"] == [None, "n0.0"]
     assert [(guide.guide_id, guide.orientation, guide.position) for guide in presentation.guides] == [
         ("safe-left", "vertical", 96.0),
@@ -382,6 +386,7 @@ def test_svgraph_presentation_json_cli_payload_is_serializable() -> None:
         "slide-master": "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
         "slide-layout": "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml",
         "theme": "application/vnd.openxmlformats-officedocument.theme+xml",
+        "custom-xml": "application/xml",
         "slide": "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
     }
     assert data["parts"][-1] == {

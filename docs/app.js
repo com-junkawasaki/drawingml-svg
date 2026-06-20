@@ -360,6 +360,12 @@ function buildSVGraphPresentation(root) {
                 kind: "theme",
                 source_node_id: null,
             },
+            {
+                part_name: "/customXml/item1.xml",
+                content_type: "application/xml",
+                kind: "custom-xml",
+                source_node_id: null,
+            },
             ...slideItems.map((slide, index) => ({
                 part_name: `/ppt/slides/slide${index + 1}.xml`,
                 content_type: "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",

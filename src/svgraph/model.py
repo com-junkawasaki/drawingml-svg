@@ -446,6 +446,13 @@ def _package_parts(
             kind="theme",
         )
     )
+    parts.append(
+        SVGraphPackagePart(
+            part_name="/customXml/item1.xml",
+            content_type="application/xml",
+            kind="custom-xml",
+        )
+    )
     for index, slide in enumerate(slides, start=1):
         parts.append(
             SVGraphPackagePart(

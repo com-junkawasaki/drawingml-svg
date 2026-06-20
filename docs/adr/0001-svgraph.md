@@ -149,6 +149,7 @@ The package emitter can then map:
 
 - each slide node to `ppt/slides/slideN.xml`
 - the `parts` list to the required package blueprint, including `part_name`, `content_type`, `kind`, and source-node provenance for presentation, slide master, slide layout, theme, and slide parts
+- `/customXml/item1.xml` to an SVGraph presentation metadata sidecar part
 - `masters` and `layouts` to PresentationML slide master/layout parts
 - `guides` and `rulers` to editor metadata or custom XML sidecars
 - `text_styles` to PresentationML default text styles and placeholder styles

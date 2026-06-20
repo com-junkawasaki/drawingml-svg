@@ -917,6 +917,9 @@ def test_web_runtime_accepts_canonical_svgraph_presentation_metadata_keys() -> N
         assert "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml" in generated
         assert "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml" in generated
         assert "application/vnd.openxmlformats-officedocument.presentationml.slide+xml" in generated
+        assert "part_name:" in generated
+        assert '"/customXml/item1.xml"' in generated
+        assert 'kind: "custom-xml"' in generated
         assert "const masters = templates(nodes, rootMeta.masters ?? null, \"slide-master\")" in generated
         assert "const masterParts = (masters.length ? masters : [null]).map" in generated
         assert "presentation.masters.length" in generated
@@ -1035,6 +1038,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser PPTX slide master default text style emission from SVGraph presentation text styles",
         "Python PPTX custom XML sidecar preservation for SVGraph presentation metadata",
         "browser PPTX custom XML sidecar preservation for SVGraph presentation metadata",
+        "SVGraph presentation package blueprint custom XML sidecar part",
         "web editor design package part schema documentation",
     ]:
         assert expected in changelog
@@ -1189,6 +1193,7 @@ def test_adr_defines_svgraph_as_presentation_package_contract() -> None:
         "The package emitter can then map:",
         "each slide node to `ppt/slides/slideN.xml`",
         "the `parts` list to the required package blueprint, including `part_name`, `content_type`, `kind`, and source-node provenance",
+        "`/customXml/item1.xml`",
         "`masters` and `layouts` to PresentationML slide master/layout parts",
         "`guides` and `rulers` to editor metadata or custom XML sidecars",
         "`text_styles` to PresentationML default text styles and placeholder styles",
@@ -1209,6 +1214,7 @@ def test_readme_documents_svgraph_presentation_package_part_contract() -> None:
         "with each part carrying `part_name`, `content_type`, `kind`, and source-node provenance where available",
         "slide master/layout/theme parts",
         "generated `/ppt/slides/slideN.xml` parts",
+        "custom XML sidecar part",
     ]:
         assert expected in readme
 
