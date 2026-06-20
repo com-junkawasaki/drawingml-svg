@@ -345,6 +345,29 @@ def test_pages_artifacts_use_svgraph_naming() -> None:
     assert "downloadPptxsvg" not in public_assets
 
 
+def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
+    root = _project_root()
+    package_json = (root / "package.json").read_text(encoding="utf-8")
+    package_lock = (root / "package-lock.json").read_text(encoding="utf-8")
+    html = (root / "docs" / "index.html").read_text(encoding="utf-8")
+    source = (root / "web" / "app.ts").read_text(encoding="utf-8")
+
+    assert '"name": "svgraph-web"' in package_json
+    assert '"name": "svgraph-web"' in package_lock
+    assert "<title>SVGraph Editor</title>" in html
+    assert 'id="downloadSVGraphBtn"' in html
+    assert 'mustElement<HTMLButtonElement>("downloadSVGraphBtn")' in source
+    assert 'downloadText("svgraph-presentation.json"' in source
+
+    combined = "\n".join([package_json, package_lock, html, source])
+    assert "drawingml-" + "svg-web" not in combined
+    assert "PPTXSVG" not in combined
+    assert "presentation IR" not in combined
+    assert "downloadIrBtn" not in combined
+    assert "downloadSvgraphBtn" not in combined
+    assert "downloadPptxsvg" not in combined
+
+
 @pytest.mark.parametrize("executable", ["svg2dml", "dml2svg", "drawingml-svg-analyze"])
 def test_cli_alias_version_writes_installed_package_version(monkeypatch, capsys, executable: str) -> None:
     monkeypatch.setattr("sys.argv", [executable, "--version"])
