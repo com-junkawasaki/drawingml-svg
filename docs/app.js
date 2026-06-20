@@ -551,6 +551,70 @@ function validateAssistantPatch(proposal, svgraph) {
     }
     return { status: errors.length ? "rejected" : "accepted", errors };
 }
+function assistantPatchDiff(proposal, svgraph) {
+    const nodes = new Map(flatten(svgraph.root).map((node) => [node.node_id, node]));
+    return proposal.ops.flatMap((op) => {
+        const node = nodes.get(op.node_id);
+        if (!node)
+            return [assistantUnsupportedDiff(op, "node")];
+        if (op.op === "mark-slide") {
+            const rows = [assistantDataDiff(op, node, "kind", "slide")];
+            if (typeof op.title === "string")
+                rows.push(assistantDataDiff(op, node, "title", op.title));
+            return rows;
+        }
+        if (op.op === "mark-table")
+            return [assistantDataDiff(op, node, "kind", "table")];
+        if (op.op === "mark-cell")
+            return [assistantDataDiff(op, node, "kind", "cell")];
+        if (op.op === "set-data" && typeof op.name === "string")
+            return [assistantDataDiff(op, node, op.name, patchValue(op.value))];
+        if (op.op === "set-metadata" && typeof op.name === "string")
+            return [assistantMetadataDiff(op, node, op.name, patchValue(op.value))];
+        if (op.op === "bind-relation" && typeof op.from === "string" && typeof op.to === "string") {
+            return [assistantDataDiff(op, node, "bind", `${op.from}->${op.to}`)];
+        }
+        if (op.op === "set-reading-order")
+            return [assistantDataDiff(op, node, "reading-order", patchValue(op.value ?? op.order))];
+        return [assistantUnsupportedDiff(op, op.op)];
+    });
+}
+function assistantDataDiff(op, node, name, after) {
+    const before = node.data[name] ?? null;
+    return {
+        op: op.op,
+        node_id: op.node_id,
+        field: `data-${name}`,
+        before,
+        after,
+        status: before === after ? "unchanged" : "pending",
+    };
+}
+function assistantMetadataDiff(op, node, name, after) {
+    const metadata = asObject(node.metadata.json);
+    const before = patchValue(metadata[name]);
+    return {
+        op: op.op,
+        node_id: op.node_id,
+        field: `metadata.${name}`,
+        before,
+        after,
+        status: JSON.stringify(before) === JSON.stringify(after) ? "unchanged" : "pending",
+    };
+}
+function assistantUnsupportedDiff(op, field) {
+    return {
+        op: op.op,
+        node_id: op.node_id,
+        field,
+        before: null,
+        after: null,
+        status: "unsupported",
+    };
+}
+function patchValue(value) {
+    return value === undefined ? null : value;
+}
 function svgToPptx(svgText) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(svgText, "image/svg+xml");
@@ -3391,14 +3455,19 @@ function renderPanel() {
     else if (state.tab === "assistant") {
         const proposal = assistantPatchProposal(state.svgraph, state.presentation);
         const validation = validateAssistantPatch(proposal, state.svgraph);
+        const diff = assistantPatchDiff(proposal, state.svgraph);
         panel.innerHTML = `
       <div class="notice">Web LLM integration is designed as a local WebGPU worker. Conversion is deterministic and runs fully in this page.</div>
       <div class="status"><span class="dot ${state.webgpu ? "ok" : ""}"></span>${state.webgpu ? "WebGPU available" : "WebGPU unavailable or blocked"}</div>
+      <div class="list" style="margin-top:12px">
+        ${diff.length ? diff.map((row) => `<div class="item"><div class="item-title">${escapeHtml(row.status)} · ${escapeHtml(row.op)} · ${escapeHtml(row.field)}</div><div class="item-meta">${escapeHtml(row.node_id)} · ${escapeHtml(JSON.stringify(row.before))} -> ${escapeHtml(JSON.stringify(row.after))}</div></div>`).join("") : '<div class="item"><div class="item-title">unchanged</div><div class="item-meta">No pending SVGraph patch changes.</div></div>'}
+      </div>
       <pre style="margin-top:12px">${escapeHtml(JSON.stringify({
             backendPolicy: state.webgpu ? "webgpu" : "wasm-or-disabled",
             allowedOps: assistantAllowedOps,
             model: "onnx-community/gemma-4-e2b-it-ONNX",
             patchValidation: validation,
+            patchDiff: diff,
             patchProposal: proposal,
             coverage: state.svgraph.coverage
         }, null, 2))}</pre>`;
