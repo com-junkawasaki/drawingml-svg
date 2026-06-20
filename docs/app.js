@@ -39,7 +39,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
           </tr>
           <tr>
             <td rowspan="2" style="background-color:#dcfce7;color:#14532d;border:2px solid #16a34a;font-weight:700">Roadmap</td>
-            <td align="center" valign="top" style="background-color:#ffffff;color:#111827;border:1px solid #94a3b8">IR</td>
+            <td align="center" valign="top" style="background-color:#ffffff;color:#111827;border:1px solid #94a3b8">IR <strong>rich</strong> <em>runs</em> <span style="color:#dc2626;font-variant:small-caps;letter-spacing:2px;text-decoration-line:underline;text-decoration-style:dashed">red</span></td>
             <td style="background-color:#f8fafc;color:#111827;border:1px solid #94a3b8;border-right:3px dotted #dc2626;border-top:4px double #2563eb;border-bottom-style:dashed;border-bottom-width:2px;border-bottom-color:#16a34a">Browser</td>
           </tr>
           <tr>
@@ -645,6 +645,7 @@ function tableFromGroup(group, matrix, id, inheritedStyle, css = []) {
         colSpan: cell.colSpan,
         rowSpan: cell.rowSpan,
         text: cell.text,
+        runs: [],
         fill: cell.fill,
         textFill: cell.textFill,
         textBold: cell.textBold,
@@ -717,12 +718,14 @@ function shapesFromForeignObject(element, matrix, id, inheritedStyle, css = []) 
                 }
             }
             const style = htmlTableCellStyle(cellElement, table, inheritedStyle, css);
+            const runs = htmlTextRuns(cellElement, style, css);
             cells.push({
                 row: spaced ? rowIndex * 2 + 1 : rowIndex,
                 col: spaced ? column * 2 + 1 : column,
                 colSpan,
                 rowSpan,
-                text: htmlCellText(cellElement),
+                text: runs.length ? runs.map((run) => run.text).join("") : htmlCellText(cellElement),
+                runs,
                 fill: style.fill ?? "#ffffff",
                 ...tableCellStyle(style, localName(cellElement) === "th"),
             });
@@ -814,6 +817,7 @@ function htmlTableSpacerCells(columnCount, rowCount, dataCells, tableStyle) {
                 colSpan: 1,
                 rowSpan: 1,
                 text: "",
+                runs: [],
                 fill,
                 ...tableCellStyle(spacerStyle, false),
             });
@@ -926,12 +930,13 @@ function htmlElementStyle(element, inheritedStyle, css) {
     const textAlign = value("text-align") ?? element.getAttribute("align");
     const verticalAlign = value("vertical-align") ?? element.getAttribute("valign");
     const fontSize = value("font-size");
-    const fontFamily = value("font-family");
+    const fontFamily = value("font-family") ?? element.getAttribute("face");
     const fontWeight = value("font-weight");
     const fontStyle = value("font-style");
     const fontVariant = value("font-variant");
-    const textDecoration = value("text-decoration-line") ?? value("text-decoration");
+    const textDecoration = [value("text-decoration-line") ?? value("text-decoration"), value("text-decoration-style")].filter(Boolean).join(" ") || null;
     const direction = value("direction");
+    const letterSpacing = value("letter-spacing");
     if (color != null)
         next.color = parseCssColor(color, next) ?? next.color ?? null;
     if (background != null) {
@@ -962,23 +967,69 @@ function htmlElementStyle(element, inheritedStyle, css) {
     next.tableBorderRight = htmlSideBorder(element, "right", currentBorder, next);
     next.tableBorderTop = htmlSideBorder(element, "top", currentBorder, next);
     next.tableBorderBottom = htmlSideBorder(element, "bottom", currentBorder, next);
+    const tag = localName(element);
+    const fontTagSize = tag === "font" ? htmlFontSize(element.getAttribute("size")) : null;
+    const fontTagColor = tag === "font" ? element.getAttribute("color") : null;
+    if (fontTagColor != null) {
+        next.color = parseCssColor(fontTagColor, next) ?? next.color ?? null;
+    }
     if (fontSize != null)
         next.fontSize = parseLength(fontSize, next.fontSize ?? 14);
+    if (fontTagSize != null)
+        next.fontSize = fontTagSize;
     if (fontFamily != null)
         next.fontFamily = fontFamily.replace(/^['"]|['"]$/g, "");
     if (fontWeight != null)
         next.fontWeight = fontWeight;
-    if (["strong", "b"].includes(localName(element)))
+    if (["strong", "b"].includes(tag))
         next.fontWeight = "bold";
     if (fontStyle != null)
         next.fontStyle = fontStyle;
+    if (["em", "i"].includes(tag))
+        next.fontStyle = "italic";
     if (fontVariant != null)
         next.fontVariant = normalizeFontVariant(fontVariant);
     if (textDecoration != null)
         next.textDecoration = textDecoration;
+    if (tag === "u")
+        next.textDecoration = addTextDecoration(next.textDecoration, "underline");
+    if (["s", "strike", "del"].includes(tag))
+        next.textDecoration = addTextDecoration(next.textDecoration, "line-through");
+    if (tag === "sup")
+        next.baselineShift = "super";
+    if (tag === "sub")
+        next.baselineShift = "sub";
+    const inlineShift = inlineBaselineShift(verticalAlign);
+    if (inlineShift)
+        next.baselineShift = inlineShift;
+    if (letterSpacing != null)
+        next.letterSpacing = normalizeSpacingLength(letterSpacing);
     if (direction != null)
         next.direction = normalizeTextDirection(direction);
     return next;
+}
+function htmlFontSize(value) {
+    if (!value)
+        return null;
+    const normalized = value.trim();
+    if (!normalized)
+        return null;
+    if (normalized.startsWith("+"))
+        return 24;
+    if (normalized.startsWith("-"))
+        return 12;
+    const parsed = Number.parseInt(normalized, 10);
+    if (!Number.isFinite(parsed))
+        return null;
+    return [10, 13, 16, 18, 24, 32, 48][Math.max(1, Math.min(7, parsed)) - 1] ?? null;
+}
+function addTextDecoration(current, token) {
+    const tokens = (current || "").toLowerCase().split(/\s+/).filter(Boolean);
+    return tokens.includes(token) ? (current || token) : `${current || ""} ${token}`.trim();
+}
+function inlineBaselineShift(value) {
+    const normalized = value?.trim().toLowerCase();
+    return normalized === "super" || normalized === "sub" ? normalized : null;
 }
 function htmlSideBorder(element, side, fallback, style) {
     const declarations = styleDeclarations(element.getAttribute("style"));
@@ -1060,27 +1111,47 @@ function htmlCellText(cell) {
 }
 function htmlTextRuns(element, inheritedStyle, css) {
     const runs = [];
+    let breakBefore = false;
+    const appendText = (text, style) => {
+        const normalized = text.replace(/\s+/g, " ");
+        if (!normalized.trim()) {
+            if (runs.length && !breakBefore)
+                runs.push({ ...htmlTextRun(" ", style), breakBefore: false });
+            return;
+        }
+        runs.push({ ...htmlTextRun(normalized, style), breakBefore });
+        breakBefore = false;
+    };
     const appendNode = (node, style) => {
         if (node.nodeType === Node.TEXT_NODE) {
-            const text = (node.textContent || "").replace(/\s+/g, " ");
-            if (text)
-                runs.push(htmlTextRun(text, style));
+            appendText(node.textContent || "", style);
             return;
         }
         if (node.nodeType !== Node.ELEMENT_NODE)
             return;
         const child = node;
+        const tag = localName(child);
+        if (tag === "br") {
+            breakBefore = true;
+            return;
+        }
         const childStyle = htmlElementStyle(child, style, css);
+        if (["div", "p", "li"].includes(tag) && runs.length)
+            breakBefore = true;
         for (const item of Array.from(child.childNodes))
             appendNode(item, childStyle);
+        if (["div", "p", "li"].includes(tag))
+            breakBefore = true;
     };
-    for (const node of Array.from(element.childNodes))
+    for (const node of Array.from(element.childNodes)) {
         appendNode(node, inheritedStyle);
+    }
     return trimHtmlTextRuns(runs);
 }
 function htmlTextRun(text, style) {
     return {
         text,
+        breakBefore: false,
         preserveSpace: false,
         fill: style.color ?? style.fill ?? "#000000",
         fillAlpha: style.fillAlpha ?? null,
@@ -1090,10 +1161,21 @@ function htmlTextRun(text, style) {
         italic: isItalic(style),
         fontVariant: style.fontVariant ?? null,
         underline: hasUnderline(style),
+        underlineStyle: htmlUnderlineStyle(style),
         strike: hasStrike(style),
         baselineShift: style.baselineShift ?? null,
         letterSpacing: style.letterSpacing ?? null,
     };
+}
+function htmlUnderlineStyle(style) {
+    const decoration = style.textDecoration || "";
+    if (decoration.includes("dashed"))
+        return "dashed";
+    if (decoration.includes("dotted"))
+        return "dotted";
+    if (decoration.includes("double"))
+        return "double";
+    return null;
 }
 function trimHtmlTextRuns(runs) {
     let first = -1;
@@ -1126,6 +1208,7 @@ function textRuns(element, inheritedStyle) {
         const transformed = applyTextTransform(text, style.textTransform);
         runs.push({
             text: transformed,
+            breakBefore: false,
             preserveSpace,
             fill: style.fill ?? "#111827",
             fillAlpha: style.fillAlpha ?? null,
@@ -1135,6 +1218,7 @@ function textRuns(element, inheritedStyle) {
             italic: isItalic(style),
             fontVariant: style.fontVariant ?? null,
             underline: hasUnderline(style),
+            underlineStyle: null,
             strike: hasStrike(style),
             baselineShift: style.baselineShift ?? null,
             letterSpacing: effectiveLetterSpacing(style, transformed, style.fontSize ?? inheritedStyle.fontSize ?? 18),
@@ -1470,6 +1554,7 @@ function connectorXml(shape) {
 function textXml(shape) {
     const runs = (shape.runs.length ? shape.runs : [{
             text: shape.text,
+            breakBefore: false,
             preserveSpace: false,
             fill: shape.fill,
             fillAlpha: null,
@@ -1479,6 +1564,7 @@ function textXml(shape) {
             italic: shape.italic,
             fontVariant: shape.fontVariant,
             underline: shape.underline,
+            underlineStyle: null,
             strike: shape.strike,
             baselineShift: shape.baselineShift,
             letterSpacing: shape.letterSpacing,
@@ -1487,9 +1573,20 @@ function textXml(shape) {
     return spXml(shape.id, shape.name, shape.x, shape.y, shape.width, shape.height, "rect", "<a:noFill/><a:ln><a:noFill/></a:ln>", body, shape.rotation);
 }
 function textRunXml(run) {
-    const attrs = ` lang="en-US" sz="${Math.round(run.fontSize * 100)}"${run.bold ? ' b="1"' : ""}${run.italic ? ' i="1"' : ""}${fontVariantXml(run.fontVariant)}${run.underline ? ' u="sng"' : ""}${run.strike ? ' strike="sngStrike"' : ""}${baselineShiftXml(run.baselineShift)}${letterSpacingXml(run.letterSpacing)}`;
+    const attrs = ` lang="en-US" sz="${Math.round(run.fontSize * 100)}"${run.bold ? ' b="1"' : ""}${run.italic ? ' i="1"' : ""}${fontVariantXml(run.fontVariant)}${underlineXml(run)}${run.strike ? ' strike="sngStrike"' : ""}${baselineShiftXml(run.baselineShift)}${letterSpacingXml(run.letterSpacing)}`;
     const parts = run.text.split(/\r\n|\r|\n/);
-    return parts.map((part, index) => `${index > 0 ? "<a:br/>" : ""}<a:r><a:rPr${attrs}>${solidColorXml(run.fill, run.fillAlpha)}<a:latin typeface="${xml(run.fontFamily)}"/></a:rPr><a:t>${xml(part)}</a:t></a:r>`).join("");
+    return `${run.breakBefore ? "<a:br/>" : ""}${parts.map((part, index) => `${index > 0 ? "<a:br/>" : ""}<a:r><a:rPr${attrs}>${solidColorXml(run.fill, run.fillAlpha)}<a:latin typeface="${xml(run.fontFamily)}"/></a:rPr><a:t>${xml(part)}</a:t></a:r>`).join("")}`;
+}
+function underlineXml(run) {
+    if (!run.underline)
+        return "";
+    if (run.underlineStyle === "dashed")
+        return ' u="dash"';
+    if (run.underlineStyle === "dotted")
+        return ' u="dotted"';
+    if (run.underlineStyle === "double")
+        return ' u="dbl"';
+    return ' u="sng"';
 }
 function fontVariantXml(value) {
     if (value === "small-caps")
@@ -1570,6 +1667,8 @@ function tableCellAttrs(cell, row, col) {
     return attrs.length ? ` ${attrs.join(" ")}` : "";
 }
 function tableCellTextXml(cell) {
+    if (cell.runs.length)
+        return cell.runs.map(textRunXml).join("");
     const attrs = ` lang="en-US" sz="1400"${cell.textBold ? ' b="1"' : ""}`;
     const fill = solidColorXml(cell.textFill || "#111827");
     return `<a:r><a:rPr${attrs}>${fill}</a:rPr><a:t>${xml(cell.text)}</a:t></a:r>`;
