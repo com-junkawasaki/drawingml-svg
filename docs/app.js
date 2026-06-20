@@ -3780,7 +3780,16 @@ fileInput.addEventListener("change", async () => {
     const file = fileInput.files?.[0];
     if (!file)
         return;
-    setSourceValue(sourceFromOpenedFile(await file.text()));
+    try {
+        setSourceValue(sourceFromOpenedFile(await file.text()));
+        setStorageStatus(`Opened ${file.name}`);
+    }
+    catch (error) {
+        setStorageStatus(`Open failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    finally {
+        fileInput.value = "";
+    }
 });
 source.addEventListener("input", recordManualSourceEdit);
 async function checkWebGpu() {
