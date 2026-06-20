@@ -204,6 +204,7 @@ type SvgStyle = {
   fill?: string | null;
   stroke?: string | null;
   strokeWidth?: number;
+  color?: string | null;
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: string;
@@ -273,6 +274,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <circle class="css-circle" cx="1130" cy="388" r="48"/>
     <rect id="clipped-bar" x="930" y="500" width="250" height="70" style="fill:#fecaca;stroke:#991b1b;clip-path:url(#bar-clip)"/>
     <ellipse id="bbox-clipped-ellipse" cx="1090" cy="560" rx="80" ry="50" style="fill:#ede9fe;stroke:#6d28d9;clip-path:url(#bbox-clip)"/>
+    <rect id="css-colors" x="740" y="615" width="120" height="50" style="color:orange;fill:currentColor;stroke:hsl(210 100% 50%)"/>
     <rect id="gradient-fill" x="900" y="615" width="120" height="50" style="fill:url(#linear-fallback);stroke:url(#radial-fallback)"/>
     <circle id="pattern-fill" cx="1080" cy="640" r="32" style="fill:url(#pattern-fallback);stroke:#334155"/>
     <use href="#reused-chip" class="accent-use" x="360" y="400"/>
@@ -1322,6 +1324,7 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   const inlineDeclarations = styleDeclarations(element.getAttribute("style"));
   const value = (name: string): string | null => inlineDeclarations[name] ?? element.getAttribute(name) ?? cssDeclarations[name] ?? null;
   const next: SvgStyle = { ...inherited };
+  const color = value("color");
   const fill = value("fill");
   const stroke = value("stroke");
   const strokeWidth = value("stroke-width");
@@ -1332,6 +1335,7 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   const marker = value("marker");
   const markerStart = value("marker-start");
   const markerEnd = value("marker-end");
+  if (color != null) next.color = parseCssColor(color, next);
   if (fill != null) next.fill = normalizePaint(fill, refs, next);
   if (stroke != null) next.stroke = normalizePaint(stroke, refs, next);
   if (strokeWidth != null) next.strokeWidth = parseLength(strokeWidth, next.strokeWidth ?? 1);
@@ -1413,7 +1417,7 @@ function normalizePaint(value: string, refs: Map<string, Element> = new Map(), s
   if (ref) {
     return paintServerColor(ref.id, refs, style) ?? normalizePaint(ref.fallback, refs, style);
   }
-  return trimmed;
+  return parseCssColor(trimmed, style) ?? trimmed;
 }
 
 function paintServerColor(id: string, refs: Map<string, Element>, style: SvgStyle, seen: Set<string> = new Set()): string | null {
@@ -1511,12 +1515,97 @@ function gradientStops(element: Element | undefined, refs: Map<string, Element>,
 }
 
 function normalizeStopColor(value: string, style: SvgStyle): string | null {
+  return parseCssColor(value, style);
+}
+
+function parseCssColor(value: string | null, style: SvgStyle = {}): string | null {
+  if (!value) return null;
   const trimmed = value.trim();
-  if (!trimmed || trimmed === "none" || trimmed === "transparent") return null;
-  if (trimmed === "currentColor") return style.fill ?? style.stroke ?? "#000000";
-  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) return `#${trimmed.slice(1).split("").map((char) => char + char).join("")}`;
-  if (/^#[0-9a-fA-F]{6}/.test(trimmed)) return trimmed.slice(0, 7);
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+  if (lower === "none" || lower === "transparent") return null;
+  if (lower === "currentcolor") return style.color ?? style.fill ?? style.stroke ?? "#000000";
+  if (lower in namedColors) return namedColors[lower] ?? null;
+  if (/^#[0-9a-f]{3}$/i.test(trimmed)) return `#${trimmed.slice(1).split("").map((char) => char + char).join("")}`;
+  if (/^#[0-9a-f]{4}$/i.test(trimmed)) return `#${trimmed.slice(1, 4).split("").map((char) => char + char).join("")}`;
+  if (/^#[0-9a-f]{6}$/i.test(trimmed)) return trimmed.slice(0, 7);
+  if (/^#[0-9a-f]{8}$/i.test(trimmed)) return trimmed.slice(0, 7);
+  const rgb = parseRgbFunction(trimmed);
+  if (rgb) return rgbToHex(rgb);
+  const hsl = parseHslFunction(trimmed);
+  if (hsl) return rgbToHex(hsl);
   return null;
+}
+
+const namedColors: Record<string, string | null> = {
+  black: "#000000",
+  blue: "#0000ff",
+  cyan: "#00ffff",
+  gray: "#808080",
+  green: "#008000",
+  grey: "#808080",
+  lime: "#00ff00",
+  magenta: "#ff00ff",
+  orange: "#ffa500",
+  purple: "#800080",
+  red: "#ff0000",
+  transparent: null,
+  white: "#ffffff",
+  yellow: "#ffff00",
+};
+
+function parseRgbFunction(value: string): [number, number, number] | null {
+  const match = value.match(/^rgba?\(([^)]+)\)$/i);
+  if (!match) return null;
+  const parts = colorFunctionParts(match[1] || "");
+  if (parts.length < 3) return null;
+  return [cssChannel(parts[0]!), cssChannel(parts[1]!), cssChannel(parts[2]!)];
+}
+
+function parseHslFunction(value: string): [number, number, number] | null {
+  const match = value.match(/^hsla?\(([^)]+)\)$/i);
+  if (!match) return null;
+  const parts = colorFunctionParts(match[1] || "");
+  if (parts.length < 3) return null;
+  return hslToRgb(parts[0]!, cssAlpha(parts[1]!), cssAlpha(parts[2]!));
+}
+
+function colorFunctionParts(value: string): string[] {
+  return value.replaceAll(",", " ").replace("/", " ").trim().split(/\s+/).filter(Boolean);
+}
+
+function cssChannel(value: string): number {
+  if (value.endsWith("%")) return Math.round(clamp(Number.parseFloat(value) || 0, 0, 100) * 2.55);
+  return Math.round(clamp(Number.parseFloat(value) || 0, 0, 255));
+}
+
+function cssAlpha(value: string): number {
+  if (value.endsWith("%")) return clamp((Number.parseFloat(value) || 0) / 100, 0, 1);
+  return clamp(Number.parseFloat(value) || 0, 0, 1);
+}
+
+function hslToRgb(hueValue: string, saturation: number, lightness: number): [number, number, number] {
+  const hue = cssHueDegrees(hueValue) / 360;
+  if (saturation === 0) {
+    const channel = Math.round(lightness * 255);
+    return [channel, channel, channel];
+  }
+  const q = lightness < 0.5 ? lightness * (1 + saturation) : lightness + saturation - lightness * saturation;
+  const p = 2 * lightness - q;
+  const channel = (offset: number) => {
+    const t = (hue + offset + 1) % 1;
+    const value = t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p;
+    return Math.round(value * 255 + 1e-9);
+  };
+  return [channel(1 / 3), channel(0), channel(-1 / 3)];
+}
+
+function cssHueDegrees(value: string): number {
+  const number = Number.parseFloat(value) || 0;
+  if (value.endsWith("turn")) return number * 360;
+  if (value.endsWith("rad")) return (number * 180) / Math.PI;
+  if (value.endsWith("grad")) return number * 0.9;
+  return number;
 }
 
 function paintUrlRef(value: string): { id: string; fallback: string } | null {
@@ -1797,6 +1886,8 @@ function emu(value: number): number {
 }
 
 function hex(value: string): string {
+  const parsed = parseCssColor(value);
+  if (parsed) return parsed.slice(1, 7).toUpperCase();
   if (value.startsWith("#")) {
     const raw = value.slice(1);
     if (raw.length === 3) return raw.split("").map((char) => char + char).join("").toUpperCase();
