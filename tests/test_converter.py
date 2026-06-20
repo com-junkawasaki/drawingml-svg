@@ -153,6 +153,15 @@ def test_readme_project_links_point_to_packaged_docs() -> None:
         assert f"include {doc}" in manifest
 
 
+def test_examples_use_canonical_svgraph_package_and_artifact_names() -> None:
+    make_pptx = (_project_root() / "examples" / "make_pptx.py").read_text(encoding="utf-8")
+
+    assert "from svgraph.pptx import" in make_pptx
+    assert 'default=Path("svgraph-sample.pptx")' in make_pptx
+    assert "drawingml_svg" not in make_pptx
+    assert "drawingml-svg" not in make_pptx
+
+
 def test_release_checklist_covers_distribution_and_pptx_smoke() -> None:
     release = (_project_root() / "RELEASE.md").read_text(encoding="utf-8")
 
