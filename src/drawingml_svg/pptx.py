@@ -420,7 +420,7 @@ def _app_props(slide_count: int) -> str:
     return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
   xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
-  <Application>drawingml-svg</Application>
+  <Application>SVGraph</Application>
   <PresentationFormat>On-screen Show (16:9)</PresentationFormat>
   <Slides>{slide_count}</Slides>
 </Properties>"""
@@ -471,9 +471,9 @@ CORE_PROPS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   xmlns:dcterms="http://purl.org/dc/terms/"
   xmlns:dcmitype="http://purl.org/dc/dcmitype/"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <dc:title>drawingml-svg sample</dc:title>
-  <dc:creator>drawingml-svg</dc:creator>
-  <cp:lastModifiedBy>drawingml-svg</cp:lastModifiedBy>
+  <dc:title>SVGraph export</dc:title>
+  <dc:creator>SVGraph</dc:creator>
+  <cp:lastModifiedBy>SVGraph</cp:lastModifiedBy>
 </cp:coreProperties>"""
 
 SLIDE_LAYOUT_REL = '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>'
@@ -508,9 +508,9 @@ SLIDE_LAYOUT = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 </p:sldLayout>"""
 
 THEME = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="drawingml-svg">
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="SVGraph">
   <a:themeElements>
-    <a:clrScheme name="drawingml-svg">
+    <a:clrScheme name="SVGraph">
       <a:dk1><a:srgbClr val="111827"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
       <a:dk2><a:srgbClr val="1F2937"/></a:dk2><a:lt2><a:srgbClr val="F9FAFB"/></a:lt2>
       <a:accent1><a:srgbClr val="1D4ED8"/></a:accent1><a:accent2><a:srgbClr val="15803D"/></a:accent2>
@@ -518,7 +518,7 @@ THEME = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
       <a:accent5><a:srgbClr val="0891B2"/></a:accent5><a:accent6><a:srgbClr val="EA580C"/></a:accent6>
       <a:hlink><a:srgbClr val="2563EB"/></a:hlink><a:folHlink><a:srgbClr val="9333EA"/></a:folHlink>
     </a:clrScheme>
-    <a:fontScheme name="drawingml-svg"><a:majorFont><a:latin typeface="Aptos Display"/></a:majorFont><a:minorFont><a:latin typeface="Aptos"/></a:minorFont></a:fontScheme>
-    <a:fmtScheme name="drawingml-svg"><a:fillStyleLst/><a:lnStyleLst/><a:effectStyleLst/><a:bgFillStyleLst/></a:fmtScheme>
+    <a:fontScheme name="SVGraph"><a:majorFont><a:latin typeface="Aptos Display"/></a:majorFont><a:minorFont><a:latin typeface="Aptos"/></a:minorFont></a:fontScheme>
+    <a:fmtScheme name="SVGraph"><a:fillStyleLst/><a:lnStyleLst/><a:effectStyleLst/><a:bgFillStyleLst/></a:fmtScheme>
   </a:themeElements>
 </a:theme>"""

@@ -615,6 +615,8 @@ def test_svg_to_pptx_bytes_creates_multi_slide_package_from_svgraph() -> None:
         presentation = pptx.read("ppt/presentation.xml").decode("utf-8")
         rels = pptx.read("ppt/_rels/presentation.xml.rels").decode("utf-8")
         app = pptx.read("docProps/app.xml").decode("utf-8")
+        core = pptx.read("docProps/core.xml").decode("utf-8")
+        theme = pptx.read("ppt/theme/theme1.xml").decode("utf-8")
         slide1 = pptx.read("ppt/slides/slide1.xml").decode("utf-8")
         slide2 = pptx.read("ppt/slides/slide2.xml").decode("utf-8")
 
@@ -626,7 +628,11 @@ def test_svg_to_pptx_bytes_creates_multi_slide_package_from_svgraph() -> None:
     assert 'cx="12192000" cy="6858000"' in presentation
     assert 'Target="slides/slide1.xml"' in rels
     assert 'Target="slides/slide2.xml"' in rels
+    assert "<Application>SVGraph</Application>" in app
     assert "<Slides>2</Slides>" in app
+    assert "<dc:title>SVGraph export</dc:title>" in core
+    assert "<dc:creator>SVGraph</dc:creator>" in core
+    assert 'name="SVGraph"' in theme
     assert "<a:t>Cover</a:t>" in slide1
     assert "<a:t>Detail</a:t>" in slide2
 

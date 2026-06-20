@@ -2,7 +2,7 @@
   <metadata>{
     "presentation": {
       "slideSize": {"width": 1280, "height": 720},
-      "masters": [{"id": "brand-master", "theme": "drawingml-svg"}],
+      "masters": [{"id": "brand-master", "theme": "SVGraph"}],
       "layouts": [{"id": "title-content", "master": "brand-master"}],
       "guides": [{"id": "safe-left", "orientation": "vertical", "position": 96, "unit": "px"}],
       "rulers": [{"id": "x", "orientation": "horizontal", "origin": 0, "spacing": 16, "unit": "px"}],

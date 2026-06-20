@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-`drawingml-svg` is a small, dependency-free converter between SVG, SVGraph, DrawingML shape fragments, and `.pptx` packages.
+`svgraph` is a small, dependency-free SVG presentation graph toolkit. The published Python package and CLI remain `drawingml-svg` for compatibility while the repository, browser editor, schema, and generated presentation metadata use SVGraph naming.
 
 It targets the practical subset needed for generated Office graphics and simple round-trips:
 
