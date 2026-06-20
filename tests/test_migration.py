@@ -1047,6 +1047,8 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "text-decoration-style:inherit" in generated
         assert "text-decoration-color:inherit" in generated
         assert "text-decoration-thickness:inherit" in generated
+        assert 'name === "text-decoration-style"' in generated
+        assert "textDecorationStyleTokens.has(normalized)" in generated
         assert 'return \' u="wavy"\'' in generated
         assert 'case "text-decoration-style":' in generated
         assert 'case "text-decoration-color":' in generated
@@ -1243,6 +1245,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser Open flow error reporting",
         "browser PPTX export support for SVG `text-decoration-style` underline mapping, including wavy underline",
         "browser PPTX export support for inherited SVG underline style, color, and thickness details",
+        "browser coverage analyzer with supported SVG `text-decoration-style` values",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",

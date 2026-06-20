@@ -1550,6 +1550,7 @@ function coverageAttributeIsSupportedOrNoop(element: Element, tag: string, name:
   if (name === "stroke-linecap") return normalizeStrokeLineCap(value) != null;
   if (name === "stroke-linejoin") return normalizeStrokeLineJoin(value) != null;
   if (name === "text-decoration" || name === "text-decoration-line") return hasSupportedTextDecorationLine(value);
+  if (name === "text-decoration-style") return textDecorationStyleTokens.has(normalized);
   if (name === "text-decoration-color") return parseCssColor(value, style) != null;
   if (name === "text-decoration-thickness") return value.trim().toLowerCase() === "auto" || parseCssLength(value, percentageBasis("diag", defaultViewport()), Number.NaN) >= 0;
   if (name === "text-transform") return normalizeTextTransform(value) != null;

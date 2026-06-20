@@ -1131,6 +1131,8 @@ function coverageAttributeIsSupportedOrNoop(element, tag, name, value, style, re
         return normalizeStrokeLineJoin(value) != null;
     if (name === "text-decoration" || name === "text-decoration-line")
         return hasSupportedTextDecorationLine(value);
+    if (name === "text-decoration-style")
+        return textDecorationStyleTokens.has(normalized);
     if (name === "text-decoration-color")
         return parseCssColor(value, style) != null;
     if (name === "text-decoration-thickness")
