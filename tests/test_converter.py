@@ -186,6 +186,13 @@ def test_cli_help_lists_svgraph_commands_and_hides_legacy_aliases(capsys) -> Non
     assert "{svg2dml,dml2svg,svg2pptx,analyze,ir" not in captured.out
 
 
+def test_pptx_exporter_uses_only_svgraph_internal_shape_prefix() -> None:
+    pptx_source = resources.files("drawingml_svg").joinpath("pptx.py").read_text(encoding="utf-8")
+
+    assert "_svgraph_" in pptx_source
+    assert "_pptxsvg_" not in pptx_source
+
+
 @pytest.mark.parametrize("executable", ["svg2dml", "dml2svg", "drawingml-svg-analyze"])
 def test_cli_alias_version_writes_installed_package_version(monkeypatch, capsys, executable: str) -> None:
     monkeypatch.setattr("sys.argv", [executable, "--version"])

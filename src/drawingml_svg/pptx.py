@@ -183,7 +183,7 @@ def _mark_relation_connectors(root: ET.Element, shapes: list[ET.Element]) -> Non
 
 
 def _internal_shape_attr(shape: ET.Element, name: str) -> str | None:
-    return shape.get(f"_svgraph_{name}") or shape.get(f"_pptxsvg_{name}")
+    return shape.get(f"_svgraph_{name}")
 
 
 def _presentation_shape_reference(shape: ET.Element) -> tuple[str, float, float, float, float] | None:
