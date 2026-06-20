@@ -892,6 +892,13 @@ def test_web_runtime_accepts_canonical_svgraph_presentation_metadata_keys() -> N
         assert "Array.isArray(metadataStyles)" in generated
         assert "text-style-${index + 1}" in generated
         assert "style_id: String(obj.id || role)" in generated
+        assert "content_type:" in generated
+        assert "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml" in generated
+        assert "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml" in generated
+        assert "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml" in generated
+        assert "application/vnd.openxmlformats-officedocument.presentationml.slide+xml" in generated
+        assert "const masters = templates(nodes, rootMeta.masters ?? null, \"slide-master\")" in generated
+        assert "const masterParts = (masters.length ? masters : [null]).map" in generated
 
 
 def test_pages_typescript_build_targets_committed_svgraph_artifact() -> None:
@@ -983,6 +990,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "wheel license expression and license file metadata",
         "canonical `svgraph.model` explicit exports",
         "canonical `svgraph` distribution version lookup",
+        "browser SVGraph presentation package part content types",
     ]:
         assert expected in changelog
 

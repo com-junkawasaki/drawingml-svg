@@ -44,6 +44,7 @@ type SlideRecord = {
 
 type PartRecord = {
   part_name: string;
+  content_type: string;
   kind: string;
   source_node_id: string | null;
 };
@@ -756,26 +757,48 @@ function buildSVGraphPresentation(root: SVGraphNode): SVGraphPresentationProject
     data: node.data,
     metadata: node.metadata,
   }));
-  const baseParts: [string, string, string | null][] = [
-    ["/ppt/presentation.xml", "presentation", null],
-    ["/ppt/slideMasters/slideMaster1.xml", "slide-master", null],
-    ["/ppt/slideLayouts/slideLayout1.xml", "slide-layout", null],
-    ["/ppt/theme/theme1.xml", "theme", null],
-  ];
+  const masters = templates(nodes, rootMeta.masters ?? null, "slide-master");
+  const layouts = templates(nodes, rootMeta.layouts ?? null, "slide-layout");
+  const masterParts = (masters.length ? masters : [null]).map((master, index) => ({
+    part_name: `/ppt/slideMasters/slideMaster${index + 1}.xml`,
+    content_type: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
+    kind: "slide-master",
+    source_node_id: master?.node_id ?? null,
+  }));
+  const layoutParts = (layouts.length ? layouts : [null]).map((layout, index) => ({
+    part_name: `/ppt/slideLayouts/slideLayout${index + 1}.xml`,
+    content_type: "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml",
+    kind: "slide-layout",
+    source_node_id: layout?.node_id ?? null,
+  }));
   return {
     kind: "svgraph-presentation",
     slide_size: slideSize,
     slides: slideItems,
     parts: [
-      ...baseParts.map(([part_name, kind, source_node_id]) => ({ part_name, kind, source_node_id })),
+      {
+        part_name: "/ppt/presentation.xml",
+        content_type: "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+        kind: "presentation",
+        source_node_id: null,
+      },
+      ...masterParts,
+      ...layoutParts,
+      {
+        part_name: "/ppt/theme/theme1.xml",
+        content_type: "application/vnd.openxmlformats-officedocument.theme+xml",
+        kind: "theme",
+        source_node_id: null,
+      },
       ...slideItems.map((slide, index) => ({
         part_name: `/ppt/slides/slide${index + 1}.xml`,
+        content_type: "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
         kind: "slide",
         source_node_id: slide.node_id,
       })),
     ],
-    masters: templates(nodes, rootMeta.masters ?? null, "slide-master"),
-    layouts: templates(nodes, rootMeta.layouts ?? null, "slide-layout"),
+    masters,
+    layouts,
     guides: guides(nodes, rootMeta.guides ?? null),
     rulers: rulers(nodes, rootMeta.rulers ?? null),
     text_styles: textStyles(nodes, rootMeta.textStyles || rootMeta.text_styles || null),
