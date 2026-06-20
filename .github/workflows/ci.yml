@@ -52,7 +52,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          from drawingml_svg import analyze_svg
+          from svgraph import analyze_svg
 
           coverage = analyze_svg(Path("examples/coverage.svg").read_text(encoding="utf-8"))
           assert coverage.estimated_element_coverage == 1.0, coverage
@@ -193,6 +193,10 @@ jobs:
               entry_points = wheel.read(entry_points_name).decode("utf-8")
           assert "drawingml_svg/py.typed" in wheel_names
           assert "svgraph/py.typed" in wheel_names
+          assert "svgraph/converter.py" in wheel_names
+          assert "svgraph/coverage.py" in wheel_names
+          assert "svgraph/model.py" in wheel_names
+          assert "svgraph/pptx.py" in wheel_names
           assert "Project-URL: Homepage, https://github.com/com-junkawasaki/svgraph" in wheel_metadata
           assert "Project-URL: Repository, https://github.com/com-junkawasaki/svgraph" in wheel_metadata
           assert "Project-URL: Issues, https://github.com/com-junkawasaki/svgraph/issues" in wheel_metadata
@@ -211,6 +215,10 @@ jobs:
           assert f"{root}/SECURITY.md" in sdist_names
           assert f"{root}/src/drawingml_svg/py.typed" in sdist_names
           assert f"{root}/src/svgraph/py.typed" in sdist_names
+          assert f"{root}/src/svgraph/converter.py" in sdist_names
+          assert f"{root}/src/svgraph/coverage.py" in sdist_names
+          assert f"{root}/src/svgraph/model.py" in sdist_names
+          assert f"{root}/src/svgraph/pptx.py" in sdist_names
           PY
           python -m venv tmp/wheel-venv
           tmp/wheel-venv/bin/python -m pip install tmp/dist/drawingml_svg-*.whl

@@ -53,6 +53,25 @@ FORBIDDEN_PUBLIC_LEGACY_STRINGS = (
     "drawingml-svg-svgraph.pptx",
 )
 
+LEGACY_IMPORT_PATTERNS = (
+    "from drawingml_svg",
+    "import drawingml_svg",
+    "python -m drawingml_svg.cli",
+    "drawingml_svg.cli",
+)
+
+ALLOWED_LEGACY_IMPORT_SURFACES = {
+    "src/svgraph/__init__.py",
+    "src/svgraph/cli.py",
+    "src/svgraph/converter.py",
+    "src/svgraph/coverage.py",
+    "src/svgraph/model.py",
+    "src/svgraph/pptx.py",
+    "tests/test_converter.py",
+    "tests/test_migration.py",
+    "tests/test_svgraph.py",
+}
+
 
 def test_legacy_names_are_limited_to_compatibility_surfaces() -> None:
     root = Path(__file__).resolve().parents[1]
@@ -79,6 +98,21 @@ def test_public_surfaces_use_svgraph_repo_and_artifact_names() -> None:
         for term in FORBIDDEN_PUBLIC_LEGACY_STRINGS:
             if term in text:
                 unexpected.append(f"{relative}: {term}")
+
+    assert unexpected == []
+
+
+def test_canonical_code_paths_import_svgraph_package() -> None:
+    root = Path(__file__).resolve().parents[1]
+    unexpected: list[str] = []
+    for path in _text_files(root):
+        relative = path.relative_to(root).as_posix()
+        if relative in ALLOWED_LEGACY_IMPORT_SURFACES:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for pattern in LEGACY_IMPORT_PATTERNS:
+            if pattern in text:
+                unexpected.append(f"{relative}: {pattern}")
 
     assert unexpected == []
 

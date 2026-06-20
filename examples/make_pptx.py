@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from drawingml_svg.pptx import build_slide_xml, prepare_slide_media, svg_to_pptx, write_pptx
+from svgraph.pptx import build_slide_xml, prepare_slide_media, svg_to_pptx, write_pptx
 
 __all__ = ["build_slide_xml", "main", "prepare_slide_media", "write_pptx"]
 

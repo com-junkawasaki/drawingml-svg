@@ -2,6 +2,8 @@ import base64
 import ast
 import io
 import re
+import subprocess
+import sys
 import tomllib
 import zipfile
 from email.parser import Parser
@@ -13,8 +15,8 @@ import pytest
 
 import drawingml_svg
 import svgraph as svgraph_package
-from drawingml_svg import analyze_svg, drawingml_to_svg, svg_to_drawingml, svg_to_pptx_bytes
-from drawingml_svg.cli import main as cli_main
+from svgraph import analyze_svg, drawingml_to_svg, svg_to_drawingml, svg_to_pptx_bytes
+from svgraph.cli import main as cli_main
 from examples.make_pptx import build_slide_xml, main as make_pptx_main, prepare_slide_media, write_pptx
 
 PNG_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="
@@ -72,6 +74,15 @@ def _webp_data_uri(width: int, height: int) -> str:
 def test_package_declares_inline_types() -> None:
     assert resources.files(drawingml_svg).joinpath("py.typed").is_file()
     assert resources.files(svgraph_package).joinpath("py.typed").is_file()
+
+
+def test_svgraph_submodules_expose_canonical_api_surface() -> None:
+    from svgraph import converter, coverage, model, pptx
+
+    assert converter.svg_to_drawingml is svg_to_drawingml
+    assert coverage.analyze_svg is analyze_svg
+    assert model.svg_to_svgraph is svgraph_package.svg_to_svgraph
+    assert pptx.svg_to_pptx_bytes is svg_to_pptx_bytes
 
 
 def test_project_metadata_exposes_public_repository_links() -> None:
@@ -197,6 +208,17 @@ def test_cli_version_writes_installed_package_version(capsys) -> None:
 
     assert excinfo.value.code == 0
     assert captured.out == "drawingml-svg 0.1.0\n"
+
+
+def test_svgraph_module_cli_uses_canonical_program_name() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "svgraph.cli", "--version"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "svgraph 0.1.0\n"
 
 
 def test_pyproject_installs_svgraph_console_script() -> None:
