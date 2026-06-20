@@ -189,6 +189,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <rect id="alpha-shape" x="580" y="615" width="120" height="50" style="fill:rgba(239,68,68,0.5);stroke:#2563ebcc;stroke-width:6;fill-opacity:0.8;stroke-opacity:0.5"/>
     <line id="dash-line" x1="120" y1="650" x2="300" y2="650" style="stroke:#0f766e;stroke-width:8;stroke-dasharray:18 10;stroke-dashoffset:5;stroke-linecap:round;stroke-linejoin:bevel"/>
     <line id="path-length-line" x1="120" y1="675" x2="220" y2="675" pathLength="50" style="stroke:#0891b2;stroke-width:4;stroke-dasharray:10 5"/>
+    <line id="negative-stroke-width" x1="230" y1="675" x2="300" y2="675" style="stroke:#7f1d1d;stroke-width:-2"/>
     <g id="scaled-stroke-group" transform="translate(320 640) scale(2)">
       <line id="scaled-stroke" x1="0" y1="0" x2="50" y2="0" style="stroke:#7c3aed;stroke-width:3;stroke-dasharray:9 3"/>
       <line id="non-scaling-stroke" x1="0" y1="18" x2="50" y2="18" style="stroke:#be185d;stroke-width:3;stroke-dasharray:9 3;vector-effect:non-scaling-stroke"/>
@@ -4391,7 +4392,7 @@ function computedStyle(element, inherited, css = [], refs = new Map(), viewport 
         next.strokeAlpha = combinedAlpha(opacityAlpha, parseAlpha(strokeOpacity), next.strokeAlpha);
     }
     if (strokeWidth != null)
-        next.strokeWidth = parseCssLength(strokeWidth, next.fontSize ?? rootFontSize, next.strokeWidth ?? 1);
+        next.strokeWidth = normalizeStrokeWidth(strokeWidth, next.fontSize ?? rootFontSize, next.strokeWidth ?? 1);
     if (strokeLineCap != null)
         next.strokeLineCap = normalizeStrokeLineCap(strokeLineCap);
     if (strokeLineJoin != null)
@@ -5236,6 +5237,10 @@ function normalizeStrokeLineJoin(value) {
 function normalizeStrokeMiterlimit(value) {
     const parsed = Number.parseFloat(value.trim());
     return Number.isFinite(parsed) && parsed >= 1 ? parsed : null;
+}
+function normalizeStrokeWidth(value, basis, fallback) {
+    const parsed = parseCssLength(value, basis, Number.NaN);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 function normalizeDisplay(value) {
     const normalized = value.trim().toLowerCase().split(/\s+/).join(" ");
