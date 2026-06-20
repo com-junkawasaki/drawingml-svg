@@ -219,6 +219,8 @@ jobs:
           assert f"{root}/MIGRATION.md" in sdist_names
           assert f"{root}/RELEASE.md" in sdist_names
           assert f"{root}/SECURITY.md" in sdist_names
+          assert f"{root}/docs/adr/0001-svgraph.md" in sdist_names
+          assert f"{root}/docs/svgraph-web-editor.md" in sdist_names
           assert f"{root}/src/drawingml_svg/py.typed" in sdist_names
           assert f"{root}/src/svgraph/__main__.py" in sdist_names
           assert f"{root}/src/svgraph/py.typed" in sdist_names

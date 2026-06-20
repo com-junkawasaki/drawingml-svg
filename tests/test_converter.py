@@ -172,6 +172,17 @@ def test_readme_project_links_point_to_packaged_docs() -> None:
         assert f"include {doc}" in manifest
 
 
+def test_readme_design_links_point_to_packaged_docs() -> None:
+    root = _project_root()
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    manifest = (root / "MANIFEST.in").read_text(encoding="utf-8")
+
+    for doc in ["docs/adr/0001-svgraph.md", "docs/svgraph-web-editor.md"]:
+        assert f"({doc})" in readme
+        assert (root / doc).is_file(), doc
+        assert f"include {doc}" in manifest
+
+
 def test_readme_python_examples_use_canonical_svgraph_imports() -> None:
     readme = (_project_root() / "README.md").read_text(encoding="utf-8")
     python_blocks = re.findall(r"```python\n(.*?)\n```", readme, flags=re.S)
@@ -249,6 +260,8 @@ def test_ci_pptx_smoke_covers_recent_fixture_regressions() -> None:
     assert "from svgraph import svg_to_svgraph, svg_to_svgraph_presentation" in workflow
     assert '"svg_to_" + "ir" not in svgraph.__all__' in workflow
     assert 'f"{root}/MIGRATION.md" in sdist_names' in workflow
+    assert 'f"{root}/docs/adr/0001-svgraph.md" in sdist_names' in workflow
+    assert 'f"{root}/docs/svgraph-web-editor.md" in sdist_names' in workflow
     assert '<a:miter lim="400000"' in workflow
     assert 'u=\\"wavy\\"' in workflow or "u=\"wavy\"" in workflow
     assert 'spc="' in workflow

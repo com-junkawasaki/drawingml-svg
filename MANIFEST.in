@@ -4,3 +4,5 @@ include CONTRIBUTING.md
 include MIGRATION.md
 include RELEASE.md
 include SECURITY.md
+include docs/adr/0001-svgraph.md
+include docs/svgraph-web-editor.md
