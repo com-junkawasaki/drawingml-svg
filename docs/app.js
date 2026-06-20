@@ -1185,11 +1185,11 @@ function inspectCoveragePaintServers(element, style, tag, stats, refs, css) {
         const server = refs.get(ref.id);
         const serverTag = server ? localName(server) : "";
         if (serverTag === "pattern") {
-            if (!paintServerColor(ref.id, refs, style))
+            if (!paintServerColor(ref.id, refs, style, new Set(), css))
                 addCoverageCount(stats.unsupported_attributes, `${attr}:pattern`);
         }
         else if (serverTag === "linearGradient" || serverTag === "radialGradient") {
-            if (!paintServerColor(ref.id, refs, style))
+            if (!paintServerColor(ref.id, refs, style, new Set(), css))
                 addCoverageCount(stats.unsupported_attributes, `${attr}:paint-server`);
         }
         else {
@@ -4296,8 +4296,8 @@ function computedStyle(element, inherited, css = [], refs = new Map(), viewport 
     const opacityAlpha = parseAlpha(opacity);
     if (opacityAlpha != null)
         next.imageAlpha = combinedAlpha(opacityAlpha, next.imageAlpha);
-    const fillPaint = fill != null ? normalizePaintValue(fill, refs, next) : null;
-    const strokePaint = stroke != null ? normalizePaintValue(stroke, refs, next) : null;
+    const fillPaint = fill != null ? normalizePaintValue(fill, refs, next, css) : null;
+    const strokePaint = stroke != null ? normalizePaintValue(stroke, refs, next, css) : null;
     if (fillPaint) {
         next.fill = fillPaint.color;
         next.fillAlpha = combinedAlpha(opacityAlpha, parseAlpha(fillOpacity), fillPaint.alpha);
@@ -5262,10 +5262,10 @@ function dasharrayWithOffset(value, offset, basis = rootFontSize) {
 function numbersClose(left, right, tolerance = 1e-9) {
     return Math.abs(left - right) < tolerance;
 }
-function normalizePaint(value, refs = new Map(), style = {}) {
-    return normalizePaintValue(value, refs, style)?.color ?? null;
+function normalizePaint(value, refs = new Map(), style = {}, css = []) {
+    return normalizePaintValue(value, refs, style, css)?.color ?? null;
 }
-function normalizePaintValue(value, refs = new Map(), style = {}) {
+function normalizePaintValue(value, refs = new Map(), style = {}, css = []) {
     const trimmed = value.trim();
     if (!trimmed || trimmed === "none" || trimmed === "transparent")
         return null;
@@ -5274,10 +5274,10 @@ function normalizePaintValue(value, refs = new Map(), style = {}) {
         return contextPaint;
     const ref = paintUrlRef(trimmed);
     if (ref) {
-        const server = paintServerColor(ref.id, refs, style);
+        const server = paintServerColor(ref.id, refs, style, new Set(), css);
         if (server)
             return { color: server, alpha: cssColorAlpha(server) };
-        return normalizePaintValue(ref.fallback, refs, style);
+        return normalizePaintValue(ref.fallback, refs, style, css);
     }
     const color = parseCssColor(trimmed, style) ?? trimmed;
     return { color, alpha: cssColorAlpha(trimmed) };
@@ -5290,7 +5290,7 @@ function contextPaintValue(value, style) {
         return { color: style.stroke, alpha: style.strokeAlpha ?? cssColorAlpha(style.stroke) };
     return null;
 }
-function paintServerColor(id, refs, style, seen = new Set()) {
+function paintServerColor(id, refs, style, seen = new Set(), css = []) {
     if (seen.has(id))
         return null;
     const element = refs.get(id);
@@ -5298,13 +5298,13 @@ function paintServerColor(id, refs, style, seen = new Set()) {
         return null;
     const tag = localName(element);
     if (tag === "pattern")
-        return averageColor(patternColors(element, refs, {}, new Set([...seen, id])));
+        return averageColor(patternColors(element, refs, {}, new Set([...seen, id]), css));
     if (tag !== "linearGradient" && tag !== "radialGradient")
         return null;
     const nextSeen = new Set([...seen, id]);
     const href = hrefValue(element);
-    const inheritedStops = href.startsWith("#") ? gradientStops(refs.get(href.slice(1)), refs, style, nextSeen) : [];
-    const stops = inheritedStops.concat(gradientStops(element, refs, style, nextSeen));
+    const inheritedStops = href.startsWith("#") ? gradientStops(refs.get(href.slice(1)), refs, style, nextSeen, css) : [];
+    const stops = inheritedStops.concat(gradientStops(element, refs, style, nextSeen, css));
     if (!stops.length)
         return null;
     if (tag === "radialGradient")
@@ -5319,15 +5319,15 @@ function paintServerColor(id, refs, style, seen = new Set()) {
         Math.round(rgb.reduce((sum, item) => sum + item[2], 0) / count),
     ]);
 }
-function patternColors(element, refs, inheritedStyle, seen) {
+function patternColors(element, refs, inheritedStyle, seen, css = []) {
     const colors = [];
     for (const child of Array.from(element.children)) {
         const tag = localName(child);
-        const style = simpleElementStyle(child, inheritedStyle, refs, seen);
+        const style = simpleElementStyle(child, inheritedStyle, refs, seen, css);
         if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse")
             continue;
         if (tag === "g" || tag === "svg" || tag === "a") {
-            colors.push(...patternColors(child, refs, style, seen));
+            colors.push(...patternColors(child, refs, style, seen, css));
             continue;
         }
         if (!["rect", "circle", "ellipse", "path", "polygon", "polyline", "text", "tspan", "line"].includes(tag))
@@ -5336,12 +5336,12 @@ function patternColors(element, refs, inheritedStyle, seen) {
             colors.push(style.fill);
         if (style.stroke && style.strokeAlpha !== 0)
             colors.push(style.stroke);
-        colors.push(...patternColors(child, refs, style, seen));
+        colors.push(...patternColors(child, refs, style, seen, css));
     }
     return colors;
 }
-function simpleElementStyle(element, inheritedStyle, refs, seen) {
-    const declarations = styleDeclarations(element.getAttribute("style"));
+function simpleElementStyle(element, inheritedStyle, refs, seen, css = []) {
+    const declarations = resolvedCascadedDeclarations(element, css, inheritedStyle);
     const value = (name) => declarations[name] ?? element.getAttribute(name) ?? null;
     const fill = value("fill");
     const stroke = value("stroke");
@@ -5357,23 +5357,23 @@ function simpleElementStyle(element, inheritedStyle, refs, seen) {
     if (visibility != null)
         next.visibility = normalizeVisibility(visibility);
     if (fill != null)
-        next.fill = normalizePatternPaint(fill, refs, next, seen);
+        next.fill = normalizePatternPaint(fill, refs, next, seen, css);
     if (stroke != null)
-        next.stroke = normalizePatternPaint(stroke, refs, next, seen);
+        next.stroke = normalizePatternPaint(stroke, refs, next, seen, css);
     if (fill != null || opacityAlpha != null || fillOpacity != null)
         next.fillAlpha = combinedAlpha(opacityAlpha, parseAlpha(fillOpacity), next.fillAlpha);
     if (stroke != null || opacityAlpha != null || strokeOpacity != null)
         next.strokeAlpha = combinedAlpha(opacityAlpha, parseAlpha(strokeOpacity), next.strokeAlpha);
     return next;
 }
-function normalizePatternPaint(value, refs, style, seen) {
+function normalizePatternPaint(value, refs, style, seen, css = []) {
     const trimmed = value.trim();
     if (!trimmed || trimmed === "none" || trimmed === "transparent")
         return null;
     const ref = paintUrlRef(trimmed);
     if (ref) {
         const targetId = ref.id;
-        return seen.has(targetId) ? normalizePaint(ref.fallback, refs, style) : paintServerColor(targetId, refs, style, seen) ?? normalizePaint(ref.fallback, refs, style);
+        return seen.has(targetId) ? normalizePaint(ref.fallback, refs, style, css) : paintServerColor(targetId, refs, style, seen, css) ?? normalizePaint(ref.fallback, refs, style, css);
     }
     return normalizeStopColor(trimmed, style);
 }
@@ -5388,16 +5388,16 @@ function averageColor(colors) {
         Math.round(rgb.reduce((sum, item) => sum + item[2], 0) / count),
     ]);
 }
-function gradientStops(element, refs, style, seen) {
+function gradientStops(element, refs, style, seen, css = []) {
     if (!element)
         return [];
     const tag = localName(element);
     if (tag !== "linearGradient" && tag !== "radialGradient")
         return [];
     const colors = [];
-    const gradientDeclarations = styleDeclarations(element.getAttribute("style"));
+    const gradientDeclarations = resolvedCascadedDeclarations(element, css, style);
     const inheritedStopColor = gradientDeclarations["stop-color"] ?? element.getAttribute("stop-color") ?? null;
-    const inheritedStopOpacity = element.getAttribute("stop-opacity") ?? gradientDeclarations["stop-opacity"] ?? null;
+    const inheritedStopOpacity = gradientDeclarations["stop-opacity"] ?? element.getAttribute("stop-opacity") ?? null;
     const gradientColor = gradientDeclarations.color ?? element.getAttribute("color") ?? null;
     const gradientStyle = gradientColor ? { ...style, color: parseCssColor(gradientColor, style) ?? style.color ?? null } : style;
     const href = hrefValue(element);
@@ -5405,14 +5405,14 @@ function gradientStops(element, refs, style, seen) {
         const inherited = refs.get(href.slice(1));
         const inheritedId = inherited?.getAttribute("id") || "";
         if (inherited && inheritedId && !seen.has(inheritedId))
-            colors.push(...gradientStops(inherited, refs, gradientStyle, new Set([...seen, inheritedId])));
+            colors.push(...gradientStops(inherited, refs, gradientStyle, new Set([...seen, inheritedId]), css));
     }
     for (const stop of Array.from(element.children)) {
         if (localName(stop) !== "stop")
             continue;
-        const declarations = styleDeclarations(stop.getAttribute("style"));
+        const declarations = resolvedCascadedDeclarations(stop, css, gradientStyle);
         const color = declarations["stop-color"] ?? stop.getAttribute("stop-color") ?? inheritedStopColor ?? "#000000";
-        const stopOpacity = stop.getAttribute("stop-opacity") ?? declarations["stop-opacity"] ?? inheritedStopOpacity;
+        const stopOpacity = declarations["stop-opacity"] ?? stop.getAttribute("stop-opacity") ?? inheritedStopOpacity;
         const stopOpacityAlpha = parseAlpha(stopOpacity);
         const normalized = normalizeStopColor(color, gradientStyle);
         const colorAlpha = cssColorAlpha(color);

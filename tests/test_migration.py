@@ -1084,9 +1084,11 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert 'style.fillAlpha !== 0' in generated
         assert 'value("fill-opacity")' in generated
         assert 'const inheritedStopColor = gradientDeclarations["stop-color"]' in generated
-        assert 'const inheritedStopOpacity = element.getAttribute("stop-opacity")' in generated
+        assert 'const inheritedStopOpacity = gradientDeclarations["stop-opacity"]' in generated
         assert "gradientStyle" in generated
         assert "parseCssColor(gradientColor, style)" in generated
+        assert "paintServerColor(ref.id, refs, style, new Set(), css)" in generated
+        assert "resolvedCascadedDeclarations(stop, css, gradientStyle)" in generated
         assert "const stopOpacityAlpha = parseAlpha(stopOpacity)" in generated
         assert "combinedAlpha(stopOpacityAlpha, colorAlpha) !== 0" in generated
         assert "function zeroAngle" in generated
@@ -1330,6 +1332,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser gradient paint-server fallback colors to ignore fully transparent stops",
         "browser gradient paint-server fallback colors with inherited stop color, opacity, and currentColor context",
         "browser SVG `href` resolution with namespace-aware legacy `xlink:href` handling",
+        "browser paint-server fallback colors with CSS cascade rules for gradient stops and pattern children",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",
