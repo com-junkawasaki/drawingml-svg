@@ -43,7 +43,9 @@ python -m zipfile --test tmp/svgraph-complex.pptx
 - Build the source distribution and wheel:
 
 ```bash
-rm -rf src/*.egg-info tmp/dist
+find src -maxdepth 1 -name "*.egg-info" -exec rm -rf {} +
+rm -rf build tmp/dist
+python -m pip install -e ".[dev]"
 python -m build --sdist --wheel -o tmp/dist
 test -f tmp/dist/svgraph-*.tar.gz
 test -f tmp/dist/svgraph-*.whl

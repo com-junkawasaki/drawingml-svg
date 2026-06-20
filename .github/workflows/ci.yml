@@ -178,6 +178,8 @@ jobs:
 
       - name: Build distribution smoke
         run: |
+          find src -maxdepth 1 -name "*.egg-info" -exec rm -rf {} +
+          rm -rf build tmp/dist
           python -m build --sdist --wheel -o tmp/dist
           test -f tmp/dist/svgraph-*.tar.gz
           test -f tmp/dist/svgraph-*.whl

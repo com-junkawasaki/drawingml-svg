@@ -463,7 +463,10 @@ def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
     release = (root / "RELEASE.md").read_text(encoding="utf-8")
     workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert "rm -rf src/*.egg-info tmp/dist" in release
+    for source in [release, workflow]:
+        assert 'find src -maxdepth 1 -name "*.egg-info" -exec rm -rf {} +' in source
+        assert "rm -rf build tmp/dist" in source
+    assert 'python -m pip install -e ".[dev]"' in release
     for source in [release, workflow]:
         assert "tmp/dist/svgraph-*.whl" in source
         assert "tmp/dist/svgraph-*.tar.gz" in source
