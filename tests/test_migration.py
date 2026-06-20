@@ -220,6 +220,27 @@ def test_typed_package_data_keeps_svgraph_canonical_and_compatibility_markers() 
     assert 'f"{root}/src/drawingml_svg/py.typed" in sdist_names' in workflow
 
 
+def test_manifest_and_ci_package_svgraph_migration_docs() -> None:
+    root = Path(__file__).resolve().parents[1]
+    manifest = (root / "MANIFEST.in").read_text(encoding="utf-8")
+    workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    packaged_docs = [
+        "CODE_OF_CONDUCT.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "MIGRATION.md",
+        "RELEASE.md",
+        "SECURITY.md",
+        "docs/adr/0001-svgraph.md",
+        "docs/svgraph-web-editor.md",
+    ]
+
+    for doc in packaged_docs:
+        assert (root / doc).is_file()
+        assert f"include {doc}" in manifest
+        assert f'f"{{root}}/{doc}" in sdist_names' in workflow
+
+
 def test_module_execution_is_canonical_svgraph_entry_point() -> None:
     root = Path(__file__).resolve().parents[1]
     main_source = (root / "src" / "svgraph" / "__main__.py").read_text(encoding="utf-8")
