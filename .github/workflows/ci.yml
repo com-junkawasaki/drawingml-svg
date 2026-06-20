@@ -200,13 +200,25 @@ jobs:
               wheel_metadata = wheel.read(metadata_name).decode("utf-8")
               entry_points = wheel.read(entry_points_name).decode("utf-8")
               top_level = set(wheel.read(top_level_name).decode("utf-8").splitlines())
-          assert "drawingml_svg/py.typed" in wheel_names
-          assert "svgraph/__main__.py" in wheel_names
-          assert "svgraph/py.typed" in wheel_names
-          assert "svgraph/converter.py" in wheel_names
-          assert "svgraph/coverage.py" in wheel_names
-          assert "svgraph/model.py" in wheel_names
-          assert "svgraph/pptx.py" in wheel_names
+          for expected in [
+              "drawingml_svg/__init__.py",
+              "drawingml_svg/cli.py",
+              "drawingml_svg/converter.py",
+              "drawingml_svg/coverage.py",
+              "drawingml_svg/ir.py",
+              "drawingml_svg/pptx.py",
+              "drawingml_svg/py.typed",
+              "drawingml_svg/svgraph.py",
+              "svgraph/__init__.py",
+              "svgraph/__main__.py",
+              "svgraph/cli.py",
+              "svgraph/converter.py",
+              "svgraph/coverage.py",
+              "svgraph/model.py",
+              "svgraph/pptx.py",
+              "svgraph/py.typed",
+          ]:
+              assert expected in wheel_names
           assert "Name: svgraph" in wheel_metadata
           assert "Summary: Small, dependency-free SVG presentation graph toolkit for SVGraph, DrawingML, PresentationML/PPTX, and browser-only web editing." in wheel_metadata
           assert "Keywords: drawingml,svg,svgraph,presentationml,ooxml,pptx,web,converter" in wheel_metadata
@@ -262,13 +274,25 @@ jobs:
           assert f"{root}/examples/sample.svg" in sdist_names
           assert f"{root}/examples/svgraph.svg" in sdist_names
           assert f"{root}/web/app.ts" in sdist_names
-          assert f"{root}/src/drawingml_svg/py.typed" in sdist_names
-          assert f"{root}/src/svgraph/__main__.py" in sdist_names
-          assert f"{root}/src/svgraph/py.typed" in sdist_names
-          assert f"{root}/src/svgraph/converter.py" in sdist_names
-          assert f"{root}/src/svgraph/coverage.py" in sdist_names
-          assert f"{root}/src/svgraph/model.py" in sdist_names
-          assert f"{root}/src/svgraph/pptx.py" in sdist_names
+          for expected in [
+              "src/drawingml_svg/__init__.py",
+              "src/drawingml_svg/cli.py",
+              "src/drawingml_svg/converter.py",
+              "src/drawingml_svg/coverage.py",
+              "src/drawingml_svg/ir.py",
+              "src/drawingml_svg/pptx.py",
+              "src/drawingml_svg/py.typed",
+              "src/drawingml_svg/svgraph.py",
+              "src/svgraph/__init__.py",
+              "src/svgraph/__main__.py",
+              "src/svgraph/cli.py",
+              "src/svgraph/converter.py",
+              "src/svgraph/coverage.py",
+              "src/svgraph/model.py",
+              "src/svgraph/pptx.py",
+              "src/svgraph/py.typed",
+          ]:
+              assert f"{root}/{expected}" in sdist_names
           PY
           python -m venv tmp/wheel-venv
           tmp/wheel-venv/bin/python -m pip install tmp/dist/svgraph-*.whl

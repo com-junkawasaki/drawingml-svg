@@ -345,10 +345,12 @@ def test_typed_package_data_keeps_svgraph_canonical_and_compatibility_markers() 
     assert package_data == {"drawingml_svg": ["py.typed"], "svgraph": ["py.typed"]}
     assert (root / "src" / "svgraph" / "py.typed").is_file()
     assert (root / "src" / "drawingml_svg" / "py.typed").is_file()
-    assert '"svgraph/py.typed" in wheel_names' in workflow
-    assert '"drawingml_svg/py.typed" in wheel_names' in workflow
-    assert 'f"{root}/src/svgraph/py.typed" in sdist_names' in workflow
-    assert 'f"{root}/src/drawingml_svg/py.typed" in sdist_names' in workflow
+    assert '"svgraph/py.typed",' in workflow
+    assert '"drawingml_svg/py.typed",' in workflow
+    assert '"src/svgraph/py.typed",' in workflow
+    assert '"src/drawingml_svg/py.typed",' in workflow
+    assert 'assert expected in wheel_names' in workflow
+    assert 'assert f"{root}/{expected}" in sdist_names' in workflow
 
 
 def test_manifest_and_ci_package_svgraph_migration_docs() -> None:
@@ -554,6 +556,25 @@ def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
     for source in [release, workflow]:
         assert "tmp/dist/svgraph-*.whl" in source
         assert "tmp/dist/svgraph-*.tar.gz" in source
+        for wheel_entry in [
+            "drawingml_svg/__init__.py",
+            "drawingml_svg/cli.py",
+            "drawingml_svg/converter.py",
+            "drawingml_svg/coverage.py",
+            "drawingml_svg/ir.py",
+            "drawingml_svg/pptx.py",
+            "drawingml_svg/py.typed",
+            "drawingml_svg/svgraph.py",
+            "svgraph/__init__.py",
+            "svgraph/__main__.py",
+            "svgraph/cli.py",
+            "svgraph/converter.py",
+            "svgraph/coverage.py",
+            "svgraph/model.py",
+            "svgraph/pptx.py",
+            "svgraph/py.typed",
+        ]:
+            assert f'"{wheel_entry}"' in source
         assert "Name: svgraph" in source
         assert (
             "Summary: Small, dependency-free SVG presentation graph toolkit for SVGraph, DrawingML, "
@@ -618,6 +639,22 @@ def test_release_checklist_rebuilds_and_packages_svgraph_web_editor() -> None:
         '"examples/sample.svg"',
         '"examples/svgraph.svg"',
         '"web/app.ts"',
+        '"src/drawingml_svg/__init__.py"',
+        '"src/drawingml_svg/cli.py"',
+        '"src/drawingml_svg/converter.py"',
+        '"src/drawingml_svg/coverage.py"',
+        '"src/drawingml_svg/ir.py"',
+        '"src/drawingml_svg/pptx.py"',
+        '"src/drawingml_svg/py.typed"',
+        '"src/drawingml_svg/svgraph.py"',
+        '"src/svgraph/__init__.py"',
+        '"src/svgraph/__main__.py"',
+        '"src/svgraph/cli.py"',
+        '"src/svgraph/converter.py"',
+        '"src/svgraph/coverage.py"',
+        '"src/svgraph/model.py"',
+        '"src/svgraph/pptx.py"',
+        '"src/svgraph/py.typed"',
         'assert f"{root}/{expected}" in names',
     ]:
         assert expected in release

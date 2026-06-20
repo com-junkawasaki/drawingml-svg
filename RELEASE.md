@@ -61,8 +61,28 @@ import zipfile
 wheel_path = glob.glob("tmp/dist/svgraph-*.whl")[0]
 sdist_path = glob.glob("tmp/dist/svgraph-*.tar.gz")[0]
 with zipfile.ZipFile(wheel_path) as wheel:
-    metadata_name = next(name for name in wheel.namelist() if name.endswith(".dist-info/METADATA"))
+    wheel_names = set(wheel.namelist())
+    metadata_name = next(name for name in wheel_names if name.endswith(".dist-info/METADATA"))
     wheel_metadata = wheel.read(metadata_name).decode("utf-8")
+for expected in [
+    "drawingml_svg/__init__.py",
+    "drawingml_svg/cli.py",
+    "drawingml_svg/converter.py",
+    "drawingml_svg/coverage.py",
+    "drawingml_svg/ir.py",
+    "drawingml_svg/pptx.py",
+    "drawingml_svg/py.typed",
+    "drawingml_svg/svgraph.py",
+    "svgraph/__init__.py",
+    "svgraph/__main__.py",
+    "svgraph/cli.py",
+    "svgraph/converter.py",
+    "svgraph/coverage.py",
+    "svgraph/model.py",
+    "svgraph/pptx.py",
+    "svgraph/py.typed",
+]:
+    assert expected in wheel_names
 assert "Name: svgraph" in wheel_metadata
 assert "Summary: Small, dependency-free SVG presentation graph toolkit for SVGraph, DrawingML, PresentationML/PPTX, and browser-only web editing." in wheel_metadata
 assert "Keywords: drawingml,svg,svgraph,presentationml,ooxml,pptx,web,converter" in wheel_metadata
@@ -112,6 +132,22 @@ for expected in [
     "examples/sample.svg",
     "examples/svgraph.svg",
     "web/app.ts",
+    "src/drawingml_svg/__init__.py",
+    "src/drawingml_svg/cli.py",
+    "src/drawingml_svg/converter.py",
+    "src/drawingml_svg/coverage.py",
+    "src/drawingml_svg/ir.py",
+    "src/drawingml_svg/pptx.py",
+    "src/drawingml_svg/py.typed",
+    "src/drawingml_svg/svgraph.py",
+    "src/svgraph/__init__.py",
+    "src/svgraph/__main__.py",
+    "src/svgraph/cli.py",
+    "src/svgraph/converter.py",
+    "src/svgraph/coverage.py",
+    "src/svgraph/model.py",
+    "src/svgraph/pptx.py",
+    "src/svgraph/py.typed",
 ]:
     assert f"{root}/{expected}" in names
 PY
