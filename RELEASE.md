@@ -47,6 +47,8 @@ tmp/release-venv/bin/svgraph examples/svgraph.svg > tmp/release-svgraph.json
 tmp/release-venv/bin/drawingml-svg examples/svgraph.svg > tmp/release-legacy-svgraph.json
 tmp/release-venv/bin/svgraph svgraph-presentation examples/svgraph.svg > tmp/release-svgraph-presentation.json
 tmp/release-venv/bin/svgraph svg2dml examples/sample.svg -o tmp/release-smoke.xml
+tmp/release-venv/bin/svgraph svg2pptx examples/sample.svg -o tmp/release-smoke.pptx
+python -m zipfile --test tmp/release-smoke.pptx
 ```
 
 ## Tag and publish

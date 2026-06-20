@@ -324,6 +324,15 @@ def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
     assert "tmp/wheel-legacy-svgraph.json" in workflow
 
 
+def test_release_checklist_smokes_canonical_svgraph_pptx_export() -> None:
+    release = (Path(__file__).resolve().parents[1] / "RELEASE.md").read_text(encoding="utf-8")
+
+    assert "tmp/release-venv/bin/svgraph svg2dml examples/sample.svg -o tmp/release-smoke.xml" in release
+    assert "tmp/release-venv/bin/svgraph svg2pptx examples/sample.svg -o tmp/release-smoke.pptx" in release
+    assert "python -m zipfile --test tmp/release-smoke.pptx" in release
+    assert "tmp/release-venv/bin/svg2pptx" not in release
+
+
 def test_contributor_checks_use_canonical_svgraph_commands_and_artifacts() -> None:
     root = Path(__file__).resolve().parents[1]
     contributing = (root / "CONTRIBUTING.md").read_text(encoding="utf-8")
