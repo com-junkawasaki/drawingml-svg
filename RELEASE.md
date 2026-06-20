@@ -24,6 +24,30 @@ defaultBranchRef.name: main
 repositoryTopics: drawingml, ooxml, pptx, presentationml, svg, svgraph, web-editor
 ```
 
+- Smoke the published Pages site after deployment:
+
+```bash
+python - <<'PY'
+from urllib.request import urlopen
+
+html = urlopen("https://com-junkawasaki.github.io/svgraph/", timeout=20).read().decode("utf-8")
+for expected in [
+    "<title>SVGraph Editor</title>",
+    "https://com-junkawasaki.github.io/svgraph/",
+    "Download SVGraph",
+]:
+    assert expected in html
+for forbidden in [
+    "PPTX" + "SVG",
+    "pptx" + "svg",
+    "drawingml-" + "svg-web",
+    "download" + "IrBtn",
+    "download" + "Pptxsvg",
+]:
+    assert forbidden not in html
+PY
+```
+
 - Run the local checks from `CONTRIBUTING.md`.
 - Rebuild the browser editor artifact and confirm the committed Pages output is current:
 

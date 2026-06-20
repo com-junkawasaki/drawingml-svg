@@ -548,6 +548,25 @@ def test_release_checklist_verifies_public_svgraph_repo_identity() -> None:
         assert expected in release
 
 
+def test_release_checklist_smokes_published_svgraph_pages_site() -> None:
+    release = (Path(__file__).resolve().parents[1] / "RELEASE.md").read_text(encoding="utf-8")
+
+    for expected in [
+        'urlopen("https://com-junkawasaki.github.io/svgraph/", timeout=20)',
+        '"<title>SVGraph Editor</title>"',
+        '"https://com-junkawasaki.github.io/svgraph/"',
+        '"Download SVGraph"',
+        '"PPTX" + "SVG"',
+        '"pptx" + "svg"',
+        '"drawingml-" + "svg-web"',
+        '"download" + "IrBtn"',
+        '"download" + "Pptxsvg"',
+        "assert expected in html",
+        "assert forbidden not in html",
+    ]:
+        assert expected in release
+
+
 def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
     root = Path(__file__).resolve().parents[1]
     release = (root / "RELEASE.md").read_text(encoding="utf-8")
