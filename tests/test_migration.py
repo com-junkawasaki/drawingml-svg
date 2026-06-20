@@ -399,6 +399,12 @@ def test_generated_distribution_metadata_preserves_legacy_compatibility_entry_po
     top_level_names = set(top_level.read_text(encoding="utf-8").splitlines())
 
     assert metadata["Name"] == "svgraph"
+    assert metadata["Summary"] == (
+        "Small, dependency-free SVG presentation graph toolkit for SVGraph, DrawingML, PresentationML/PPTX, "
+        "and browser-only web editing."
+    )
+    assert metadata["Keywords"] == "drawingml,svg,svgraph,presentationml,ooxml,pptx,web,converter"
+    assert "Documentation, https://com-junkawasaki.github.io/svgraph/" in metadata.get_all("Project-URL")
     assert "drawingml-svg = svgraph.cli:main" in entry_point_text
     assert "drawingml-svg-analyze = svgraph.cli:main" in entry_point_text
     assert {"svgraph", "drawingml_svg"} <= top_level_names

@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tomllib
 import zipfile
+from email.parser import Parser
 from importlib import resources
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -129,9 +130,17 @@ def test_generated_distribution_metadata_preserves_svgraph_identity() -> None:
     if not pkg_info.exists() or not entry_points.exists() or not top_level.exists():
         pytest.skip("egg-info metadata has not been generated")
 
+    metadata = Parser().parsestr(pkg_info.read_text(encoding="utf-8"))
     entry_point_text = entry_points.read_text(encoding="utf-8")
     top_level_names = set(top_level.read_text(encoding="utf-8").splitlines())
 
+    assert metadata["Name"] == "svgraph"
+    assert metadata["Summary"] == (
+        "Small, dependency-free SVG presentation graph toolkit for SVGraph, DrawingML, PresentationML/PPTX, "
+        "and browser-only web editing."
+    )
+    assert metadata["Keywords"] == "drawingml,svg,svgraph,presentationml,ooxml,pptx,web,converter"
+    assert "Documentation, https://com-junkawasaki.github.io/svgraph/" in metadata.get_all("Project-URL")
     assert "svgraph = svgraph.cli:main" in entry_point_text
     assert "svgraph" in top_level_names
 
