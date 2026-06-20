@@ -2533,10 +2533,9 @@ function tableCellAttrs(cell: TableCell | null, row: number, col: number): strin
   if (cell.row === row && cell.col === col) {
     if (cell.colSpan > 1) attrs.push(`gridSpan="${cell.colSpan}"`);
     if (cell.rowSpan > 1) attrs.push(`rowSpan="${cell.rowSpan}"`);
-  } else if (col > cell.col) {
-    attrs.push('hMerge="1"');
-  } else if (row > cell.row) {
-    attrs.push('vMerge="1"');
+  } else {
+    if (col > cell.col) attrs.push('hMerge="1"');
+    if (row > cell.row) attrs.push('vMerge="1"');
   }
   return attrs.length ? ` ${attrs.join(" ")}` : "";
 }

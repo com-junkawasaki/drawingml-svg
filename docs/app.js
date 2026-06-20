@@ -2184,11 +2184,11 @@ function tableCellAttrs(cell, row, col) {
         if (cell.rowSpan > 1)
             attrs.push(`rowSpan="${cell.rowSpan}"`);
     }
-    else if (col > cell.col) {
-        attrs.push('hMerge="1"');
-    }
-    else if (row > cell.row) {
-        attrs.push('vMerge="1"');
+    else {
+        if (col > cell.col)
+            attrs.push('hMerge="1"');
+        if (row > cell.row)
+            attrs.push('vMerge="1"');
     }
     return attrs.length ? ` ${attrs.join(" ")}` : "";
 }
