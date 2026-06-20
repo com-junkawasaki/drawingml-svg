@@ -583,6 +583,19 @@ def test_canonical_code_paths_import_svgraph_package() -> None:
     assert unexpected == []
 
 
+def test_legacy_import_allowlist_is_limited_to_migration_tests() -> None:
+    assert ALLOWED_LEGACY_IMPORT_SURFACES == {
+        "tests/test_migration.py",
+        "tests/test_svgraph.py",
+    }
+    assert LEGACY_IMPORT_PATTERNS == (
+        "from drawingml_svg",
+        "import drawingml_svg",
+        "python -m drawingml_svg.cli",
+        "drawingml_svg.cli",
+    )
+
+
 def test_pages_artifacts_use_svgraph_naming() -> None:
     root = Path(__file__).resolve().parents[1]
     public_assets = "\n".join(
@@ -763,6 +776,14 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
 def test_drawingml_svg_modules_are_compatibility_wrappers() -> None:
     root = Path(__file__).resolve().parents[1]
     unexpected: list[str] = []
+    assert COMPATIBILITY_WRAPPER_MODULES == {
+        "src/drawingml_svg/__init__.py": "from svgraph import",
+        "src/drawingml_svg/cli.py": "from svgraph.cli import *",
+        "src/drawingml_svg/converter.py": "from svgraph.converter import *",
+        "src/drawingml_svg/coverage.py": "from svgraph.coverage import *",
+        "src/drawingml_svg/pptx.py": "from svgraph.pptx import *",
+        "src/drawingml_svg/svgraph.py": "from svgraph.model import *",
+    }
     for relative, expected_import in COMPATIBILITY_WRAPPER_MODULES.items():
         text = (root / relative).read_text(encoding="utf-8")
         if expected_import not in text:
