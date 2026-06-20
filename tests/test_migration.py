@@ -349,6 +349,7 @@ def test_manifest_and_ci_package_svgraph_migration_docs() -> None:
 def test_module_execution_is_canonical_svgraph_entry_point() -> None:
     root = Path(__file__).resolve().parents[1]
     main_source = (root / "src" / "svgraph" / "__main__.py").read_text(encoding="utf-8")
+    cli_source = (root / "src" / "svgraph" / "cli.py").read_text(encoding="utf-8")
     workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     readme = (root / "README.md").read_text(encoding="utf-8")
     migration = (root / "MIGRATION.md").read_text(encoding="utf-8")
@@ -360,6 +361,9 @@ def test_module_execution_is_canonical_svgraph_entry_point() -> None:
     assert "tmp/wheel-venv/bin/python -m svgraph analyze examples/coverage.svg" in workflow
     assert "python -m svgraph --version" in readme
     assert "python -m svgraph --version" in migration
+    assert 'version("svgraph")' in cli_source
+    assert 'project.get("name") != "svgraph"' in cli_source
+    assert '"drawingml-svg"' in cli_source
     assert "python -m drawingml_svg" not in readme
     assert "python -m drawingml_svg" not in migration
 
@@ -459,6 +463,7 @@ def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
     release = (root / "RELEASE.md").read_text(encoding="utf-8")
     workflow = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
+    assert "rm -rf src/*.egg-info tmp/dist" in release
     for source in [release, workflow]:
         assert "tmp/dist/svgraph-*.whl" in source
         assert "tmp/dist/svgraph-*.tar.gz" in source
@@ -770,6 +775,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "python -m svgraph.cli",
         "release and CI smoke checks",
         "public `com-junkawasaki/svgraph` repository identity and Pages URL",
+        "stale local `*.egg-info` metadata",
         "wheel metadata",
         "canonical `svgraph` surfaces",
         "canonical typed Python import package",

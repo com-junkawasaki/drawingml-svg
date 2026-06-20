@@ -5,6 +5,7 @@ import json
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+import tomllib
 from xml.etree import ElementTree as ET
 
 from .coverage import analyze_svg
@@ -74,10 +75,25 @@ def _package_version() -> str:
     try:
         return version("svgraph")
     except PackageNotFoundError:
+        source_tree_version = _source_tree_version()
+        if source_tree_version is not None:
+            return source_tree_version
         try:
             return version("drawingml-svg")
         except PackageNotFoundError:
             return "0+unknown"
+
+
+def _source_tree_version() -> str | None:
+    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    if not pyproject.is_file():
+        return None
+    data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    project = data.get("project", {})
+    if project.get("name") != "svgraph":
+        return None
+    source_version = project.get("version")
+    return source_version if isinstance(source_version, str) else None
 
 
 def _normalize_argv(argv: list[str] | None) -> list[str] | None:
