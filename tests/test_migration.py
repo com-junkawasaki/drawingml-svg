@@ -924,6 +924,9 @@ def test_web_runtime_accepts_canonical_svgraph_presentation_metadata_keys() -> N
         assert "contentTypes(slideXmls.length, masterCount, layoutCount)" in generated
         assert "presentationRels(slideXmls.length, masterCount)" in generated
         assert "slideLayoutRel(layoutIndex)" in generated
+        assert "slideMaster(presentation.text_styles)" in generated
+        assert "function textStyleXml" in generated
+        assert "Aptos Display" in generated
 
 
 def test_pages_typescript_build_targets_committed_svgraph_artifact() -> None:
@@ -1026,6 +1029,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser PPTX export parity for SVGraph presentation slide master and layout package parts",
         "release and CI wheel smoke coverage for multi-master SVGraph PPTX packages",
         "Python PPTX slide master default text style emission from SVGraph presentation text styles",
+        "browser PPTX slide master default text style emission from SVGraph presentation text styles",
         "web editor design package part schema documentation",
     ]:
         assert expected in changelog

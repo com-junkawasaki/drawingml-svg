@@ -3133,7 +3133,7 @@ function writePptx(slideXmls, presentation) {
     };
     for (let index = 1; index <= masterCount; index += 1) {
         const layoutIndex = Math.min(index, layoutCount);
-        files[`ppt/slideMasters/slideMaster${index}.xml`] = slideMaster;
+        files[`ppt/slideMasters/slideMaster${index}.xml`] = slideMaster(presentation.text_styles);
         files[`ppt/slideMasters/_rels/slideMaster${index}.xml.rels`] = slideMasterRels(layoutIndex);
     }
     for (let index = 1; index <= layoutCount; index += 1) {
@@ -5623,6 +5623,55 @@ function slideMasterRels(layoutIndex = 1) {
 function slideLayoutRels(masterIndex = 1) {
     return xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster${masterIndex}.xml"/></Relationships>`);
 }
-const slideMaster = xmlDecl(`<p:sldMaster xmlns:a="${nsA}" xmlns:r="${nsR}" xmlns:p="${nsP}"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst><p:txStyles><p:titleStyle/><p:bodyStyle/><p:otherStyle/></p:txStyles></p:sldMaster>`);
+function slideMaster(textStyles = []) {
+    const titleStyle = textStyleXml("titleStyle", textStyleForRole(textStyles, "title"));
+    const bodyStyle = textStyleXml("bodyStyle", textStyleForRole(textStyles, "body"));
+    const otherStyle = textStyleXml("otherStyle", textStyleForRole(textStyles, "other") || textStyleForRole(textStyles, "lead") || textStyleForRole(textStyles, "caption"));
+    return xmlDecl(`<p:sldMaster xmlns:a="${nsA}" xmlns:r="${nsR}" xmlns:p="${nsP}"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst><p:txStyles>${titleStyle}${bodyStyle}${otherStyle}</p:txStyles></p:sldMaster>`);
+}
+function textStyleForRole(textStyles, role) {
+    const normalized = role.toLowerCase();
+    return textStyles.find((style) => style.role.toLowerCase() === normalized) ?? null;
+}
+function textStyleXml(tag, style) {
+    if (!style)
+        return `<p:${tag}/>`;
+    const properties = style.properties;
+    const attrs = [];
+    const fontSize = styleNumber(properties.fontSize ?? properties["font-size"]);
+    if (fontSize != null)
+        attrs.push(`sz="${Math.round(fontSize * 100)}"`);
+    if (styleBool(properties.bold ?? properties.fontWeight ?? properties["font-weight"]))
+        attrs.push('b="1"');
+    if (styleBool(properties.italic ?? properties.fontStyle ?? properties["font-style"]))
+        attrs.push('i="1"');
+    const fontFamily = properties.fontFamily ?? properties["font-family"];
+    const latin = typeof fontFamily === "string" ? `<a:latin typeface="${xmlAttr(fontFamily)}"/>` : "";
+    const attrsText = attrs.length ? ` ${attrs.join(" ")}` : "";
+    return `<p:${tag}><a:lvl1pPr><a:defRPr${attrsText}>${latin}</a:defRPr></a:lvl1pPr></p:${tag}>`;
+}
+function styleNumber(value) {
+    if (typeof value === "number")
+        return value;
+    if (typeof value === "string") {
+        const match = value.match(/^\s*([0-9]+(?:\.[0-9]+)?)/);
+        return match ? Number(match[1]) : null;
+    }
+    return null;
+}
+function styleBool(value) {
+    if (typeof value === "boolean")
+        return value;
+    if (typeof value === "number")
+        return value >= 600;
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        return ["1", "true", "bold", "bolder"].includes(normalized) || (/^\d+$/.test(normalized) && Number(normalized) >= 600);
+    }
+    return false;
+}
+function xmlAttr(value) {
+    return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
 const slideLayout = xmlDecl(`<p:sldLayout xmlns:a="${nsA}" xmlns:r="${nsR}" xmlns:p="${nsP}" type="blank" preserve="1"><p:cSld name="Blank"><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>`);
 const themeXml = xmlDecl(`<a:theme xmlns:a="${nsA}" name="SVGraph web"><a:themeElements><a:clrScheme name="SVGraph"><a:dk1><a:srgbClr val="111827"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="1F2937"/></a:dk2><a:lt2><a:srgbClr val="F9FAFB"/></a:lt2><a:accent1><a:srgbClr val="1D4ED8"/></a:accent1><a:accent2><a:srgbClr val="15803D"/></a:accent2><a:accent3><a:srgbClr val="DC2626"/></a:accent3><a:accent4><a:srgbClr val="7C3AED"/></a:accent4><a:accent5><a:srgbClr val="0891B2"/></a:accent5><a:accent6><a:srgbClr val="EA580C"/></a:accent6><a:hlink><a:srgbClr val="2563EB"/></a:hlink><a:folHlink><a:srgbClr val="9333EA"/></a:folHlink></a:clrScheme><a:fontScheme name="SVGraph"><a:majorFont><a:latin typeface="Aptos Display"/></a:majorFont><a:minorFont><a:latin typeface="Aptos"/></a:minorFont></a:fontScheme><a:fmtScheme name="SVGraph"><a:fillStyleLst/><a:lnStyleLst/><a:effectStyleLst/><a:bgFillStyleLst/></a:fmtScheme></a:themeElements></a:theme>`);
