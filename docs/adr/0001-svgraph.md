@@ -33,7 +33,14 @@ SVGraph is intentionally independent of a specific output format. Target emitter
     "kind": "svgraph-presentation",
     "slide_size": [1280, 720],
     "slides": [],
-    "parts": [],
+    "parts": [
+      {
+        "part_name": "/ppt/presentation.xml",
+        "content_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+        "kind": "presentation",
+        "source_node_id": null
+      }
+    ],
     "masters": [],
     "layouts": [],
     "guides": [],
@@ -141,7 +148,7 @@ Example:
 The package emitter can then map:
 
 - each slide node to `ppt/slides/slideN.xml`
-- the `parts` list to the required package blueprint, including presentation, slide master, slide layout, theme, and slide parts
+- the `parts` list to the required package blueprint, including `part_name`, `content_type`, `kind`, and source-node provenance for presentation, slide master, slide layout, theme, and slide parts
 - `masters` and `layouts` to PresentationML slide master/layout parts
 - `guides` and `rulers` to editor metadata or custom XML sidecars
 - `text_styles` to PresentationML default text styles and placeholder styles

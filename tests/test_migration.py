@@ -991,6 +991,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "canonical `svgraph.model` explicit exports",
         "canonical `svgraph` distribution version lookup",
         "browser SVGraph presentation package part content types",
+        "SVGraph presentation package part schema documentation",
     ]:
         assert expected in changelog
 
@@ -1108,6 +1109,9 @@ def test_adr_defines_svgraph_as_presentation_package_contract() -> None:
         '"guides": []',
         '"rulers": []',
         '"text_styles": []',
+        '"part_name": "/ppt/presentation.xml"',
+        '"content_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"',
+        '"source_node_id": null',
         '`data-kind="slide-master"`',
         '`data-kind="slide-layout"`',
         '`data-kind="guide"`',
@@ -1115,6 +1119,7 @@ def test_adr_defines_svgraph_as_presentation_package_contract() -> None:
         '`data-kind="style-template"`',
         "The package emitter can then map:",
         "each slide node to `ppt/slides/slideN.xml`",
+        "the `parts` list to the required package blueprint, including `part_name`, `content_type`, `kind`, and source-node provenance",
         "`masters` and `layouts` to PresentationML slide master/layout parts",
         "`guides` and `rulers` to editor metadata or custom XML sidecars",
         "`text_styles` to PresentationML default text styles and placeholder styles",
@@ -1125,6 +1130,18 @@ def test_adr_defines_svgraph_as_presentation_package_contract() -> None:
 
     assert "pptxsvg" not in adr
     assert "presentation IR" not in adr
+
+
+def test_readme_documents_svgraph_presentation_package_part_contract() -> None:
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+
+    for expected in [
+        "The `svgraph-presentation` command and `svg_to_svgraph_presentation()` API",
+        "with each part carrying `part_name`, `content_type`, `kind`, and source-node provenance where available",
+        "slide master/layout/theme parts",
+        "generated `/ppt/slides/slideN.xml` parts",
+    ]:
+        assert expected in readme
 
 
 def test_web_editor_design_uses_browser_only_svgraph_contract() -> None:
