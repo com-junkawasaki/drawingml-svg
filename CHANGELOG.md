@@ -17,6 +17,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Added `python -m svgraph` as a canonical module execution path and moved local contribution checks away from `python -m svgraph.cli`.
 - Updated README, ADR, and release checklist guidance to document `python -m svgraph` and `svgraph.model` as canonical migration targets.
 - Added release checklist coverage for verifying the public `com-junkawasaki/svgraph` repository identity and Pages URL before publishing.
+- Expanded the release checklist repository identity check to include public visibility and the canonical GitHub URL.
 - Added a packaged migration guide that maps old repository, distribution, import, CLI, and IR surfaces to canonical SVGraph surfaces.
 - Added release checklist cleanup for stale local `*.egg-info` metadata before building `svgraph` wheel and sdist artifacts.
 - Added migration guide verification commands for browser type checking and committed Pages artifact freshness.
