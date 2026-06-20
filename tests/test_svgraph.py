@@ -27,6 +27,12 @@ def test_compatibility_package_declares_inline_types() -> None:
     assert resources.files(drawingml_svg).joinpath("py.typed").is_file()
 
 
+def test_compatibility_package_top_level_exports_match_svgraph_api() -> None:
+    for name in svgraph_package.__all__:
+        assert getattr(drawingml_svg, name) is getattr(svgraph_package, name)
+    assert drawingml_svg.__all__ == svgraph_package.__all__
+
+
 @pytest.mark.parametrize("executable", ["svg2dml", "dml2svg", "drawingml-svg-analyze"])
 def test_cli_alias_version_writes_installed_package_version(monkeypatch, capsys, executable: str) -> None:
     monkeypatch.setattr("sys.argv", [executable, "--version"])

@@ -73,6 +73,7 @@ ALLOWED_LEGACY_IMPORT_SURFACES = {
 }
 
 COMPATIBILITY_WRAPPER_MODULES = {
+    "src/drawingml_svg/__init__.py": "from svgraph import",
     "src/drawingml_svg/cli.py": "from svgraph.cli import *",
     "src/drawingml_svg/converter.py": "from svgraph.converter import *",
     "src/drawingml_svg/coverage.py": "from svgraph.coverage import *",
