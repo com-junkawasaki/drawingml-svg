@@ -376,7 +376,7 @@ def _text_styles(root: SVGraphNode, metadata: dict[str, object]) -> tuple[SVGrap
         for role, properties in raw_styles.items():
             if isinstance(properties, dict):
                 styles.append(SVGraphTextStyle(str(role), str(role), properties))
-    for index, entry in enumerate(_list_metadata(metadata, "textStyles"), start=1):
+    for index, entry in enumerate(_list_metadata(metadata, "textStyles") or _list_metadata(metadata, "text_styles"), start=1):
         if isinstance(entry, dict):
             role = str(entry.get("role") or entry.get("id") or f"text-style-{index}")
             styles.append(SVGraphTextStyle(str(entry.get("id") or role), role, entry))
@@ -442,7 +442,7 @@ def _package_parts(
 
 def _slide_size(root: SVGraphNode, fallback_view_box: tuple[float, float, float, float]) -> tuple[float, float]:
     metadata = _presentation_metadata(root.metadata)
-    slide_size = metadata.get("slideSize")
+    slide_size = metadata.get("slideSize") or metadata.get("slide_size")
     if isinstance(slide_size, dict):
         width = _number(slide_size.get("width"))
         height = _number(slide_size.get("height"))

@@ -235,6 +235,32 @@ def test_svgraph_presentation_preserves_presentation_templates_guides_rulers_and
     assert presentation.text_styles[0].properties["fontSize"] == 48
 
 
+def test_svgraph_presentation_accepts_snake_case_presentation_metadata() -> None:
+    svg = """\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9">
+  <metadata>{
+    "presentation": {
+      "slide_size": [1920, 1080],
+      "text_styles": [
+        {"id": "title-style", "role": "title", "fontFamily": "Aptos Display", "fontSize": 60},
+        {"role": "body", "fontFamily": "Aptos", "fontSize": 24}
+      ]
+    }
+  }</metadata>
+  <g id="slide-a" data-kind="slide"><rect width="10" height="10"/></g>
+</svg>
+"""
+
+    presentation = svg_to_svgraph_presentation(svg)
+
+    assert presentation.slide_size == (1920.0, 1080.0)
+    assert [(style.style_id, style.role) for style in presentation.text_styles] == [
+        ("title-style", "title"),
+        ("body", "body"),
+    ]
+    assert presentation.text_styles[0].properties["fontSize"] == 60
+
+
 def test_svgraph_presentation_json_cli_payload_is_serializable() -> None:
     payload = svg_svgraph_presentation_to_json(
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><g data-slide="1"/></svg>"""

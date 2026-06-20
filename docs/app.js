@@ -315,7 +315,7 @@ function buildSVGraphPresentation(root) {
     const selectedSlides = slides.length ? slides : [root];
     const rootMeta = asObject(asObject(root.metadata.json).presentation);
     const rootBox = viewBox(root);
-    const metaSlideSize = asObject(rootMeta.slideSize);
+    const metaSlideSize = asObject(rootMeta.slideSize || rootMeta.slide_size);
     const slideSize = typeof metaSlideSize.width === "number" && typeof metaSlideSize.height === "number"
         ? [metaSlideSize.width, metaSlideSize.height]
         : [rootBox[2] || 960, rootBox[3] || 540];
@@ -425,13 +425,23 @@ function rulers(nodes, metadataItems) {
     return [...fromMeta, ...fromNodes];
 }
 function textStyles(nodes, metadataStyles) {
-    const styleObj = !Array.isArray(metadataStyles) ? asObject(metadataStyles) : {};
-    const fromMeta = Object.entries(styleObj).map(([role, properties]) => ({
-        style_id: role,
-        role,
-        properties: asObject(properties),
-        node_id: null,
-    }));
+    const fromMeta = Array.isArray(metadataStyles)
+        ? metadataStyles.map((item, index) => {
+            const obj = asObject(item);
+            const role = String(obj.role || obj.id || `text-style-${index + 1}`);
+            return {
+                style_id: String(obj.id || role),
+                role,
+                properties: obj,
+                node_id: null,
+            };
+        })
+        : Object.entries(asObject(metadataStyles)).map(([role, properties]) => ({
+            style_id: role,
+            role,
+            properties: asObject(properties),
+            node_id: null,
+        }));
     const fromNodes = nodes
         .filter((node) => node.data.kind === "style-template" || node.data.role === "style-template")
         .map((node) => ({
