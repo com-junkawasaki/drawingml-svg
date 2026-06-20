@@ -1010,6 +1010,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "SVGraph presentation JSON helper content type and source-node provenance regression coverage",
         "generated PPTX content type regression coverage aligned with the SVGraph presentation package blueprint",
         "generated PPTX slide master and layout part expansion from SVGraph presentation metadata and nodes",
+        "generated PPTX slide relationship routing to declared SVGraph slide layout parts",
         "web editor design package part schema documentation",
     ]:
         assert expected in changelog

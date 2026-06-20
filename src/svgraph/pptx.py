@@ -272,8 +272,9 @@ def write_pptx(
     prepared_slides: list[tuple[bytes, str]] = []
     media: list[tuple[str, bytes]] = []
     next_media_index = 1
-    for xml in slide_xmls:
-        prepared_slide, slide_rels, slide_media, next_media_index = _prepare_slide_media(xml, next_media_index)
+    for index, xml in enumerate(slide_xmls, start=1):
+        layout_index = min(index, layout_count)
+        prepared_slide, slide_rels, slide_media, next_media_index = _prepare_slide_media(xml, next_media_index, layout_index)
         prepared_slides.append((prepared_slide, slide_rels))
         media.extend(slide_media)
 
@@ -306,14 +307,18 @@ def write_pptx(
 
 
 def prepare_slide_media(slide_xml: bytes) -> tuple[bytes, str, list[tuple[str, bytes]]]:
-    prepared_slide, rels, media, _ = _prepare_slide_media(slide_xml, 1)
+    prepared_slide, rels, media, _ = _prepare_slide_media(slide_xml, 1, 1)
     return prepared_slide, rels, media
 
 
-def _prepare_slide_media(slide_xml: bytes, next_media_index: int) -> tuple[bytes, str, list[tuple[str, bytes]], int]:
+def _prepare_slide_media(
+    slide_xml: bytes,
+    next_media_index: int,
+    layout_index: int,
+) -> tuple[bytes, str, list[tuple[str, bytes]], int]:
     root = ET.fromstring(slide_xml)
     media: list[tuple[str, bytes]] = []
-    rels = [SLIDE_LAYOUT_REL]
+    rels = [_slide_layout_rel(layout_index)]
     next_rel_id = 2
     for blip in root.findall(f".//{qn(NS_A, 'blip')}"):
         embed = blip.get(qn(REL_NS, "embed"), "")
@@ -509,7 +514,11 @@ CORE_PROPS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <cp:lastModifiedBy>SVGraph</cp:lastModifiedBy>
 </cp:coreProperties>"""
 
-SLIDE_LAYOUT_REL = '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>'
+def _slide_layout_rel(layout_index: int = 1) -> str:
+    return f'  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout{layout_index}.xml"/>'
+
+
+SLIDE_LAYOUT_REL = _slide_layout_rel()
 
 def _slide_master_rels(layout_index: int = 1) -> str:
     return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

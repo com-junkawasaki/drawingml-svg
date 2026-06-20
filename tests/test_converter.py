@@ -844,6 +844,9 @@ def test_svg_to_pptx_bytes_writes_declared_master_and_layout_parts() -> None:
           <g id="cover" data-kind="slide">
             <rect width="200" height="120" fill="#ccfbf1"/>
           </g>
+          <g id="detail" data-kind="slide">
+            <ellipse cx="100" cy="80" rx="50" ry="30" fill="#dbeafe"/>
+          </g>
         </svg>"""
     )
 
@@ -854,6 +857,7 @@ def test_svg_to_pptx_bytes_writes_declared_master_and_layout_parts() -> None:
         rels = pptx.read("ppt/_rels/presentation.xml.rels").decode("utf-8")
         master2_rels = pptx.read("ppt/slideMasters/_rels/slideMaster2.xml.rels").decode("utf-8")
         layout2_rels = pptx.read("ppt/slideLayouts/_rels/slideLayout2.xml.rels").decode("utf-8")
+        slide2_rels = pptx.read("ppt/slides/_rels/slide2.xml.rels").decode("utf-8")
 
     overrides = {
         override.get("PartName"): override.get("ContentType")
@@ -864,9 +868,11 @@ def test_svg_to_pptx_bytes_writes_declared_master_and_layout_parts() -> None:
     assert overrides["/ppt/slideMasters/slideMaster2.xml"] == "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"
     assert overrides["/ppt/slideLayouts/slideLayout2.xml"] == "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"
     assert presentation.count("<p:sldMasterId ") == 2
+    assert presentation.count("<p:sldId ") == 2
     assert 'Target="slideMasters/slideMaster2.xml"' in rels
     assert 'Target="../slideLayouts/slideLayout2.xml"' in master2_rels
     assert 'Target="../slideMasters/slideMaster2.xml"' in layout2_rels
+    assert 'Target="../slideLayouts/slideLayout2.xml"' in slide2_rels
 
 
 def test_svgraph_semantic_relation_and_table_export_as_native_pptx_objects() -> None:
