@@ -567,6 +567,7 @@ def test_release_checklist_smokes_published_svgraph_pages_site() -> None:
         '"https://com-junkawasaki.github.io/svgraph/"',
         '"Download SVG"',
         '"Download SVGraph"',
+        '"Download Sidecar"',
         '"PPTX" + "SVG"',
         '"pptx" + "svg"',
         '"drawingml-" + "svg-web"',
@@ -888,13 +889,18 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
     assert "<title>SVGraph Editor</title>" in html
     assert 'id="downloadSvgBtn"' in html
     assert 'id="downloadSVGraphBtn"' in html
+    assert 'id="downloadSidecarBtn"' in html
     assert 'id="downloadDrawingMlBtn"' in html
     assert 'mustElement<HTMLButtonElement>("downloadSvgBtn")' in source
     assert 'mustElement<HTMLButtonElement>("downloadSVGraphBtn")' in source
+    assert 'mustElement<HTMLButtonElement>("downloadSidecarBtn")' in source
     assert 'mustElement<HTMLButtonElement>("downloadDrawingMlBtn")' in source
     for generated in [source, app_js]:
         assert 'downloadBlob("svgraph-source.svg"' in generated
         assert 'downloadText("svgraph.json"' in generated
+        assert 'downloadText("svgraph-sidecar.json"' in generated
+        assert 'kind: "svgraph-sidecar"' in generated
+        assert "function buildSVGraphSidecar" in generated
         assert 'downloadBlob("svgraph-drawingml.xml"' in generated
         assert "function svgToDrawingMl" in generated
         assert "function buildDrawingMlFragment" in generated
@@ -1055,6 +1061,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser Slides pane package blueprint preview",
         "browser DrawingML fragment download",
         "browser SVG source download",
+        "browser SVGraph sidecar JSON download",
         "web editor design package part schema documentation",
     ]:
         assert expected in changelog
@@ -1244,6 +1251,8 @@ def test_web_editor_design_uses_browser_only_svgraph_contract() -> None:
         "`web/app.ts` is the TypeScript browser runtime.",
         "GitHub Pages loads the compiled `docs/app.js`.",
         "without Python",
+        "`svgraph-sidecar.json`",
+        "semantic sidecar with metadata, dependencies, coverage, and presentation package state",
         "DrawingML fragments and `.pptx` without Python",
         "`SVGraphDocument`",
         "`SVGraphPresentation` projection",

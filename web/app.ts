@@ -91,6 +91,15 @@ type SVGraphDocument = {
   presentation: SVGraphPresentationProjection;
 };
 
+type SVGraphSidecar = {
+  kind: "svgraph-sidecar";
+  version: string;
+  metadata: { text?: string; json?: JsonValue };
+  dependencies: Dependency[];
+  coverage: SvgCoverage;
+  presentation: SVGraphPresentationProjection;
+};
+
 type SvgCoverage = {
   total_elements: number;
   convertible_elements: number;
@@ -932,6 +941,17 @@ function buildSVGraph(svgText: string): SVGraphDocument {
     dependencies,
     coverage,
     presentation,
+  };
+}
+
+function buildSVGraphSidecar(svgraph: SVGraphDocument): SVGraphSidecar {
+  return {
+    kind: "svgraph-sidecar",
+    version: svgraph.version,
+    metadata: svgraph.metadata,
+    dependencies: svgraph.dependencies,
+    coverage: svgraph.coverage,
+    presentation: svgraph.presentation,
   };
 }
 
@@ -3718,6 +3738,9 @@ mustElement<HTMLButtonElement>("downloadSvgBtn").addEventListener("click", () =>
 });
 mustElement<HTMLButtonElement>("downloadSVGraphBtn").addEventListener("click", () => {
   if (state.svgraph) downloadText("svgraph.json", JSON.stringify(state.svgraph, null, 2));
+});
+mustElement<HTMLButtonElement>("downloadSidecarBtn").addEventListener("click", () => {
+  if (state.svgraph) downloadText("svgraph-sidecar.json", JSON.stringify(buildSVGraphSidecar(state.svgraph), null, 2));
 });
 mustElement<HTMLButtonElement>("downloadDrawingMlBtn").addEventListener("click", () => {
   downloadBlob("svgraph-drawingml.xml", new Blob([svgToDrawingMl(source.value)], { type: "application/xml;charset=utf-8" }));

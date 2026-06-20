@@ -16,6 +16,7 @@ Current implementation status:
 
 - `web/app.ts` is the TypeScript browser runtime.
 - GitHub Pages loads the compiled `docs/app.js`.
+- The browser can export `svgraph-sidecar.json` with metadata, dependencies, coverage diagnostics, and the presentation/package projection for targets that need semantic state outside the visual output.
 - The browser can export DrawingML fragments and `.pptx` without Python for the SVGraph presentation MVP subset: multi-slide SVG groups, editable rect/ellipse/line/text shapes with inline `tspan` rich text runs and basic `text-anchor`/baseline alignment, polygon/polyline/quadratic/cubic/arc path custom geometry, embedded data URI images, marker arrows, local `defs`/`use`, linear/radial gradient and pattern fallback colors, named colors, CSS `rgb()`/`hsl()` colors, `currentColor`, fill/stroke alpha from opacity properties and alpha colors, stroke dash/cap/join styles, transform-scaled strokes, line/polyline/basic path `pathLength` dash scaling, `vector-effect="non-scaling-stroke"`, rectangular `clipPath` in user-space and object bounding-box units, nested SVG `overflow="hidden"` viewport clipping, simple selector styles, inline style/inherited paint, basic transforms, relation connectors, inferred rect/text and line/text SVG grid tables, semantic tables, and `foreignObject` table frame sizing/alignment plus alpha fills and text runs.
 - The Python converter remains the fuller reference implementation for complex SVG features such as paths, images, advanced CSS, clipping, markers, and richer table extraction.
 
@@ -121,6 +122,7 @@ Export targets:
 
 - `svg`: canonical source.
 - `svgraph.json`: full SVGraph.
+- `svgraph-sidecar.json`: semantic sidecar with metadata, dependencies, coverage, and presentation package state.
 - `svgraph-presentation.json`: presentation/package projection.
 - `drawingml.xml`: current fragment converter output.
 - `pptx`: full package emitter output.

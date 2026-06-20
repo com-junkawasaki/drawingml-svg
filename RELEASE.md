@@ -43,6 +43,7 @@ for expected in [
     "https://com-junkawasaki.github.io/svgraph/",
     "Download SVG",
     "Download SVGraph",
+    "Download Sidecar",
 ]:
     assert expected in html
 for forbidden in [

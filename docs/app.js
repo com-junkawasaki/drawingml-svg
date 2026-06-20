@@ -500,6 +500,16 @@ function buildSVGraph(svgText) {
         presentation,
     };
 }
+function buildSVGraphSidecar(svgraph) {
+    return {
+        kind: "svgraph-sidecar",
+        version: svgraph.version,
+        metadata: svgraph.metadata,
+        dependencies: svgraph.dependencies,
+        coverage: svgraph.coverage,
+        presentation: svgraph.presentation,
+    };
+}
 function svgToPptx(svgText) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(svgText, "image/svg+xml");
@@ -3398,6 +3408,10 @@ mustElement("downloadSvgBtn").addEventListener("click", () => {
 mustElement("downloadSVGraphBtn").addEventListener("click", () => {
     if (state.svgraph)
         downloadText("svgraph.json", JSON.stringify(state.svgraph, null, 2));
+});
+mustElement("downloadSidecarBtn").addEventListener("click", () => {
+    if (state.svgraph)
+        downloadText("svgraph-sidecar.json", JSON.stringify(buildSVGraphSidecar(state.svgraph), null, 2));
 });
 mustElement("downloadDrawingMlBtn").addEventListener("click", () => {
     downloadBlob("svgraph-drawingml.xml", new Blob([svgToDrawingMl(source.value)], { type: "application/xml;charset=utf-8" }));
