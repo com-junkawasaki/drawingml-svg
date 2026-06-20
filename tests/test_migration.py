@@ -307,6 +307,24 @@ def test_pages_artifacts_use_svgraph_naming() -> None:
     assert "downloadPptxsvg" not in public_assets
 
 
+def test_pages_workflow_deploys_svgraph_docs_site() -> None:
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+    html = (root / "docs" / "index.html").read_text(encoding="utf-8")
+
+    assert "name: Pages" in workflow
+    assert 'branches: ["main"]' in workflow
+    assert "pages: write" in workflow
+    assert "id-token: write" in workflow
+    assert "uses: actions/configure-pages@v6" in workflow
+    assert "uses: actions/upload-pages-artifact@v4" in workflow
+    assert "path: docs" in workflow
+    assert "uses: actions/deploy-pages@v4" in workflow
+    assert (root / "docs" / ".nojekyll").is_file()
+    assert "<title>SVGraph Editor</title>" in html
+    assert "https://com-junkawasaki.github.io/drawingml-svg" not in workflow + html
+
+
 def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
     root = Path(__file__).resolve().parents[1]
     pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
