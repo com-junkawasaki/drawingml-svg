@@ -89,6 +89,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Documented that legacy `drawingml_svg.ir` exports stay limited to pre-SVGraph IR aliases while canonical `SVGraph*` types live in `svgraph.model`.
 - Added migration guard tests that keep legacy names out of top-level APIs, Pages artifacts, and non-compatibility code paths.
 - Added OSS project guidance, including contributing, security, code of conduct, issue templates, PR template, and README status links.
+- Aligned the pull request impact checklist with SVGraph model, presentation/package, PPTX, browser editor, analyzer, and metadata surfaces.
 - Added Dependabot configuration for GitHub Actions, Python, and npm/web dependency update pull requests.
 - Added a release checklist covering changelog, version, local checks, PPTX smoke verification, wheel smoke checks, and GitHub release notes.
 - Expanded DrawingML preset coverage for common polygons, arrows, symbols, flowchart shapes, ribbons, callouts, and action buttons.

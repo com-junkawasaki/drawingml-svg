@@ -255,6 +255,12 @@ def test_github_templates_cover_canonical_svgraph_surfaces() -> None:
     assert advisory_url in security
     assert "SVGraph JSON payload" in security
     assert "generated PPTX package" in security
+    assert "## SVGraph impact" in pr_template
+    assert "SVGraph model or metadata changed" in pr_template
+    assert "SVGraph presentation/package projection changed" in pr_template
+    assert "PresentationML/PPTX export changed" in pr_template
+    assert "Browser editor or Pages artifact changed" in pr_template
+    assert "## Converter impact" not in pr_template
     assert "tmp/svgraph-coverage.pptx" in pr_template
     for source in [*templates.values(), pr_template, security]:
         assert "drawingml-svg" not in source
@@ -1091,6 +1097,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "svgraph.coverage",
         "svgraph.pptx",
         "contributing, security, code of conduct, issue templates, PR template",
+        "pull request impact checklist with SVGraph model, presentation/package, PPTX, browser editor",
         "browser editor source, committed Pages artifact, and examples",
         "published sdist",
         "`slide_size` and `text_styles`",

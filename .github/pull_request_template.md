@@ -2,11 +2,15 @@
 
 -
 
-## Converter impact
+## SVGraph impact
 
+- [ ] SVGraph model or metadata changed
+- [ ] SVGraph presentation/package projection changed
 - [ ] SVG to DrawingML behavior changed
 - [ ] DrawingML to SVG behavior changed
+- [ ] PresentationML/PPTX export changed
 - [ ] Analyzer behavior changed
+- [ ] Browser editor or Pages artifact changed
 - [ ] Documentation or project metadata only
 
 ## Testing
