@@ -488,6 +488,9 @@ line</text>
     <circle id="pattern-fill" cx="1080" cy="640" r="32" style="fill:url(#pattern-fallback);stroke:#334155"/>
     <use href="#reused-chip" class="accent-use" x="360" y="400"/>
     <use id="symbol-viewbox-use" href="#viewbox-icon" x="500" y="385" width="80" height="40" preserveAspectRatio="xMaxYMax slice"/>
+    <svg id="nested-viewbox" x="610" y="385" width="80" height="40" viewBox="0 0 20 10" preserveAspectRatio="none">
+      <rect x="50%" y="50%" width="25%" height="50%" fill="#0f766e" stroke="#064e3b" stroke-width="1"/>
+    </svg>
     <g transform="translate(90 390) scale(1.5)">
       <rect id="scaled" width="160" height="80" style="fill:#dbeafe;stroke:#2563eb"/>
     </g>
@@ -809,27 +812,35 @@ function extractShapes(root: Element): Shape[] {
   const css = collectCss(scopeRoot);
   const refs = collectRefs(scopeRoot);
   const viewport = svgViewport(scopeRoot);
+  const rootMatrix = localName(scopeRoot) === "svg" ? viewBoxMatrix(scopeRoot, renderedSvgViewport(scopeRoot, viewport)) : [1, 0, 0, 1, 0, 0] as Matrix;
   let nextId = 2;
-  const walk = (element: Element, matrix: Matrix, inheritedStyle: SvgStyle, refStack: Set<string>) => {
+  const walk = (element: Element, matrix: Matrix, inheritedStyle: SvgStyle, refStack: Set<string>, currentViewport: Viewport) => {
     const tag = localName(element);
     if (tag === "metadata" || tag === "defs" || tag === "style") return;
-    const ownStyle = computedStyle(element, inheritedStyle, css, refs, viewport);
-    const ownMatrix = multiply(matrix, styleTransformMatrix(element, ownStyle, viewport));
+    const ownStyle = computedStyle(element, inheritedStyle, css, refs, currentViewport);
+    let ownMatrix = multiply(matrix, styleTransformMatrix(element, ownStyle, currentViewport));
+    let childViewport = currentViewport;
+    if (tag === "svg") {
+      childViewport = renderedSvgViewport(element, currentViewport);
+      ownMatrix = multiply(multiply(ownMatrix, [1, 0, 0, 1, geom(element, "x", "x", currentViewport), geom(element, "y", "y", currentViewport)]), viewBoxMatrix(element, childViewport));
+    }
     if (tag === "use") {
       const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
       const refId = href.startsWith("#") ? href.slice(1) : "";
       const ref = refs.get(refId);
       if (ref && !refStack.has(refId)) {
-        let useMatrix = multiply(ownMatrix, [1, 0, 0, 1, geom(element, "x", "x", viewport), geom(element, "y", "y", viewport)]);
+        let useMatrix = multiply(ownMatrix, [1, 0, 0, 1, geom(element, "x", "x", currentViewport), geom(element, "y", "y", currentViewport)]);
+        let refViewport = currentViewport;
         if (["svg", "symbol"].includes(localName(ref))) {
-          useMatrix = multiply(useMatrix, viewBoxMatrix(ref, useViewport(ref, element, viewport), element.getAttribute("preserveAspectRatio")));
+          refViewport = useViewport(ref, element, currentViewport);
+          useMatrix = multiply(useMatrix, viewBoxMatrix(ref, refViewport, element.getAttribute("preserveAspectRatio")));
         }
-        walk(ref, useMatrix, ownStyle, new Set([...refStack, refId]));
+        walk(ref, useMatrix, ownStyle, new Set([...refStack, refId]), refViewport);
       }
       return;
     }
     if (tag === "g" && (element.getAttribute("data-kind") === "table" || element.getAttribute("data-role") === "table")) {
-      const table = tableFromGroup(element, ownMatrix, nextId, ownStyle, css, viewport);
+      const table = tableFromGroup(element, ownMatrix, nextId, ownStyle, css, childViewport);
       if (table) {
         shapes.push(table);
         nextId += 1;
@@ -837,25 +848,25 @@ function extractShapes(root: Element): Shape[] {
       return;
     }
     if (tag === "foreignObject") {
-      const tableShapes = shapesFromForeignObject(element, ownMatrix, nextId, ownStyle, css, viewport);
+      const tableShapes = shapesFromForeignObject(element, ownMatrix, nextId, ownStyle, css, childViewport);
       if (tableShapes.length) {
         shapes.push(...tableShapes);
         nextId += tableShapes.length;
       }
       return;
     }
-    const rawShape = elementToShape(element, ownMatrix, ownStyle, nextId, viewport);
-    const clip = rectClipBounds(rawShape, ownStyle, refs, ownMatrix, viewport);
+    const rawShape = tag === "svg" ? null : elementToShape(element, ownMatrix, ownStyle, nextId, childViewport);
+    const clip = rectClipBounds(rawShape, ownStyle, refs, ownMatrix, childViewport);
     const shape = applyClip(rawShape, clip);
     if (shape) {
       shapes.push(shape);
       nextId += 1;
     }
-    for (const child of Array.from(element.children)) walk(child, ownMatrix, ownStyle, refStack);
+    for (const child of Array.from(element.children)) walk(child, ownMatrix, ownStyle, refStack, childViewport);
   };
   const baseStyle = scopeRoot === root ? {} : computedStyle(scopeRoot, {}, css, refs, viewport);
   const rootStyle = computedStyle(root, baseStyle, css, refs, viewport);
-  for (const child of Array.from(root.children)) walk(child, [1, 0, 0, 1, 0, 0], rootStyle, new Set());
+  for (const child of Array.from(root.children)) walk(child, rootMatrix, rootStyle, new Set(), viewport);
   return shapes;
 }
 
@@ -2659,6 +2670,13 @@ function svgViewport(root: Element): Viewport {
 
 function defaultViewport(): Viewport {
   return { width: 1280, height: 720 };
+}
+
+function renderedSvgViewport(element: Element, parentViewport: Viewport = defaultViewport()): Viewport {
+  const box = viewBoxValues(element);
+  const width = optionalGeom(element, "width", "x", parentViewport) ?? box?.width ?? defaultViewport().width;
+  const height = optionalGeom(element, "height", "y", parentViewport) ?? box?.height ?? defaultViewport().height;
+  return { width: width > 0 ? width : (box?.width ?? defaultViewport().width), height: height > 0 ? height : (box?.height ?? defaultViewport().height) };
 }
 
 function viewBoxValues(element: Element): { minX: number; minY: number; width: number; height: number } | null {
