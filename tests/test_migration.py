@@ -1163,10 +1163,18 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "function wordSpacingHasNoEffect" in generated
         assert "function wordSpacingIsSupported" in generated
         assert "style.letterSpacing != null || style.textLength != null" in generated
+        assert "function renderingQualityHintHasNoEffect" in generated
+        assert '"crisp-edges"' in generated
+        assert '"optimizelegibility"' in generated
+        assert '"pixelated"' in generated
         assert 'id="length-glyphs-text"' in generated
         assert 'lengthAdjust=" SPACINGANDGLYPHS "' in generated
         assert 'id="word-spacing-text"' in generated
         assert 'id="inherited-word-spacing"' in generated
+        assert 'text-rendering="optimizeLegibility"' in generated
+        assert 'shape-rendering="crisp-edges"' in generated
+        assert 'image-rendering="pixelated"' in generated
+        assert 'color-rendering="optimizeQuality"' in generated
         assert 'decoration.includes("wavy")' in generated
         assert 'name === "text-decoration-style"' in generated
         assert "textDecorationStyleTokens.has(normalized)" in generated

@@ -67,6 +67,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Aligned browser `initial` and `unset` CSS keyword handling with SVG defaults for converted style properties.
 - Aligned browser `textLength` spacing support with Python for absolute lengths, `spacingAndGlyphs`, and normal `letter-spacing` fallback.
 - Aligned browser `word-spacing` coverage diagnostics with Python for no-op text, local text/tspan support, and inherited layout warnings.
+- Aligned browser rendering quality hint diagnostics with Python for `crisp-edges`, `optimizeLegibility`, and `pixelated` no-op values.
 - Added browser assistant patch proposal validation for SVGraph-level edit operations before applying LLM suggestions.
 - Added browser assistant patch diff preview rows for SVGraph data and metadata edits before applying LLM suggestions.
 - Added browser assistant patch apply support for validated SVGraph data and metadata edits back into the canonical SVG source.

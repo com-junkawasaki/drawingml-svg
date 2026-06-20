@@ -613,10 +613,10 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
       .css-overflow-frame { x: 1120px; y: 610px; width: 80px; height: 40px; }
     </style>
     <rect width="1280" height="720" fill="#ffffff" stroke="none"/>
-    <text x="90" y="90" style="font-size:40;font-family:Arial;font-weight:700;fill:#17202a">Browser SVG coverage</text>
+    <text x="90" y="90" text-rendering="optimizeLegibility" style="font-size:40;font-family:Arial;font-weight:700;fill:#17202a">Browser SVG coverage</text>
     <polygon id="tri" points="120,170 300,170 210,315"/>
     <polyline id="zig" points="390,170 460,250 530,170 600,250" style="fill:none;stroke:#dc2626;stroke-linejoin:miter;stroke-miterlimit:6"/>
-    <path id="box-path" d="M 690 170 L 900 170 L 900 315 L 690 315 Z" style="fill:#dcfce7;stroke:#15803d"/>
+    <path id="box-path" d="M 690 170 L 900 170 L 900 315 L 690 315 Z" shape-rendering="crisp-edges" style="fill:#dcfce7;stroke:#15803d"/>
     <rect class="css-geom-rect"/>
     <circle class="css-geom-circle"/>
     <line class="css-geom-line"/>
@@ -626,11 +626,11 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <rect id="negative-radius-fallback" x="900" y="340" width="90" height="44" rx="-3" ry="8" style="fill:#fef9c3;stroke:#854d0e"/>
     <line id="marked-line" x1="980" y1="185" x2="1130" y2="260" style="stroke:#7c3aed;stroke-width:8;marker-end:url(#arrow)"/>
     <line id="non-arrow-marker-line" x1="980" y1="280" x2="1130" y2="300" style="stroke:#475569;stroke-width:5;marker-end:url(#dot-marker)"/>
-    <image id="pixel" class="css-image-frame" preserveAspectRatio="xMidYMid slice" opacity="35%" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="/>
+    <image id="pixel" class="css-image-frame" preserveAspectRatio="xMidYMid slice" opacity="35%" image-rendering="pixelated" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="/>
     <circle class="css-circle" cx="1130" cy="388" r="48"/>
     <rect id="clipped-bar" x="930" y="500" width="250" height="70" style="fill:#fecaca;stroke:#991b1b;clip-path:url(#bar-clip)"/>
     <ellipse id="bbox-clipped-ellipse" cx="1090" cy="560" rx="80" ry="50" style="fill:#ede9fe;stroke:#6d28d9;clip-path:url(#bbox-clip)"/>
-    <rect id="css-colors" x="740" y="615" width="120" height="50" style="color:orange;fill:currentColor;stroke:hsl(210 100% 50%)"/>
+    <rect id="css-colors" x="740" y="615" width="120" height="50" color-rendering="optimizeQuality" style="color:orange;fill:currentColor;stroke:hsl(210 100% 50%)"/>
     <rect id="display-hidden" x="875" y="615" width="34" height="50" style="display:none;fill:#111827"/>
     <g id="visibility-hidden" visibility="hidden"><rect id="visibility-visible" x="910" y="615" width="34" height="50" visibility="visible" style="fill:#ffffff;stroke:#0f766e;stroke-width:3"/></g>
     <g class="var-theme"><rect class="inherit-box" x="910" y="88" width="105" height="52"/></g>
@@ -1762,7 +1762,7 @@ function coverageAttributeIsSupportedOrNoop(element: Element, tag: string, name:
 function coverageAttributeHasNoEffect(element: Element, name: string, value: string): boolean {
   const normalized = value.trim().toLowerCase();
   if (!normalized) return true;
-  if (["color-rendering", "image-rendering", "shape-rendering", "text-rendering"].includes(name)) return ["auto", "optimizequality", "optimizespeed", "geometricprecision", "crispedges", "legibility"].includes(normalized);
+  if (["color-rendering", "image-rendering", "shape-rendering", "text-rendering"].includes(name)) return renderingQualityHintHasNoEffect(normalized);
   if (["clip-path", "filter", "mask"].includes(name)) return normalized === "none";
   if (["clip-rule", "fill-rule"].includes(name)) return normalized === "nonzero";
   if (name === "isolation") return normalized === "auto";
@@ -1789,6 +1789,10 @@ function coverageAttributeHasNoEffect(element: Element, name: string, value: str
   if (name === "opacity") return normalized === "1" || normalized === "100%";
   if (name === "pathLength") return !element.getAttribute("stroke-dasharray");
   return false;
+}
+
+function renderingQualityHintHasNoEffect(value: string): boolean {
+  return ["auto", "crisp-edges", "crispedges", "geometricprecision", "optimizelegibility", "optimizequality", "optimizespeed", "pixelated"].includes(value);
 }
 
 function zeroLengthOrPercentage(value: string): boolean {
