@@ -3313,7 +3313,13 @@ function renderPanel() {
       </div>`;
     }
     else if (state.tab === "slides") {
-        panel.innerHTML = `<div class="list">${state.presentation.slides.map((slide) => `<div class="item"><div class="item-title">${escapeHtml(slide.slide_id)}${slide.title ? ` · ${escapeHtml(slide.title)}` : ""}</div><div class="item-meta">${escapeHtml(slide.node_id)} · viewBox ${slide.view_box.join(" ")}</div></div>`).join("")}</div>`;
+        panel.innerHTML = `
+      <div class="list">
+        ${state.presentation.slides.map((slide) => `<div class="item"><div class="item-title">${escapeHtml(slide.slide_id)}${slide.title ? ` · ${escapeHtml(slide.title)}` : ""}</div><div class="item-meta">${escapeHtml(slide.node_id)} · viewBox ${slide.view_box.join(" ")}</div></div>`).join("")}
+      </div>
+      <div class="list" style="margin-top:12px">
+        ${state.presentation.parts.map((part) => `<div class="item"><div class="item-title">${escapeHtml(part.kind)} · ${escapeHtml(part.part_name)}</div><div class="item-meta">${escapeHtml(part.content_type)}${part.source_node_id ? ` · ${escapeHtml(part.source_node_id)}` : ""}</div></div>`).join("")}
+      </div>`;
     }
     else if (state.tab === "assistant") {
         panel.innerHTML = `

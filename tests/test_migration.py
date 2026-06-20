@@ -924,6 +924,8 @@ def test_web_runtime_accepts_canonical_svgraph_presentation_metadata_keys() -> N
         assert "const masterParts = (masters.length ? masters : [null]).map" in generated
         assert "presentation.masters.length" in generated
         assert "presentation.layouts.length" in generated
+        assert "state.presentation.parts.map" in generated
+        assert "part.content_type" in generated
         assert "contentTypes(slideXmls.length, masterCount, layoutCount, true)" in generated
         assert "presentationRels(slideXmls.length, masterCount)" in generated
         assert "slideLayoutRel(layoutIndex)" in generated
@@ -1039,6 +1041,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "Python PPTX custom XML sidecar preservation for SVGraph presentation metadata",
         "browser PPTX custom XML sidecar preservation for SVGraph presentation metadata",
         "SVGraph presentation package blueprint custom XML sidecar part",
+        "browser Slides pane package blueprint preview",
         "web editor design package part schema documentation",
     ]:
         assert expected in changelog
