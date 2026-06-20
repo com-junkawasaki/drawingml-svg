@@ -356,6 +356,27 @@ def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
     assert "tmp/wheel-legacy-svgraph.json" in workflow
 
 
+def test_release_checklist_rebuilds_and_packages_svgraph_web_editor() -> None:
+    release = (Path(__file__).resolve().parents[1] / "RELEASE.md").read_text(encoding="utf-8")
+
+    for expected in [
+        "npm ci",
+        "npm run build:web",
+        "git diff --exit-code docs/app.js",
+        'sdist_path = glob.glob("tmp/dist/svgraph-*.tar.gz")[0]',
+        '"docs/index.html"',
+        '"docs/app.js"',
+        '"docs/.nojekyll"',
+        '"docs/svgraph-web-editor.md"',
+        '"web/app.ts"',
+        '"package.json"',
+        '"package-lock.json"',
+        '"tsconfig.web.json"',
+        'assert f"{root}/{expected}" in names',
+    ]:
+        assert expected in release
+
+
 def test_release_checklist_smokes_canonical_svgraph_pptx_export() -> None:
     release = (Path(__file__).resolve().parents[1] / "RELEASE.md").read_text(encoding="utf-8")
 

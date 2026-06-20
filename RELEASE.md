@@ -7,6 +7,14 @@ Use this checklist when publishing a new `svgraph` release.
 - Confirm `CHANGELOG.md` has a dated section for the release and an empty `Unreleased` section for the next cycle.
 - Confirm `pyproject.toml` and `package.json` have the intended version.
 - Run the local checks from `CONTRIBUTING.md`.
+- Rebuild the browser editor artifact and confirm the committed Pages output is current:
+
+```bash
+npm ci
+npm run build:web
+git diff --exit-code docs/app.js
+```
+
 - Regenerate and inspect the PPTX smoke fixture:
 
 ```bash
@@ -22,6 +30,26 @@ python -m zipfile --test tmp/svgraph-complex.pptx
 python -m build --sdist --wheel -o tmp/dist
 test -f tmp/dist/svgraph-*.tar.gz
 test -f tmp/dist/svgraph-*.whl
+python - <<'PY'
+import glob
+import tarfile
+
+sdist_path = glob.glob("tmp/dist/svgraph-*.tar.gz")[0]
+with tarfile.open(sdist_path) as sdist:
+    names = set(sdist.getnames())
+root = next(name for name in names if name.endswith("/pyproject.toml")).rsplit("/", 1)[0]
+for expected in [
+    "docs/index.html",
+    "docs/app.js",
+    "docs/.nojekyll",
+    "docs/svgraph-web-editor.md",
+    "web/app.ts",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.web.json",
+]:
+    assert f"{root}/{expected}" in names
+PY
 ```
 
 - Install the wheel in a clean virtual environment and run CLI smoke checks:
