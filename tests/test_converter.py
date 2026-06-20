@@ -173,6 +173,19 @@ def test_cli_version_writes_installed_package_version(capsys) -> None:
     assert captured.out == "drawingml-svg 0.1.0\n"
 
 
+def test_cli_help_lists_svgraph_commands_and_hides_legacy_aliases(capsys) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        cli_main(["--help"])
+
+    captured = capsys.readouterr()
+
+    assert excinfo.value.code == 0
+    assert "svgraph" in captured.out
+    assert "svgraph-presentation" in captured.out
+    assert "pptxsvg" not in captured.out
+    assert "{svg2dml,dml2svg,svg2pptx,analyze,ir" not in captured.out
+
+
 @pytest.mark.parametrize("executable", ["svg2dml", "dml2svg", "drawingml-svg-analyze"])
 def test_cli_alias_version_writes_installed_package_version(monkeypatch, capsys, executable: str) -> None:
     monkeypatch.setattr("sys.argv", [executable, "--version"])
@@ -250,6 +263,17 @@ def test_cli_alias_invocation_uses_executable_name(tmp_path, monkeypatch) -> Non
     assert cli_main() == 0
     assert output.is_file()
     assert "<p:sp>" in output.read_text(encoding="utf-8")
+
+
+def test_cli_legacy_svgraph_commands_still_work(tmp_path, capsys) -> None:
+    source = tmp_path / "input.svg"
+    source.write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><g data-slide="1"/></svg>', encoding="utf-8")
+
+    assert cli_main(["ir", str(source)]) == 0
+    assert '"kind": "svgraph"' in capsys.readouterr().out
+
+    assert cli_main(["pptxsvg", str(source)]) == 0
+    assert '"kind": "svgraph-presentation"' in capsys.readouterr().out
 
 
 def test_cli_reports_missing_input_without_traceback(tmp_path, capsys) -> None:

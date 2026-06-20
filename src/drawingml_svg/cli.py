@@ -14,26 +14,24 @@ from .pptx import svg_to_pptx
 from .svgraph import svg_svgraph_presentation_to_json, svg_svgraph_to_json
 
 
+VISIBLE_COMMANDS = ("svg2dml", "dml2svg", "svg2pptx", "analyze", "svgraph", "svgraph-presentation")
+LEGACY_COMMANDS = ("ir", "pptxsvg")
+REPORT_COMMANDS = {"analyze", "ir", "svgraph", "svgraph-presentation", "pptxsvg"}
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = _normalize_argv(argv)
     parser = argparse.ArgumentParser(prog="drawingml-svg")
     parser.add_argument("--version", action="version", version=f"%(prog)s {_package_version()}")
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="command", metavar="{" + ",".join(VISIBLE_COMMANDS) + "}")
     subparsers.required = True
 
-    for command in (
-        "svg2dml",
-        "dml2svg",
-        "svg2pptx",
-        "analyze",
-        "ir",
-        "svgraph",
-        "svgraph-presentation",
-        "pptxsvg",
-    ):
+    for command in (*VISIBLE_COMMANDS, *LEGACY_COMMANDS):
         sub = subparsers.add_parser(command)
+        if command in LEGACY_COMMANDS:
+            subparsers._choices_actions = [action for action in subparsers._choices_actions if action.dest != command]
         sub.add_argument("input", nargs="?", help="Input file. Reads stdin when omitted.")
-        if command not in {"analyze", "ir", "svgraph", "svgraph-presentation", "pptxsvg"}:
+        if command not in REPORT_COMMANDS:
             sub.add_argument("-o", "--output", help="Output file. Writes stdout when omitted.")
 
     args = parser.parse_args(argv)
