@@ -367,6 +367,7 @@ def test_release_checklist_rebuilds_and_packages_svgraph_web_editor() -> None:
 
     for expected in [
         "npm ci",
+        "npm run check:web",
         "npm run build:web",
         "git diff --exit-code docs/app.js",
         'sdist_path = glob.glob("tmp/dist/svgraph-*.tar.gz")[0]',
@@ -580,6 +581,7 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "`docs/app.js` is the compiled Pages artifact." in readme
     assert "Python or server APIs" in readme
     assert "npm ci" in readme
+    assert "npm run check:web" in readme
     assert "npm run build:web" in readme
     assert package_metadata["scripts"]["build:web"] == "tsc -p tsconfig.web.json"
     assert package_metadata["scripts"]["check:web"] == "tsc -p tsconfig.web.json --noEmit"

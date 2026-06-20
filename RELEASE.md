@@ -11,6 +11,7 @@ Use this checklist when publishing a new `svgraph` release.
 
 ```bash
 npm ci
+npm run check:web
 npm run build:web
 git diff --exit-code docs/app.js
 ```

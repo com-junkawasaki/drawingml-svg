@@ -35,6 +35,7 @@ The GitHub Pages editor runs a TypeScript converter entirely in the browser:
 
 ```bash
 npm ci
+npm run check:web
 npm run build:web
 ```
 
