@@ -184,6 +184,9 @@ type TextShape = BaseShape & {
   italic: boolean;
   fontVariant: string | null;
   underline: boolean;
+  underlineColor: string | null;
+  underlineAlpha: number | null;
+  underlineThickness: number | null;
   strike: boolean;
   baselineShift: string | null;
   letterSpacing: number | null;
@@ -207,6 +210,9 @@ type TextRun = {
   fontVariant: string | null;
   underline: boolean;
   underlineStyle: string | null;
+  underlineColor: string | null;
+  underlineAlpha: number | null;
+  underlineThickness: number | null;
   strike: boolean;
   baselineShift: string | null;
   letterSpacing: number | null;
@@ -301,6 +307,9 @@ type SvgStyle = {
   fontStyle?: string;
   fontVariant?: string | null;
   textDecoration?: string;
+  textDecorationColor?: string | null;
+  textDecorationAlpha?: number | null;
+  textDecorationThickness?: number | null;
   textTransform?: string | null;
   textAnchor?: string | null;
   textBaseline?: string | null;
@@ -464,7 +473,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <rect id="alpha-shape" x="580" y="615" width="120" height="50" style="fill:rgba(239,68,68,0.5);stroke:#2563ebcc;stroke-width:6;fill-opacity:0.8;stroke-opacity:0.5"/>
     <line id="dash-line" x1="120" y1="650" x2="300" y2="650" style="stroke:#0f766e;stroke-width:8;stroke-dasharray:18 10;stroke-dashoffset:5;stroke-linecap:round;stroke-linejoin:bevel"/>
     <text id="rich-text" x="330" y="660" rotate="6" style="font-size:24;font-family:Arial;fill:#111827;font-variant:small-caps;text-transform:capitalize">rich <tspan style="fill:#dc2626;font-weight:700;baseline-shift:super;text-transform:uppercase">red</tspan><tspan style="fill:#2563eb;font-style:italic;text-decoration:underline line-through;letter-spacing:2px;text-transform:none"> blue</tspan></text>
-    <text id="anchored-text" x="680" y="660" style="font-size:24;font-family:Arial;fill:#0f172a;text-anchor:middle;dominant-baseline:middle">Centered</text>
+    <text id="anchored-text" x="680" y="660" style="font-size:24;font-family:Arial;fill:#0f172a;text-anchor:middle;dominant-baseline:middle;text-decoration-line:underline;text-decoration-color:#dc2626;text-decoration-thickness:3px">Centered</text>
     <text id="preserve-text" x="90" y="355" xml:space="preserve" style="font-size:22;font-family:Arial;fill:#64748b">  padded  <tspan style="fill:#0f766e"> kept </tspan></text>
     <text id="length-text" x="735" y="95" textLength="170" lengthAdjust="spacing" style="font-size:22;font-family:Arial;fill:#334155">Wide gap</text>
     <text id="font-shorthand" class="font-short-title" x="760" y="135">Font short</text>
@@ -948,6 +957,9 @@ function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: n
       italic: isItalic(style),
       fontVariant: style.fontVariant ?? null,
       underline: hasUnderline(style),
+      underlineColor: style.textDecorationColor ?? null,
+      underlineAlpha: style.textDecorationAlpha ?? null,
+      underlineThickness: style.textDecorationThickness ?? null,
       strike: hasStrike(style),
       baselineShift: style.baselineShift ?? null,
       letterSpacing: effectiveLetterSpacing(style, text, fontSize),
@@ -1273,6 +1285,9 @@ function htmlCaptionShape(caption: Element, style: SvgStyle, id: number, x: numb
     italic: isItalic(style),
     fontVariant: style.fontVariant ?? null,
     underline: hasUnderline(style),
+    underlineColor: style.textDecorationColor ?? null,
+    underlineAlpha: style.textDecorationAlpha ?? null,
+    underlineThickness: style.textDecorationThickness ?? null,
     strike: hasStrike(style),
     baselineShift: style.baselineShift ?? null,
     letterSpacing: style.letterSpacing ?? null,
@@ -1356,6 +1371,8 @@ function htmlElementStyle(element: Element, inheritedStyle: SvgStyle, css: CssRu
   const fontStyle = value("font-style");
   const fontVariant = value("font-variant");
   const textDecoration = [value("text-decoration-line") ?? value("text-decoration"), value("text-decoration-style")].filter(Boolean).join(" ") || null;
+  const textDecorationColor = value("text-decoration-color");
+  const textDecorationThickness = value("text-decoration-thickness");
   const direction = value("direction");
   const letterSpacing = value("letter-spacing");
   if (color != null) next.color = parseCssColor(color, next) ?? next.color ?? null;
@@ -1417,6 +1434,7 @@ function htmlElementStyle(element: Element, inheritedStyle: SvgStyle, css: CssRu
   if (textDecoration != null) next.textDecoration = textDecoration;
   if (tag === "u") next.textDecoration = addTextDecoration(next.textDecoration, "underline");
   if (["s", "strike", "del"].includes(tag)) next.textDecoration = addTextDecoration(next.textDecoration, "line-through");
+  applyTextDecorationDetails(next, textDecoration, textDecorationColor, textDecorationThickness, 14);
   if (tag === "sup") next.baselineShift = "super";
   if (tag === "sub") next.baselineShift = "sub";
   const inlineShift = inlineBaselineShift(verticalAlign);
@@ -1599,6 +1617,9 @@ function htmlTextRun(text: string, style: SvgStyle): TextRun {
     fontVariant: style.fontVariant ?? null,
     underline: hasUnderline(style),
     underlineStyle: htmlUnderlineStyle(style),
+    underlineColor: style.textDecorationColor ?? null,
+    underlineAlpha: style.textDecorationAlpha ?? null,
+    underlineThickness: style.textDecorationThickness ?? null,
     strike: hasStrike(style),
     baselineShift: style.baselineShift ?? null,
     letterSpacing: style.letterSpacing ?? null,
@@ -1654,6 +1675,9 @@ function textRuns(element: Element, inheritedStyle: SvgStyle, viewport: Viewport
       fontVariant: style.fontVariant ?? null,
       underline: hasUnderline(style),
       underlineStyle: null,
+      underlineColor: style.textDecorationColor ?? null,
+      underlineAlpha: style.textDecorationAlpha ?? null,
+      underlineThickness: style.textDecorationThickness ?? null,
       strike: hasStrike(style),
       baselineShift: style.baselineShift ?? null,
       letterSpacing: effectiveLetterSpacing(style, transformed, style.fontSize ?? inheritedStyle.fontSize ?? 18),
@@ -1745,6 +1769,53 @@ function hasUnderline(style: SvgStyle): boolean {
 function hasStrike(style: SvgStyle): boolean {
   return (style.textDecoration || "").toLowerCase().split(/\s+/).includes("line-through");
 }
+
+function applyTextDecorationDetails(style: SvgStyle, decoration: string | null, colorValue: string | null, thicknessValue: string | null, basis: number): void {
+  if (!hasUnderline(style)) return;
+  const colorToken = colorValue ?? textDecorationColorToken(decoration);
+  if (colorToken) {
+    const color = parseCssColor(colorToken, style);
+    if (color) {
+      style.textDecorationColor = color;
+      style.textDecorationAlpha = cssColorAlpha(colorToken);
+    }
+  }
+  if (hasStrike(style)) return;
+  const thicknessToken = thicknessValue ?? textDecorationThicknessToken(decoration);
+  if (!thicknessToken) return;
+  const normalized = thicknessToken.trim().toLowerCase();
+  if (!normalized || normalized === "auto" || normalized === "from-font") return;
+  const thickness = parseCssLength(normalized, basis, Number.NaN);
+  if (Number.isFinite(thickness)) style.textDecorationThickness = Math.max(0, thickness);
+}
+
+function textDecorationColorToken(value: string | null): string | null {
+  if (!value) return null;
+  for (const token of cssValueTokens(value)) {
+    const normalized = token.toLowerCase();
+    if (textDecorationLineTokens.has(normalized) || textDecorationStyleTokens.has(normalized) || normalized === "auto" || normalized === "from-font" || htmlCssLength(normalized, 0) != null) {
+      continue;
+    }
+    if (normalized === "currentcolor" || parseCssColor(token, {})) return token;
+  }
+  return null;
+}
+
+function textDecorationThicknessToken(value: string | null): string | null {
+  if (!value) return null;
+  for (const token of cssValueTokens(value)) {
+    const normalized = token.toLowerCase();
+    if (normalized === "auto" || normalized === "from-font") return token;
+    if (textDecorationLineTokens.has(normalized) || textDecorationStyleTokens.has(normalized) || normalized === "currentcolor" || parseCssColor(token, {})) {
+      continue;
+    }
+    if (htmlCssLength(normalized, 0) != null) return token;
+  }
+  return null;
+}
+
+const textDecorationLineTokens = new Set(["underline", "overline", "line-through", "blink", "none"]);
+const textDecorationStyleTokens = new Set(["solid", "double", "dotted", "dashed", "wavy"]);
 
 function normalizeFontVariant(value: string): string | null {
   const normalized = value.trim().toLowerCase();
@@ -2033,6 +2104,9 @@ function textXml(shape: TextShape): string {
     fontVariant: shape.fontVariant,
     underline: shape.underline,
     underlineStyle: null,
+    underlineColor: shape.underlineColor,
+    underlineAlpha: shape.underlineAlpha,
+    underlineThickness: shape.underlineThickness,
     strike: shape.strike,
     baselineShift: shape.baselineShift,
     letterSpacing: shape.letterSpacing,
@@ -2044,7 +2118,8 @@ function textXml(shape: TextShape): string {
 function textRunXml(run: TextRun): string {
   const attrs = ` lang="en-US" sz="${Math.round(run.fontSize * 100)}"${run.bold ? ' b="1"' : ""}${run.italic ? ' i="1"' : ""}${fontVariantXml(run.fontVariant)}${underlineXml(run)}${run.strike ? ' strike="sngStrike"' : ""}${baselineShiftXml(run.baselineShift)}${letterSpacingXml(run.letterSpacing)}`;
   const parts = run.text.split(/\r\n|\r|\n/);
-  return `${run.breakBefore ? "<a:br/>" : ""}${parts.map((part, index) => `${index > 0 ? "<a:br/>" : ""}<a:r><a:rPr${attrs}>${solidColorXml(run.fill, run.fillAlpha)}<a:latin typeface="${xml(run.fontFamily)}"/></a:rPr><a:t>${xml(part)}</a:t></a:r>`).join("")}`;
+  const runProperties = `${solidColorXml(run.fill, run.fillAlpha)}${underlineChildrenXml(run)}<a:latin typeface="${xml(run.fontFamily)}"/>`;
+  return `${run.breakBefore ? "<a:br/>" : ""}${parts.map((part, index) => `${index > 0 ? "<a:br/>" : ""}<a:r><a:rPr${attrs}>${runProperties}</a:rPr><a:t>${xml(part)}</a:t></a:r>`).join("")}`;
 }
 
 function underlineXml(run: TextRun): string {
@@ -2053,6 +2128,13 @@ function underlineXml(run: TextRun): string {
   if (run.underlineStyle === "dotted") return ' u="dotted"';
   if (run.underlineStyle === "double") return ' u="dbl"';
   return ' u="sng"';
+}
+
+function underlineChildrenXml(run: TextRun): string {
+  if (!run.underline) return "";
+  const fill = run.underlineColor ? `<a:uFill>${solidColorXml(run.underlineColor, run.underlineAlpha)}</a:uFill>` : "";
+  const line = run.underlineThickness != null ? `<a:uLn w="${emu(run.underlineThickness)}"/>` : "";
+  return `${fill}${line}`;
 }
 
 function fontVariantXml(value: string | null): string {
@@ -2654,6 +2736,8 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   const fontStyle = value("font-style");
   const fontVariant = value("font-variant");
   const textDecoration = value("text-decoration-line") ?? value("text-decoration");
+  const textDecorationColor = value("text-decoration-color");
+  const textDecorationThickness = value("text-decoration-thickness");
   const textTransform = value("text-transform");
   const textAnchor = value("text-anchor");
   const textBaseline = value("dominant-baseline") ?? value("alignment-baseline");
@@ -2709,6 +2793,7 @@ function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = [
   if (fontStyle != null) next.fontStyle = fontStyle;
   if (fontVariant != null) next.fontVariant = normalizeFontVariant(fontVariant);
   if (textDecoration != null) next.textDecoration = textDecoration;
+  applyTextDecorationDetails(next, textDecoration, textDecorationColor, textDecorationThickness, percentageBasis("diag", viewport));
   if (textTransform != null) next.textTransform = normalizeTextTransform(textTransform);
   if (textAnchor != null) next.textAnchor = normalizeTextAnchor(textAnchor);
   if (textBaseline != null) next.textBaseline = normalizeTextBaseline(textBaseline);
