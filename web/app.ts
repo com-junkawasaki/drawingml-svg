@@ -2279,6 +2279,7 @@ function rectClipBounds(shape: Shape | null, style: SvgStyle, refs: Map<string, 
   }
   if (units !== "userspaceonuse") return null;
   const clipMatrix = multiply(multiply(matrix, transformMatrix(clip.getAttribute("transform"))), transformMatrix(rect.getAttribute("transform")));
+  if (!matrixKeepsRectAxisAligned(clipMatrix)) return null;
   const box = transformedBox(clipMatrix, geom(rect, "x", "x", viewport), geom(rect, "y", "y", viewport), width, height);
   return box.width > 0 && box.height > 0 ? box : null;
 }
@@ -4744,6 +4745,12 @@ function matrixKeepsRectUpright(matrix: Matrix): boolean {
   const [a, b, c, d] = matrix;
   const epsilon = 1e-9;
   return Math.abs(b) < epsilon && Math.abs(c) < epsilon && a > epsilon && d > epsilon;
+}
+
+function matrixKeepsRectAxisAligned(matrix: Matrix): boolean {
+  const [a, b, c, d] = matrix;
+  const epsilon = 1e-9;
+  return Math.abs(b) < epsilon && Math.abs(c) < epsilon && Math.abs(a) > epsilon && Math.abs(d) > epsilon;
 }
 
 function parsePoints(value: string): [number, number][] {
