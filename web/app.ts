@@ -204,6 +204,12 @@ type SvgStyle = {
   markerEnd?: boolean;
 };
 
+type CssRule = {
+  selector: string;
+  declarations: Record<string, string>;
+  order: number;
+};
+
 type PreparedSlide = {
   xml: string;
   rels: string;
@@ -232,6 +238,13 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     </g>
   </g>
   <g id="coverage-slide" data-kind="slide" data-title="Browser SVG Coverage" style="stroke:#334155;stroke-width:4;fill:#fde68a">
+    <defs>
+      <rect id="reused-chip" width="170" height="70" rx="14"/>
+    </defs>
+    <style>
+      .accent-use { fill: #fce7f3; stroke: #be185d; stroke-width: 5; }
+      g .css-circle { fill: #e0f2fe; stroke: #0369a1; stroke-width: 5; }
+    </style>
     <rect width="1280" height="720" fill="#ffffff" stroke="none"/>
     <text x="90" y="90" style="font-size:40;font-family:Arial;font-weight:700;fill:#17202a">Browser SVG coverage</text>
     <polygon id="tri" points="120,170 300,170 210,315"/>
@@ -239,6 +252,8 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <path id="box-path" d="M 690 170 L 900 170 L 900 315 L 690 315 Z" style="fill:#dcfce7;stroke:#15803d"/>
     <line id="marked-line" x1="980" y1="185" x2="1130" y2="260" style="stroke:#7c3aed;stroke-width:8;marker-end:url(#arrow)"/>
     <image id="pixel" x="980" y="340" width="96" height="96" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/luzQnAAAAABJRU5ErkJggg=="/>
+    <circle class="css-circle" cx="1130" cy="388" r="48"/>
+    <use href="#reused-chip" class="accent-use" x="360" y="400"/>
     <g transform="translate(90 390) scale(1.5)">
       <rect id="scaled" width="160" height="80" style="fill:#dbeafe;stroke:#2563eb"/>
     </g>
@@ -556,14 +571,26 @@ function buildSlideXml(slide: Element, slideIndex: number): string {
 
 function extractShapes(root: Element): Shape[] {
   const shapes: Shape[] = [];
+  const css = collectCss(root);
+  const refs = collectRefs(root);
   let nextId = 2;
-  const walk = (element: Element, matrix: Matrix, inheritedStyle: SvgStyle) => {
+  const walk = (element: Element, matrix: Matrix, inheritedStyle: SvgStyle, refStack: Set<string>) => {
     const tag = localName(element);
     if (tag === "metadata" || tag === "defs" || tag === "style") return;
     const ownMatrix = multiply(matrix, transformMatrix(element.getAttribute("transform")));
-    const ownStyle = computedStyle(element, inheritedStyle);
+    const ownStyle = computedStyle(element, inheritedStyle, css);
+    if (tag === "use") {
+      const href = element.getAttribute("href") || element.getAttribute("xlink:href") || "";
+      const refId = href.startsWith("#") ? href.slice(1) : "";
+      const ref = refs.get(refId);
+      if (ref && !refStack.has(refId)) {
+        const useMatrix = multiply(ownMatrix, [1, 0, 0, 1, num(element, "x"), num(element, "y")]);
+        walk(ref, useMatrix, ownStyle, new Set([...refStack, refId]));
+      }
+      return;
+    }
     if (tag === "g" && (element.getAttribute("data-kind") === "table" || element.getAttribute("data-role") === "table")) {
-      const table = tableFromGroup(element, ownMatrix, nextId, ownStyle);
+      const table = tableFromGroup(element, ownMatrix, nextId, ownStyle, css);
       if (table) {
         shapes.push(table);
         nextId += 1;
@@ -575,10 +602,10 @@ function extractShapes(root: Element): Shape[] {
       shapes.push(shape);
       nextId += 1;
     }
-    for (const child of Array.from(element.children)) walk(child, ownMatrix, ownStyle);
+    for (const child of Array.from(element.children)) walk(child, ownMatrix, ownStyle, refStack);
   };
-  const rootStyle = computedStyle(root, {});
-  for (const child of Array.from(root.children)) walk(child, [1, 0, 0, 1, 0, 0], rootStyle);
+  const rootStyle = computedStyle(root, {}, css);
+  for (const child of Array.from(root.children)) walk(child, [1, 0, 0, 1, 0, 0], rootStyle, new Set());
   return shapes;
 }
 
@@ -719,11 +746,11 @@ function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: n
   return null;
 }
 
-function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedStyle: SvgStyle): TableShape | null {
+function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedStyle: SvgStyle, css: CssRule[] = []): TableShape | null {
   const rects = Array.from(group.querySelectorAll("rect")).filter((rect) => rect.getAttribute("data-kind") === "cell" || rect.getAttribute("data-role") === "cell");
   if (!rects.length) return null;
   const cells = rects.map((rect) => {
-    const style = computedStyle(rect, inheritedStyle);
+    const style = computedStyle(rect, inheritedStyle, css);
     const [x, y] = point(matrix, num(rect, "x"), num(rect, "y"));
     return {
       row: Number(rect.getAttribute("data-row") || 0),
@@ -1155,9 +1182,10 @@ function num(element: Element, name: string, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function computedStyle(element: Element, inherited: SvgStyle): SvgStyle {
-  const declarations = styleDeclarations(element.getAttribute("style"));
-  const value = (name: string): string | null => element.getAttribute(name) ?? declarations[name] ?? null;
+function computedStyle(element: Element, inherited: SvgStyle, css: CssRule[] = []): SvgStyle {
+  const cssDeclarations = matchingCssDeclarations(element, css);
+  const inlineDeclarations = styleDeclarations(element.getAttribute("style"));
+  const value = (name: string): string | null => inlineDeclarations[name] ?? element.getAttribute(name) ?? cssDeclarations[name] ?? null;
   const next: SvgStyle = { ...inherited };
   const fill = value("fill");
   const stroke = value("stroke");
@@ -1182,6 +1210,52 @@ function computedStyle(element: Element, inherited: SvgStyle): SvgStyle {
   if (markerStart != null) next.markerStart = markerStart !== "none";
   if (markerEnd != null) next.markerEnd = markerEnd !== "none";
   return next;
+}
+
+function collectCss(root: Element): CssRule[] {
+  const rules: CssRule[] = [];
+  let order = 0;
+  for (const style of Array.from(root.querySelectorAll("style"))) {
+    const text = style.textContent || "";
+    for (const match of text.matchAll(/([^{}]+)\{([^{}]+)\}/g)) {
+      const selectorText = (match[1] || "").trim();
+      const body = match[2] || "";
+      if (!selectorText || selectorText.startsWith("@")) continue;
+      for (const selector of selectorText.split(",").map((item) => item.trim()).filter(Boolean)) {
+        rules.push({ selector, declarations: styleDeclarations(body), order });
+        order += 1;
+      }
+    }
+  }
+  return rules;
+}
+
+function collectRefs(root: Element): Map<string, Element> {
+  const refs = new Map<string, Element>();
+  const walk = (element: Element) => {
+    const id = element.getAttribute("id");
+    if (id) refs.set(id, element);
+    for (const child of Array.from(element.children)) walk(child);
+  };
+  walk(root);
+  return refs;
+}
+
+function matchingCssDeclarations(element: Element, css: CssRule[]): Record<string, string> {
+  const declarations: Record<string, string> = {};
+  for (const rule of css) {
+    if (!matchesSelector(element, rule.selector)) continue;
+    Object.assign(declarations, rule.declarations);
+  }
+  return declarations;
+}
+
+function matchesSelector(element: Element, selector: string): boolean {
+  try {
+    return element.matches(selector);
+  } catch (_) {
+    return false;
+  }
 }
 
 function styleDeclarations(style: string | null): Record<string, string> {
