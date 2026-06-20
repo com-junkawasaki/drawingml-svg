@@ -5,6 +5,22 @@ on:
   pull_request:
 
 jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Build browser TypeScript
+        run: npm run build:web
+
   test:
     runs-on: ubuntu-latest
     strategy:

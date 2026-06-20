@@ -12,6 +12,13 @@ The app should support:
 - exporting PresentationML/PPTX from deterministic emitters
 - running local Web LLM inference in the browser for semantic assistance, not for final conversion correctness
 
+Current implementation status:
+
+- `web/app.ts` is the TypeScript browser runtime.
+- GitHub Pages loads the compiled `docs/app.js`.
+- The browser can export `.pptx` without Python for the PPTXSVG MVP subset: multi-slide SVG groups, editable rect/ellipse/line/text shapes, relation connectors, and semantic tables.
+- The Python converter remains the fuller reference implementation for complex SVG features such as paths, images, advanced CSS, clipping, markers, and richer table extraction.
+
 ## Product Shape
 
 The first screen is the editor, not a landing page.

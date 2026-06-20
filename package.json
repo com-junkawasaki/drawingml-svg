@@ -1,0 +1,13 @@
+{
+  "name": "drawingml-svg-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:web": "tsc -p tsconfig.web.json",
+    "check:web": "tsc -p tsconfig.web.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

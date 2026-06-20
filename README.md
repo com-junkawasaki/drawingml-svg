@@ -25,6 +25,19 @@ It targets the practical subset needed for generated Office graphics and simple 
 
 The converter supports DrawingML shape fragments and can also emit complete `.pptx` packages from PPTXSVG slide metadata. It does not read complete `.pptx` or `.docx` packages yet.
 
+## Browser-only PPTXSVG
+
+The GitHub Pages editor runs a TypeScript converter entirely in the browser:
+
+- `web/app.ts` builds SVG IR, PPTXSVG package IR, PresentationML slide XML, and a `.pptx` ZIP without Python or server APIs.
+- `docs/app.js` is the compiled Pages artifact.
+- Current browser export coverage is intentionally narrower than the Python converter: `rect`, `circle`/`ellipse`, `line`, `text`, PPTXSVG multi-slide groups, semantic relation connectors, and semantic table groups as native PowerPoint tables.
+
+```bash
+npm ci
+npm run build:web
+```
+
 ## Project links
 
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
