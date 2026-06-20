@@ -1047,14 +1047,35 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "text-decoration-style:inherit" in generated
         assert "text-decoration-color:inherit" in generated
         assert "text-decoration-thickness:inherit" in generated
+        assert "resolvedCascadedDeclarations(element, css, style)" in generated
+        assert "function textDecorationShorthandIsSupported" in generated
+        assert "function textLengthIsSupported" in generated
+        assert 'decoration.includes("wavy")' in generated
         assert 'name === "text-decoration-style"' in generated
         assert "textDecorationStyleTokens.has(normalized)" in generated
         unsupported_attributes = generated.split("const coverageUnsupportedAttributes", 1)[1].split(
             "const coverageSupportedPathCommands",
             1,
         )[0]
-        assert '"text-decoration-color"' in unsupported_attributes
-        assert '"text-decoration-thickness"' in unsupported_attributes
+        for attr in [
+            "letter-spacing",
+            "opacity",
+            "overflow",
+            "pathLength",
+            "rotate",
+            "stroke-dashoffset",
+            "stroke-linecap",
+            "stroke-linejoin",
+            "textLength",
+            "text-decoration-color",
+            "text-decoration-line",
+            "text-decoration-thickness",
+            "text-transform",
+            "transform-origin",
+            "vector-effect",
+            "word-spacing",
+        ]:
+            assert f'"{attr}"' in unsupported_attributes
         assert 'return \' u="wavy"\'' in generated
         assert 'case "text-decoration-style":' in generated
         assert 'case "text-decoration-color":' in generated
@@ -1252,6 +1273,8 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser PPTX export support for SVG `text-decoration-style` underline mapping, including wavy underline",
         "browser PPTX export support for inherited SVG underline style, color, and thickness details",
         "browser coverage analyzer with supported SVG `text-decoration-style` values",
+        "browser coverage analyzer with SVG `text-decoration-color` and `text-decoration-thickness` diagnostics",
+        "browser coverage analyzer with CSS declaration diagnostics for supported SVG text, stroke, transform, and opacity attributes",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",

@@ -1364,6 +1364,7 @@ const coverageUnsupportedAttributes = new Set([
   "image-rendering",
   "isolation",
   "kerning",
+  "letter-spacing",
   "lengthAdjust",
   "marker",
   "marker-end",
@@ -1371,19 +1372,32 @@ const coverageUnsupportedAttributes = new Set([
   "marker-start",
   "mask",
   "mix-blend-mode",
+  "opacity",
+  "overflow",
   "paint-order",
+  "pathLength",
   "preserveAspectRatio",
+  "rotate",
   "shape-rendering",
   "spreadMethod",
+  "stroke-dashoffset",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "textLength",
   "text-decoration",
   "text-decoration-color",
+  "text-decoration-line",
   "text-decoration-skip-ink",
   "text-decoration-style",
   "text-decoration-thickness",
   "text-orientation",
   "text-rendering",
+  "text-transform",
   "text-underline-offset",
+  "transform-origin",
   "unicode-bidi",
+  "vector-effect",
+  "word-spacing",
   "writing-mode",
 ]);
 
@@ -1455,10 +1469,10 @@ function coverageSupportedElementIssue(tag: string): string {
 }
 
 function inspectCoverageAttributes(element: Element, style: SvgStyle, tag: string, stats: SvgCoverage, refs: Map<string, Element>, css: CssRule[], viewport: Viewport, refStack: Set<string> = new Set()): void {
-  const attributes = attrs(element);
+  const attributes = { ...attrs(element), ...resolvedCascadedDeclarations(element, css, style) };
   for (const [name, value] of Object.entries(attributes)) {
     if (!coverageUnsupportedAttributes.has(name)) continue;
-    if (coverageAttributeIsSupportedOrNoop(element, tag, name, value, style, refs)) continue;
+    if (coverageAttributeIsSupportedOrNoop(element, tag, name, value, style, refs, viewport)) continue;
     addCoverageCount(stats.unsupported_attributes, name);
   }
   inspectCoverageHref(element, tag, stats, refs);
@@ -1531,7 +1545,7 @@ function coveragePaintChannelIsVisible(tag: string, attr: "fill" | "stroke", sty
   return style.strokeAlpha !== 0 && (style.strokeWidth ?? 1) !== 0;
 }
 
-function coverageAttributeIsSupportedOrNoop(element: Element, tag: string, name: string, value: string, style: SvgStyle, refs: Map<string, Element>): boolean {
+function coverageAttributeIsSupportedOrNoop(element: Element, tag: string, name: string, value: string, style: SvgStyle, refs: Map<string, Element>, viewport: Viewport): boolean {
   const normalized = value.trim().toLowerCase();
   if (!normalized || ["auto", "normal", "none", "0", "0px"].includes(normalized)) return true;
   if (name === "clip-path") return clipPathHasRect(value, refs);
@@ -1551,12 +1565,14 @@ function coverageAttributeIsSupportedOrNoop(element: Element, tag: string, name:
   if (name === "stroke-dashoffset") return Number.isFinite(parseCssLength(value, percentageBasis("diag", defaultViewport()), Number.NaN));
   if (name === "stroke-linecap") return normalizeStrokeLineCap(value) != null;
   if (name === "stroke-linejoin") return normalizeStrokeLineJoin(value) != null;
-  if (name === "text-decoration" || name === "text-decoration-line") return hasSupportedTextDecorationLine(value);
+  if (name === "textLength") return textLengthIsSupported(element, tag, value, style);
+  if (name === "text-decoration") return textDecorationShorthandIsSupported(value, style);
+  if (name === "text-decoration-line") return hasSupportedTextDecorationLine(value);
   if (name === "text-decoration-style") return textDecorationStyleTokens.has(normalized);
   if (name === "text-decoration-color") return parseCssColor(value, style) != null;
   if (name === "text-decoration-thickness") return value.trim().toLowerCase() === "auto" || parseCssLength(value, percentageBasis("diag", defaultViewport()), Number.NaN) >= 0;
   if (name === "text-transform") return normalizeTextTransform(value) != null;
-  if (name === "transform-origin") return true;
+  if (name === "transform-origin") return transformOriginPoint(element, value, viewport) != null;
   if (name === "vector-effect") return normalizeVectorEffect(value) != null;
   if (name === "word-spacing") return normalizeSpacingLength(value, style.fontSize ?? rootFontSize) != null;
   return false;
@@ -1628,6 +1644,33 @@ function clipPathHasRect(value: string, refs: Map<string, Element>): boolean {
 function hasSupportedTextDecorationLine(value: string): boolean {
   const tokens = value.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return tokens.length > 0 && tokens.every((token) => ["none", "underline", "line-through"].includes(token));
+}
+
+function textDecorationShorthandIsSupported(value: string, style: SvgStyle): boolean {
+  let hasLine = false;
+  for (const token of cssValueTokens(value)) {
+    const normalized = token.toLowerCase();
+    if (["none", "underline", "line-through"].includes(normalized)) {
+      hasLine = true;
+      continue;
+    }
+    if (normalized === "overline" || normalized === "blink") return false;
+    if (textDecorationStyleTokens.has(normalized)) continue;
+    if (normalized === "auto" || normalized === "from-font") continue;
+    if (parseCssColor(token, style)) continue;
+    const thickness = parseCssLength(token, percentageBasis("diag", defaultViewport()), Number.NaN);
+    if (Number.isFinite(thickness) && thickness >= 0) continue;
+    return false;
+  }
+  return hasLine;
+}
+
+function textLengthIsSupported(element: Element, tag: string, value: string, style: SvgStyle): boolean {
+  if (tag !== "text" && tag !== "tspan") return false;
+  const length = parseCssLength(value, style.fontSize ?? rootFontSize, Number.NaN);
+  if (!Number.isFinite(length) || length < 0) return false;
+  const text = element.textContent || "";
+  return !text.includes("\n") && text.trim().length > 1;
 }
 
 function addCoverageCount(counts: Record<string, number>, key: string): void {
@@ -3041,6 +3084,7 @@ function htmlTextRun(text: string, style: SvgStyle): TextRun {
 
 function underlineStyle(style: SvgStyle): string | null {
   const decoration = style.textDecoration || "";
+  if (decoration.includes("wavy")) return "wavy";
   if (decoration.includes("dashed")) return "dashed";
   if (decoration.includes("dotted")) return "dotted";
   if (decoration.includes("double")) return "double";
