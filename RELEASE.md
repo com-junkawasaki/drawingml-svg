@@ -107,7 +107,11 @@ sdist_path = glob.glob("tmp/dist/svgraph-*.tar.gz")[0]
 with zipfile.ZipFile(wheel_path) as wheel:
     wheel_names = set(wheel.namelist())
     metadata_name = next(name for name in wheel_names if name.endswith(".dist-info/METADATA"))
+    entry_points_name = next(name for name in wheel_names if name.endswith(".dist-info/entry_points.txt"))
+    top_level_name = next(name for name in wheel_names if name.endswith(".dist-info/top_level.txt"))
     wheel_metadata = wheel.read(metadata_name).decode("utf-8")
+    entry_points = wheel.read(entry_points_name).decode("utf-8")
+    top_level = set(wheel.read(top_level_name).decode("utf-8").splitlines())
 for expected in [
     "drawingml_svg/__init__.py",
     "drawingml_svg/cli.py",
@@ -151,6 +155,9 @@ assert pyproject["project"]["urls"] == {
     "Documentation": "https://com-junkawasaki.github.io/svgraph/",
     "Issues": "https://github.com/com-junkawasaki/svgraph/issues",
 }
+for name, target in pyproject["project"]["scripts"].items():
+    assert f"{name} = {target}" in entry_points
+assert {"svgraph", "drawingml_svg"} <= top_level
 assert web_package["name"] == "svgraph-web"
 assert web_package["version"] == pyproject["project"]["version"]
 assert web_package["description"] == "Browser-only SVGraph editor and SVG to PresentationML/PPTX converter."

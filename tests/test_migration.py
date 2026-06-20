@@ -673,6 +673,11 @@ def test_release_and_ci_distribution_smoke_use_svgraph_artifact_names() -> None:
         assert 'web_lock["name"] == web_package["name"]' in source
         assert 'web_lock["packages"][""]["name"] == web_package["name"]' in source
         assert 'web_lock["packages"][""]["license"] == web_package["license"]' in source
+        assert 'entry_points_name = next(name for name in wheel_names if name.endswith(".dist-info/entry_points.txt"))' in source
+        assert 'top_level_name = next(name for name in wheel_names if name.endswith(".dist-info/top_level.txt"))' in source
+        assert 'for name, target in pyproject["project"]["scripts"].items():' in source
+        assert 'assert f"{name} = {target}" in entry_points' in source
+        assert 'assert {"svgraph", "drawingml_svg"} <= top_level' in source
         assert "tmp/dist/drawingml_svg-" not in source
         assert "tmp/dist/drawingml-svg-" not in source
 
@@ -1121,6 +1126,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "pull request impact checklist with SVGraph model, presentation/package, PPTX, browser editor",
         "browser editor source, committed Pages artifact, and examples",
         "published sdist",
+        "every pyproject console script and top-level package is verified from built wheel metadata",
         "`slide_size` and `text_styles`",
         "`slideSize` and `textStyles`",
         "GitHub Actions, Python, and npm/web dependency update pull requests",

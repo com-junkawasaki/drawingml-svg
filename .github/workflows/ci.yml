@@ -228,10 +228,6 @@ jobs:
           assert "Project-URL: Repository, https://github.com/com-junkawasaki/svgraph" in wheel_metadata
           assert "Project-URL: Documentation, https://com-junkawasaki.github.io/svgraph/" in wheel_metadata
           assert "Project-URL: Issues, https://github.com/com-junkawasaki/svgraph/issues" in wheel_metadata
-          assert "svgraph = svgraph.cli:main" in entry_points
-          assert "drawingml-svg = svgraph.cli:main" in entry_points
-          assert {"svgraph", "drawingml_svg"} <= top_level
-
           with tarfile.open(sdist_path) as sdist:
               sdist_names = set(sdist.getnames())
               root = next(name for name in sdist_names if name.endswith("/pyproject.toml")).rsplit("/", 1)[0]
@@ -247,6 +243,9 @@ jobs:
               "Documentation": "https://com-junkawasaki.github.io/svgraph/",
               "Issues": "https://github.com/com-junkawasaki/svgraph/issues",
           }
+          for name, target in pyproject["project"]["scripts"].items():
+              assert f"{name} = {target}" in entry_points
+          assert {"svgraph", "drawingml_svg"} <= top_level
           assert web_package["name"] == "svgraph-web"
           assert web_package["version"] == pyproject["project"]["version"]
           assert web_package["description"] == "Browser-only SVGraph editor and SVG to PresentationML/PPTX converter."
