@@ -93,7 +93,8 @@ type Shape =
   | EllipseShape
   | LineShape
   | TextShape
-  | TableShape;
+  | TableShape
+  | FreeformShape;
 
 type BaseShape = {
   id: number;
@@ -151,6 +152,15 @@ type TextShape = BaseShape & {
   bold: boolean;
 };
 
+type FreeformShape = BaseShape & {
+  kind: "freeform";
+  points: [number, number][];
+  closed: boolean;
+  fill: string | null;
+  stroke: string | null;
+  strokeWidth: number;
+};
+
 type TableShape = BaseShape & {
   kind: "table";
   x: number;
@@ -168,6 +178,15 @@ type TableCell = {
 };
 
 type Matrix = [number, number, number, number, number, number];
+
+type SvgStyle = {
+  fill?: string | null;
+  stroke?: string | null;
+  strokeWidth?: number;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+};
 
 const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
   <metadata>{"presentation":{"slideSize":{"width":1280,"height":720},"masters":[{"id":"brand-master"}],"layouts":[{"id":"title-content","master":"brand-master"}],"guides":[{"id":"safe-left","orientation":"vertical","position":90}],"rulers":[{"id":"x","orientation":"horizontal","origin":0,"spacing":16}],"textStyles":{"title":{"fontFamily":"Aptos Display","fontSize":54,"bold":true},"lead":{"fontFamily":"Aptos","fontSize":28},"body":{"fontFamily":"Aptos","fontSize":18}}}}</metadata>
@@ -188,6 +207,16 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
       <rect data-kind="cell" data-row="0" data-col="1" x="260" width="260" height="80" fill="#e6f4f1" stroke="#0f766e"/>
       <rect data-kind="cell" data-row="1" data-col="0" y="80" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
       <rect data-kind="cell" data-row="1" data-col="1" x="260" y="80" width="260" height="80" fill="#ffffff" stroke="#0f766e"/>
+    </g>
+  </g>
+  <g id="coverage-slide" data-kind="slide" data-title="Browser SVG Coverage" style="stroke:#334155;stroke-width:4;fill:#fde68a">
+    <rect width="1280" height="720" fill="#ffffff" stroke="none"/>
+    <text x="90" y="90" style="font-size:40;font-family:Arial;font-weight:700;fill:#17202a">Browser SVG coverage</text>
+    <polygon id="tri" points="120,170 300,170 210,315"/>
+    <polyline id="zig" points="390,170 460,250 530,170 600,250" style="fill:none;stroke:#dc2626"/>
+    <path id="box-path" d="M 690 170 L 900 170 L 900 315 L 690 315 Z" style="fill:#dcfce7;stroke:#15803d"/>
+    <g transform="translate(90 390) scale(1.5)">
+      <rect id="scaled" width="160" height="80" style="fill:#dbeafe;stroke:#2563eb"/>
     </g>
   </g>
 </svg>`;
@@ -504,48 +533,50 @@ function buildSlideXml(slide: Element, slideIndex: number): string {
 function extractShapes(root: Element): Shape[] {
   const shapes: Shape[] = [];
   let nextId = 2;
-  const walk = (element: Element, matrix: Matrix) => {
+  const walk = (element: Element, matrix: Matrix, inheritedStyle: SvgStyle) => {
     const tag = localName(element);
     if (tag === "metadata" || tag === "defs" || tag === "style") return;
     const ownMatrix = multiply(matrix, transformMatrix(element.getAttribute("transform")));
+    const ownStyle = computedStyle(element, inheritedStyle);
     if (tag === "g" && (element.getAttribute("data-kind") === "table" || element.getAttribute("data-role") === "table")) {
-      const table = tableFromGroup(element, ownMatrix, nextId);
+      const table = tableFromGroup(element, ownMatrix, nextId, ownStyle);
       if (table) {
         shapes.push(table);
         nextId += 1;
       }
       return;
     }
-    const shape = elementToShape(element, ownMatrix, nextId);
+    const shape = elementToShape(element, ownMatrix, ownStyle, nextId);
     if (shape) {
       shapes.push(shape);
       nextId += 1;
     }
-    for (const child of Array.from(element.children)) walk(child, ownMatrix);
+    for (const child of Array.from(element.children)) walk(child, ownMatrix, ownStyle);
   };
-  for (const child of Array.from(root.children)) walk(child, [1, 0, 0, 1, 0, 0]);
+  const rootStyle = computedStyle(root, {});
+  for (const child of Array.from(root.children)) walk(child, [1, 0, 0, 1, 0, 0], rootStyle);
   return shapes;
 }
 
-function elementToShape(element: Element, matrix: Matrix, id: number): Shape | null {
+function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: number): Shape | null {
   const tag = localName(element);
   const data = dataAttrs(attrs(element));
   const name = element.getAttribute("id") || tag;
   if (tag === "rect") {
-    const [x, y] = point(matrix, num(element, "x"), num(element, "y"));
+    const box = transformedBox(matrix, num(element, "x"), num(element, "y"), num(element, "width"), num(element, "height"));
     return {
       id,
       kind: "rect",
       name,
       data,
-      x,
-      y,
-      width: num(element, "width"),
-      height: num(element, "height"),
+      x: box.x,
+      y: box.y,
+      width: box.width,
+      height: box.height,
       rx: num(element, "rx"),
-      fill: paint(element, "fill", "#ffffff"),
-      stroke: paint(element, "stroke", null),
-      strokeWidth: num(element, "stroke-width", 1),
+      fill: style.fill ?? "#000000",
+      stroke: style.stroke ?? null,
+      strokeWidth: style.strokeWidth ?? 1,
     };
   }
   if (tag === "circle" || tag === "ellipse") {
@@ -553,19 +584,19 @@ function elementToShape(element: Element, matrix: Matrix, id: number): Shape | n
     const cy = num(element, "cy");
     const rx = tag === "circle" ? num(element, "r") : num(element, "rx");
     const ry = tag === "circle" ? num(element, "r") : num(element, "ry");
-    const [x, y] = point(matrix, cx - rx, cy - ry);
+    const box = transformedBox(matrix, cx - rx, cy - ry, rx * 2, ry * 2);
     return {
       id,
       kind: "ellipse",
       name,
       data,
-      x,
-      y,
-      width: rx * 2,
-      height: ry * 2,
-      fill: paint(element, "fill", "#ffffff"),
-      stroke: paint(element, "stroke", null),
-      strokeWidth: num(element, "stroke-width", 1),
+      x: box.x,
+      y: box.y,
+      width: box.width,
+      height: box.height,
+      fill: style.fill ?? "#000000",
+      stroke: style.stroke ?? null,
+      strokeWidth: style.strokeWidth ?? 1,
     };
   }
   if (tag === "line") {
@@ -580,15 +611,15 @@ function elementToShape(element: Element, matrix: Matrix, id: number): Shape | n
       y1,
       x2,
       y2,
-      stroke: paint(element, "stroke", "#111827"),
-      strokeWidth: num(element, "stroke-width", 1),
+      stroke: style.stroke ?? "#111827",
+      strokeWidth: style.strokeWidth ?? 1,
       relation: data.kind === "relation" || data.role === "relation",
       startId: null,
       endId: null,
     };
   }
   if (tag === "text") {
-    const fontSize = num(element, "font-size", 18);
+    const fontSize = style.fontSize ?? 18;
     const [x, y] = point(matrix, num(element, "x"), num(element, "y"));
     return {
       id,
@@ -600,19 +631,52 @@ function elementToShape(element: Element, matrix: Matrix, id: number): Shape | n
       width: Math.max(80, (element.textContent || "").trim().length * fontSize * 0.62),
       height: fontSize * 1.35,
       text: (element.textContent || "").trim(),
-      fill: paint(element, "fill", "#111827"),
+      fill: style.fill ?? "#111827",
       fontSize,
-      fontFamily: element.getAttribute("font-family") || "Aptos",
-      bold: ["bold", "700", "800", "900"].includes(element.getAttribute("font-weight") || ""),
+      fontFamily: style.fontFamily || "Aptos",
+      bold: ["bold", "700", "800", "900"].includes(style.fontWeight || ""),
     };
+  }
+  if (tag === "polygon" || tag === "polyline") {
+    const points = parsePoints(element.getAttribute("points") || "").map(([x, y]) => point(matrix, x, y));
+    if (points.length >= 2) {
+      return {
+        id,
+        kind: "freeform",
+        name,
+        data,
+        points,
+        closed: tag === "polygon",
+        fill: tag === "polygon" ? (style.fill ?? "#000000") : null,
+        stroke: style.stroke ?? "#111827",
+        strokeWidth: style.strokeWidth ?? 1,
+      };
+    }
+  }
+  if (tag === "path") {
+    const parsed = parseBasicPath(element.getAttribute("d") || "", matrix);
+    if (parsed && parsed.points.length >= 2) {
+      return {
+        id,
+        kind: "freeform",
+        name,
+        data,
+        points: parsed.points,
+        closed: parsed.closed,
+        fill: parsed.closed ? (style.fill ?? "#000000") : null,
+        stroke: style.stroke ?? "#111827",
+        strokeWidth: style.strokeWidth ?? 1,
+      };
+    }
   }
   return null;
 }
 
-function tableFromGroup(group: Element, matrix: Matrix, id: number): TableShape | null {
+function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedStyle: SvgStyle): TableShape | null {
   const rects = Array.from(group.querySelectorAll("rect")).filter((rect) => rect.getAttribute("data-kind") === "cell" || rect.getAttribute("data-role") === "cell");
   if (!rects.length) return null;
   const cells = rects.map((rect) => {
+    const style = computedStyle(rect, inheritedStyle);
     const [x, y] = point(matrix, num(rect, "x"), num(rect, "y"));
     return {
       row: Number(rect.getAttribute("data-row") || 0),
@@ -621,7 +685,7 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number): TableShape 
       y,
       width: num(rect, "width"),
       height: num(rect, "height"),
-      fill: paint(rect, "fill", "#ffffff"),
+      fill: style.fill ?? "#ffffff",
     };
   });
   const xEdges = edges(cells.flatMap((cell) => [cell.x, cell.x + cell.width]));
@@ -649,14 +713,14 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number): TableShape 
 }
 
 function markRelationConnectors(shapes: Shape[]): void {
-  const boxes = shapes.filter((shape): shape is RectShape | EllipseShape | TextShape => ["rect", "ellipse", "text"].includes(shape.kind));
+  const boxes = shapes.filter((shape): shape is RectShape | EllipseShape | TextShape | FreeformShape => ["rect", "ellipse", "text", "freeform"].includes(shape.kind));
   for (const line of shapes.filter((shape): shape is LineShape => shape.kind === "line" && shape.relation)) {
     line.startId = nearestShapeId(line.x1, line.y1, boxes);
     line.endId = nearestShapeId(line.x2, line.y2, boxes);
   }
 }
 
-function nearestShapeId(x: number, y: number, shapes: (RectShape | EllipseShape | TextShape)[]): number | null {
+function nearestShapeId(x: number, y: number, shapes: (RectShape | EllipseShape | TextShape | FreeformShape)[]): number | null {
   if (!shapes.length) return null;
   return shapes
     .map((shape) => {
@@ -668,7 +732,14 @@ function nearestShapeId(x: number, y: number, shapes: (RectShape | EllipseShape 
     .sort((a, b) => a.distance - b.distance)[0]?.id ?? null;
 }
 
-function shapeBox(shape: RectShape | EllipseShape | TextShape): { x: number; y: number; width: number; height: number } {
+function shapeBox(shape: RectShape | EllipseShape | TextShape | FreeformShape): { x: number; y: number; width: number; height: number } {
+  if (shape.kind === "freeform") {
+    const xs = shape.points.map(([x]) => x);
+    const ys = shape.points.map(([, y]) => y);
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+    return { x: minX, y: minY, width: Math.max(...xs) - minX, height: Math.max(...ys) - minY };
+  }
   return { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
 }
 
@@ -677,6 +748,7 @@ function shapeToXml(shape: Shape): string {
   if (shape.kind === "ellipse") return ellipseXml(shape);
   if (shape.kind === "line") return shape.relation ? connectorXml(shape) : lineXml(shape);
   if (shape.kind === "text") return textXml(shape);
+  if (shape.kind === "freeform") return freeformXml(shape);
   return tableXml(shape);
 }
 
@@ -724,6 +796,21 @@ function tableXml(shape: TableShape): string {
     })
     .join("");
   return `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="${emu(shape.x)}" y="${emu(shape.y)}"/><a:ext cx="${emu(shape.columns.reduce((a, b) => a + b, 0))}" cy="${emu(shape.rows.reduce((a, b) => a + b, 0))}"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1" bandRow="1"/><a:tblGrid>${grid}</a:tblGrid>${rows}</a:tbl></a:graphicData></a:graphic></p:graphicFrame>`;
+}
+
+function freeformXml(shape: FreeformShape): string {
+  const box = shapeBox(shape);
+  const width = Math.max(box.width, 1);
+  const height = Math.max(box.height, 1);
+  const local = shape.points.map(([x, y]) => [emu(x - box.x), emu(y - box.y)]);
+  const [first, ...rest] = local;
+  if (!first) return "";
+  const commands = [`<a:moveTo><a:pt x="${first[0]}" y="${first[1]}"/></a:moveTo>`]
+    .concat(rest.map(([x, y]) => `<a:lnTo><a:pt x="${x}" y="${y}"/></a:lnTo>`))
+    .concat(shape.closed ? ["<a:close/>"] : [])
+    .join("");
+  const geom = `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="l" t="t" r="r" b="b"/><a:pathLst><a:path w="${emu(width)}" h="${emu(height)}">${commands}</a:path></a:pathLst></a:custGeom>`;
+  return `<p:sp><p:nvSpPr><p:cNvPr id="${shape.id}" name="${xml(shape.name)}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="${emu(box.x)}" y="${emu(box.y)}"/><a:ext cx="${emu(width)}" cy="${emu(height)}"/></a:xfrm>${geom}${fillXml(shape.fill)}${lineStyleXml(shape.stroke, shape.strokeWidth)}</p:spPr></p:sp>`;
 }
 
 function spXml(id: number, name: string, x: number, y: number, width: number, height: number, prst: string, style: string, body: string): string {
@@ -981,10 +1068,46 @@ function num(element: Element, name: string, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function paint(element: Element, name: string, fallback: string | null): string | null {
-  const value = element.getAttribute(name);
-  if (!value || value === "none") return value === "none" ? null : fallback;
-  return value;
+function computedStyle(element: Element, inherited: SvgStyle): SvgStyle {
+  const declarations = styleDeclarations(element.getAttribute("style"));
+  const value = (name: string): string | null => element.getAttribute(name) ?? declarations[name] ?? null;
+  const next: SvgStyle = { ...inherited };
+  const fill = value("fill");
+  const stroke = value("stroke");
+  const strokeWidth = value("stroke-width");
+  const fontSize = value("font-size");
+  const fontFamily = value("font-family");
+  const fontWeight = value("font-weight");
+  if (fill != null) next.fill = normalizePaint(fill);
+  if (stroke != null) next.stroke = normalizePaint(stroke);
+  if (strokeWidth != null) next.strokeWidth = parseLength(strokeWidth, next.strokeWidth ?? 1);
+  if (fontSize != null) next.fontSize = parseLength(fontSize, next.fontSize ?? 18);
+  if (fontFamily != null) next.fontFamily = fontFamily.replace(/^['"]|['"]$/g, "");
+  if (fontWeight != null) next.fontWeight = fontWeight;
+  return next;
+}
+
+function styleDeclarations(style: string | null): Record<string, string> {
+  if (!style) return {};
+  return Object.fromEntries(
+    style
+      .split(";")
+      .map((entry) => entry.split(":"))
+      .filter((parts): parts is [string, string] => parts.length >= 2 && Boolean(parts[0]?.trim()))
+      .map(([name, ...value]) => [name.trim(), value.join(":").trim()]),
+  );
+}
+
+function normalizePaint(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "none" || trimmed === "transparent") return null;
+  return trimmed;
+}
+
+function parseLength(value: string | null, fallback = 0): number {
+  if (!value) return fallback;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function edges(values: number[]): number[] {
@@ -993,9 +1116,28 @@ function edges(values: number[]): number[] {
 
 function transformMatrix(value: string | null): Matrix {
   if (!value) return [1, 0, 0, 1, 0, 0];
-  const translate = /translate\(\s*([-\d.]+)(?:[\s,]+([-\d.]+))?\s*\)/.exec(value);
-  if (translate) return [1, 0, 0, 1, Number(translate[1]), Number(translate[2] || 0)];
-  return [1, 0, 0, 1, 0, 0];
+  let matrix: Matrix = [1, 0, 0, 1, 0, 0];
+  for (const match of value.matchAll(/(matrix|translate|scale|rotate)\(([^)]*)\)/g)) {
+    const kind = match[1];
+    const args = (match[2] || "").replaceAll(",", " ").trim().split(/\s+/).map(Number).filter((item) => Number.isFinite(item));
+    let next: Matrix = [1, 0, 0, 1, 0, 0];
+    if (kind === "matrix" && args.length >= 6) {
+      next = [args[0]!, args[1]!, args[2]!, args[3]!, args[4]!, args[5]!];
+    } else if (kind === "translate") {
+      next = [1, 0, 0, 1, args[0] || 0, args[1] || 0];
+    } else if (kind === "scale") {
+      next = [args[0] ?? 1, 0, 0, args[1] ?? args[0] ?? 1, 0, 0];
+    } else if (kind === "rotate") {
+      const angle = ((args[0] || 0) * Math.PI) / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const cx = args[1] || 0;
+      const cy = args[2] || 0;
+      next = multiply(multiply([1, 0, 0, 1, cx, cy], [cos, sin, -sin, cos, 0, 0]), [1, 0, 0, 1, -cx, -cy]);
+    }
+    matrix = multiply(matrix, next);
+  }
+  return matrix;
 }
 
 function multiply(a: Matrix, b: Matrix): Matrix {
@@ -1004,6 +1146,78 @@ function multiply(a: Matrix, b: Matrix): Matrix {
 
 function point(m: Matrix, x: number, y: number): [number, number] {
   return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+}
+
+function transformedBox(matrix: Matrix, x: number, y: number, width: number, height: number): { x: number; y: number; width: number; height: number } {
+  const points = [point(matrix, x, y), point(matrix, x + width, y), point(matrix, x + width, y + height), point(matrix, x, y + height)];
+  const xs = points.map(([px]) => px);
+  const ys = points.map(([, py]) => py);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  return { x: minX, y: minY, width: Math.max(...xs) - minX, height: Math.max(...ys) - minY };
+}
+
+function parsePoints(value: string): [number, number][] {
+  const numbers = value.replaceAll(",", " ").trim().split(/\s+/).map(Number).filter((item) => Number.isFinite(item));
+  const points: [number, number][] = [];
+  for (let index = 0; index + 1 < numbers.length; index += 2) {
+    points.push([numbers[index]!, numbers[index + 1]!]);
+  }
+  return points;
+}
+
+function parseBasicPath(value: string, matrix: Matrix): { points: [number, number][]; closed: boolean } | null {
+  const tokens = value.match(/[MmLlHhVvZz]|[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[eE][-+]?\d+)?/g) || [];
+  const points: [number, number][] = [];
+  let command = "";
+  let index = 0;
+  let x = 0;
+  let y = 0;
+  let start: [number, number] | null = null;
+  let closed = false;
+  const nextNumber = () => {
+    const token = tokens[index++];
+    return token == null ? null : Number(token);
+  };
+  while (index < tokens.length) {
+    const token = tokens[index]!;
+    if (/^[A-Za-z]$/.test(token)) {
+      command = token;
+      index += 1;
+    }
+    if (!/[MmLlHhVvZz]/.test(command)) return null;
+    if (command === "Z" || command === "z") {
+      closed = true;
+      if (start) points.push(start);
+      continue;
+    }
+    if (command === "H" || command === "h") {
+      const nx = nextNumber();
+      if (nx == null) return null;
+      x = command === "h" ? x + nx : nx;
+    } else if (command === "V" || command === "v") {
+      const ny = nextNumber();
+      if (ny == null) return null;
+      y = command === "v" ? y + ny : ny;
+    } else {
+      const nx = nextNumber();
+      const ny = nextNumber();
+      if (nx == null || ny == null) return null;
+      if (command === "m" || command === "l") {
+        x += nx;
+        y += ny;
+      } else {
+        x = nx;
+        y = ny;
+      }
+      if (command === "M") command = "L";
+      if (command === "m") command = "l";
+    }
+    const transformed = point(matrix, x, y);
+    if (!start) start = transformed;
+    points.push(transformed);
+  }
+  return points.length >= 2 ? { points, closed } : null;
 }
 
 function emu(value: number): number {
