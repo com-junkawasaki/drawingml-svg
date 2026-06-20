@@ -138,7 +138,7 @@ def svg_to_drawingml(svg_text: str) -> str:
     root = ET.fromstring(svg_text)
     container = ET.Element(qn(NS_P, "spTree"))
     nv_grp = ET.SubElement(container, qn(NS_P, "nvGrpSpPr"))
-    ET.SubElement(nv_grp, qn(NS_P, "cNvPr"), {"id": "1", "name": "DrawingML SVG Group"})
+    ET.SubElement(nv_grp, qn(NS_P, "cNvPr"), {"id": "1", "name": "SVGraph Group"})
     ET.SubElement(nv_grp, qn(NS_P, "cNvGrpSpPr"))
     ET.SubElement(nv_grp, qn(NS_P, "nvPr"))
     grp_sp_pr = ET.SubElement(container, qn(NS_P, "grpSpPr"))
@@ -2384,7 +2384,7 @@ def _append_svg_marker_defs(svg: ET.Element, shapes: list[Shape]) -> None:
         defs,
         qn(NS_SVG, "marker"),
         {
-            "id": "drawingml-svg-arrow",
+            "id": "svgraph-arrow",
             "viewBox": "0 0 10 10",
             "refX": "10",
             "refY": "5",
@@ -3815,7 +3815,7 @@ def _append_dml_arrow(ln: ET.Element, tag: str, value: str | None) -> None:
 
 def _dml_line_arrow(element: ET.Element | None) -> str | None:
     if element is not None and element.get("type") not in {None, "none"}:
-        return "drawingml-svg-arrow"
+        return "svgraph-arrow"
     return None
 
 

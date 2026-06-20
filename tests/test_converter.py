@@ -7875,9 +7875,9 @@ def test_line_markers_convert_to_drawingml_arrows_and_round_trip() -> None:
     assert analyze_svg(svg).unsupported_attributes == {}
 
     round_trip = drawingml_to_svg(dml)
-    assert '<marker id="drawingml-svg-arrow"' in round_trip
-    assert 'marker-start="url(#drawingml-svg-arrow)"' in round_trip
-    assert 'marker-end="url(#drawingml-svg-arrow)"' in round_trip
+    assert '<marker id="svgraph-arrow"' in round_trip
+    assert 'marker-start="url(#svgraph-arrow)"' in round_trip
+    assert 'marker-end="url(#svgraph-arrow)"' in round_trip
 
 
 def test_marker_url_allows_whitespace_around_reference() -> None:
