@@ -12,6 +12,8 @@
 ## Testing
 
 - [ ] `ruff check .`
+- [ ] `npm run build:web`
+- [ ] `git diff --exit-code docs/app.js`
 - [ ] `PYTHONPATH=src python -m pytest -q`
 - [ ] `PYTHONPATH=src python -m svgraph analyze examples/coverage.svg`
 - [ ] `PYTHONPATH=src python examples/make_pptx.py examples/coverage.svg -o tmp/svgraph-coverage.pptx`

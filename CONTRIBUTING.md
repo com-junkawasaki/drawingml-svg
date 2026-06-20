@@ -16,6 +16,9 @@ Run these before opening a pull request:
 
 ```bash
 ruff check .
+npm ci
+npm run build:web
+git diff --exit-code docs/app.js
 PYTHONPATH=src python -m pytest -q
 PYTHONPATH=src python -m svgraph analyze examples/coverage.svg
 PYTHONPATH=src python -m svgraph svgraph examples/svgraph.svg > tmp/svgraph.json
