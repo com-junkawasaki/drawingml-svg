@@ -62,6 +62,7 @@ LEGACY_IMPORT_PATTERNS = (
 
 ALLOWED_LEGACY_IMPORT_SURFACES = {
     "src/svgraph/__init__.py",
+    "src/svgraph/__main__.py",
     "src/svgraph/cli.py",
     "src/svgraph/converter.py",
     "src/svgraph/coverage.py",

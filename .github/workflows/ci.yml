@@ -194,6 +194,7 @@ jobs:
               entry_points = wheel.read(entry_points_name).decode("utf-8")
               top_level = set(wheel.read(top_level_name).decode("utf-8").splitlines())
           assert "drawingml_svg/py.typed" in wheel_names
+          assert "svgraph/__main__.py" in wheel_names
           assert "svgraph/py.typed" in wheel_names
           assert "svgraph/converter.py" in wheel_names
           assert "svgraph/coverage.py" in wheel_names
@@ -217,6 +218,7 @@ jobs:
           assert f"{root}/RELEASE.md" in sdist_names
           assert f"{root}/SECURITY.md" in sdist_names
           assert f"{root}/src/drawingml_svg/py.typed" in sdist_names
+          assert f"{root}/src/svgraph/__main__.py" in sdist_names
           assert f"{root}/src/svgraph/py.typed" in sdist_names
           assert f"{root}/src/svgraph/converter.py" in sdist_names
           assert f"{root}/src/svgraph/coverage.py" in sdist_names
@@ -225,6 +227,7 @@ jobs:
           PY
           python -m venv tmp/wheel-venv
           tmp/wheel-venv/bin/python -m pip install tmp/dist/drawingml_svg-*.whl
+          tmp/wheel-venv/bin/python -m svgraph --version
           tmp/wheel-venv/bin/svgraph --version
           tmp/wheel-venv/bin/drawingml-svg --version
           tmp/wheel-venv/bin/svg2dml --version
@@ -232,6 +235,7 @@ jobs:
           tmp/wheel-venv/bin/dml2svg --version
           tmp/wheel-venv/bin/drawingml-svg-analyze --version
           tmp/wheel-venv/bin/svgraph analyze examples/coverage.svg
+          tmp/wheel-venv/bin/python -m svgraph analyze examples/coverage.svg
           tmp/wheel-venv/bin/drawingml-svg-analyze examples/coverage.svg
           tmp/wheel-venv/bin/svgraph examples/svgraph.svg > tmp/wheel-svgraph.json
           tmp/wheel-venv/bin/svgraph svgraph-presentation examples/svgraph.svg > tmp/wheel-svgraph-presentation.json

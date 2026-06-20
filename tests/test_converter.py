@@ -73,6 +73,7 @@ def _webp_data_uri(width: int, height: int) -> str:
 
 def test_package_declares_inline_types() -> None:
     assert resources.files(drawingml_svg).joinpath("py.typed").is_file()
+    assert resources.files(svgraph_package).joinpath("__main__.py").is_file()
     assert resources.files(svgraph_package).joinpath("py.typed").is_file()
 
 
@@ -215,6 +216,17 @@ def test_cli_version_writes_installed_package_version(capsys) -> None:
 
 
 def test_svgraph_module_cli_uses_canonical_program_name() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "svgraph", "--version"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout == "svgraph 0.1.0\n"
+
+
+def test_svgraph_cli_module_keeps_canonical_program_name() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "svgraph.cli", "--version"],
         check=True,
