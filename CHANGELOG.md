@@ -32,6 +32,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Aligned browser `foreignObject` HTML table grid validation with Python, so malformed spans and ragged rows remain unsupported instead of being clamped into native tables.
 - Aligned browser `foreignObject` HTML table row height export with Python, including proportional scaling and missing-row fallback distribution.
 - Aligned browser `foreignObject` HTML table shorthand style parsing with Python for first background colors, parenthesized border colors, and `thin`/`medium`/`thick` border widths.
+- Aligned browser `foreignObject` HTML table `border-spacing` parsing and spacer clamping with Python.
 - Added `svgraph` as the canonical typed Python import package and console-script entry point target, including `svgraph.model`, `svgraph.converter`, `svgraph.coverage`, and `svgraph.pptx` wrapper modules, while preserving `drawingml_svg` and `drawingml-svg` compatibility surfaces.
 - Packaged the browser editor source, committed Pages artifact, and examples in the `svgraph` source distribution so OSS consumers can rebuild docs/app.js, inspect examples, and reproduce release smoke checks from the published sdist.
 - Aligned release checklist source distribution checks with packaged SVGraph docs, governance files, examples, and browser editor sources.

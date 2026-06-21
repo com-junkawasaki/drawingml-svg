@@ -3364,10 +3364,16 @@ function htmlTableBorderSpacing(table: Element, css: CssRule[], width: number, h
   if (collapse?.trim().toLowerCase() === "collapse") return [0, 0];
   const value = htmlCssValue(table, "border-spacing", css) ?? table.getAttribute("cellspacing");
   if (!value) return [0, 0];
-  const parts = value.trim().split(/\s+/).filter(Boolean);
-  const x = htmlCssLength(parts[0] ?? null, width) ?? 0;
-  const y = htmlCssLength(parts[1] ?? parts[0] ?? null, height) ?? x;
-  return [Math.max(0, x), Math.max(0, y)];
+  const parts = cssValueTokens(value);
+  if (!parts.length) return [0, 0];
+  const x = htmlTableFitSpacing(htmlCssLength(parts[0] ?? null, width) ?? 0, width);
+  const y = htmlTableFitSpacing(htmlCssLength(parts[1] ?? parts[0] ?? null, height) ?? x, height);
+  return [x, y];
+}
+
+function htmlTableFitSpacing(spacing: number, size: number): number {
+  if (spacing <= 0 || size <= 0) return 0;
+  return Math.min(spacing, size / 3);
 }
 
 function interleaveSpacers(values: number[], spacing: number): number[] {

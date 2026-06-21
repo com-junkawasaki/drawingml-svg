@@ -1124,6 +1124,8 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "function htmlFirstColorFill" in generated
         assert "background:padding-box #ffffff" in generated
         assert "const parts = cssValueTokens(value)" in generated
+        assert "function htmlTableFitSpacing" in generated
+        assert "Math.min(spacing, size / 3)" in generated
         assert 'trimmed === "thick"' in generated
         assert "coverageHasNonRenderingGeometry(element, tag, style, css, viewport)" in generated
         assert "styleTransformMatrix(element, ownStyle, currentViewport, css)" in generated
