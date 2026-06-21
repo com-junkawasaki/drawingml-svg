@@ -63,7 +63,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
           </tr>
           <tr>
             <td rowspan="2" style="background-color:#dcfce7;color:#14532d;border:2px solid #16a34a;font-weight:700">Roadmap</td>
-            <td align="center" valign="top" style="background-color:#ffffff;color:#111827;border:1px solid #94a3b8;white-space:nowrap;direction:rtl;padding:2px 6px 3px 8px">SVGraph <strong>rich</strong> <em>runs</em> <span style="color:#dc2626;font-variant:small-caps;letter-spacing:2px;text-decoration-line:underline;text-decoration-style:dashed">red</span></td>
+            <td align="center" valign="top" style="background-color:#ffffff;color:#111827;border:1px solid #94a3b8;white-space:nowrap;direction:rtl;padding:2px 6px 3px 8px">SVGraph <strong>rich</strong> <em>runs</em> <strong style="font-weight:400">plain</strong> <span style="color:#dc2626;font-variant:small-caps;letter-spacing:2px;text-decoration-line:underline;text-decoration-style:dashed">red</span></td>
             <td style="background-color:#f8fafc;color:#111827;border:1px solid #94a3b8;border-right:3px dotted #dc2626;border-top:4px double #2563eb;border-bottom-style:dashed;border-bottom-width:2px;border-bottom-color:#16a34a">Browser</td>
           </tr>
           <tr>
@@ -3458,11 +3458,11 @@ function htmlElementStyle(element, inheritedStyle, css) {
         next.fontFamily = normalizeFontFamily(fontFamily);
     if (fontWeight != null)
         next.fontWeight = fontWeight;
-    if (["strong", "b"].includes(tag))
+    if (["strong", "b"].includes(tag) && htmlFontWeightIsNormal(next.fontWeight))
         next.fontWeight = "bold";
     if (fontStyle != null)
         next.fontStyle = fontStyle;
-    if (["em", "i"].includes(tag))
+    if (["em", "i"].includes(tag) && htmlFontStyleIsNormal(next.fontStyle))
         next.fontStyle = "italic";
     if (fontVariant != null)
         next.fontVariant = normalizeFontVariant(fontVariant);
@@ -3500,6 +3500,13 @@ function htmlFontSize(value) {
     if (!Number.isFinite(parsed))
         return null;
     return [10, 13, 16, 18, 24, 32, 48][Math.max(1, Math.min(7, parsed)) - 1] ?? null;
+}
+function htmlFontWeightIsNormal(value) {
+    const normalized = (value ?? "normal").trim().toLowerCase();
+    return normalized === "normal" || normalized === "400";
+}
+function htmlFontStyleIsNormal(value) {
+    return (value ?? "normal").trim().toLowerCase() === "normal";
 }
 function addTextDecoration(current, token) {
     const tokens = (current || "").toLowerCase().split(/\s+/).filter(Boolean);

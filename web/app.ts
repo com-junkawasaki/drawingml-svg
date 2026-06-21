@@ -520,7 +520,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
           </tr>
           <tr>
             <td rowspan="2" style="background-color:#dcfce7;color:#14532d;border:2px solid #16a34a;font-weight:700">Roadmap</td>
-            <td align="center" valign="top" style="background-color:#ffffff;color:#111827;border:1px solid #94a3b8;white-space:nowrap;direction:rtl;padding:2px 6px 3px 8px">SVGraph <strong>rich</strong> <em>runs</em> <span style="color:#dc2626;font-variant:small-caps;letter-spacing:2px;text-decoration-line:underline;text-decoration-style:dashed">red</span></td>
+            <td align="center" valign="top" style="background-color:#ffffff;color:#111827;border:1px solid #94a3b8;white-space:nowrap;direction:rtl;padding:2px 6px 3px 8px">SVGraph <strong>rich</strong> <em>runs</em> <strong style="font-weight:400">plain</strong> <span style="color:#dc2626;font-variant:small-caps;letter-spacing:2px;text-decoration-line:underline;text-decoration-style:dashed">red</span></td>
             <td style="background-color:#f8fafc;color:#111827;border:1px solid #94a3b8;border-right:3px dotted #dc2626;border-top:4px double #2563eb;border-bottom-style:dashed;border-bottom-width:2px;border-bottom-color:#16a34a">Browser</td>
           </tr>
           <tr>
@@ -3721,9 +3721,9 @@ function htmlElementStyle(element: Element, inheritedStyle: SvgStyle, css: CssRu
   if (fontTagSize != null) next.fontSize = fontTagSize;
   if (fontFamily != null) next.fontFamily = normalizeFontFamily(fontFamily);
   if (fontWeight != null) next.fontWeight = fontWeight;
-  if (["strong", "b"].includes(tag)) next.fontWeight = "bold";
+  if (["strong", "b"].includes(tag) && htmlFontWeightIsNormal(next.fontWeight)) next.fontWeight = "bold";
   if (fontStyle != null) next.fontStyle = fontStyle;
-  if (["em", "i"].includes(tag)) next.fontStyle = "italic";
+  if (["em", "i"].includes(tag) && htmlFontStyleIsNormal(next.fontStyle)) next.fontStyle = "italic";
   if (fontVariant != null) next.fontVariant = normalizeFontVariant(fontVariant);
   if (textDecoration != null) next.textDecoration = textDecoration;
   if (tag === "u") next.textDecoration = addTextDecoration(next.textDecoration, "underline");
@@ -3747,6 +3747,15 @@ function htmlFontSize(value: string | null): number | null {
   const parsed = Number.parseInt(normalized, 10);
   if (!Number.isFinite(parsed)) return null;
   return [10, 13, 16, 18, 24, 32, 48][Math.max(1, Math.min(7, parsed)) - 1] ?? null;
+}
+
+function htmlFontWeightIsNormal(value: string | null | undefined): boolean {
+  const normalized = (value ?? "normal").trim().toLowerCase();
+  return normalized === "normal" || normalized === "400";
+}
+
+function htmlFontStyleIsNormal(value: string | null | undefined): boolean {
+  return (value ?? "normal").trim().toLowerCase() === "normal";
 }
 
 function addTextDecoration(current: string | undefined, token: string): string {
