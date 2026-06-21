@@ -4720,17 +4720,17 @@ function elementToShape(element: Element, matrix: Matrix, style: SvgStyle, id: n
 }
 
 function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedStyle: SvgStyle, css: CssRule[] = [], viewport: Viewport = defaultViewport()): TableShape | null {
-  const rects = Array.from(group.querySelectorAll("rect")).filter((rect) => rect.getAttribute("data-kind") === "cell" || rect.getAttribute("data-role") === "cell");
+  const rects = semanticTableRects(group);
   if (!rects.length) return null;
-  const cells = rects.map((rect) => {
+  const cells = rects.map(({ rect, source }) => {
     const style = computedStyle(rect, inheritedStyle, css, new Map(), viewport);
     const [x, y] = point(matrix, geom(rect, "x", "x", viewport), geom(rect, "y", "y", viewport));
     return {
-      row: Number(rect.getAttribute("data-row") || 0),
-      col: Number(rect.getAttribute("data-col") || 0),
-      colSpan: Math.max(1, Number(rect.getAttribute("data-colspan") || rect.getAttribute("data-col-span") || 1) || 1),
-      rowSpan: Math.max(1, Number(rect.getAttribute("data-rowspan") || rect.getAttribute("data-row-span") || 1) || 1),
-      text: rect.getAttribute("data-text") || rect.getAttribute("aria-label") || "",
+      row: Number(source.getAttribute("data-row") || rect.getAttribute("data-row") || 0),
+      col: Number(source.getAttribute("data-col") || rect.getAttribute("data-col") || 0),
+      colSpan: Math.max(1, Number(source.getAttribute("data-colspan") || source.getAttribute("data-col-span") || rect.getAttribute("data-colspan") || rect.getAttribute("data-col-span") || 1) || 1),
+      rowSpan: Math.max(1, Number(source.getAttribute("data-rowspan") || source.getAttribute("data-row-span") || rect.getAttribute("data-rowspan") || rect.getAttribute("data-row-span") || 1) || 1),
+      text: source.getAttribute("data-text") || rect.getAttribute("data-text") || source.getAttribute("aria-label") || rect.getAttribute("aria-label") || "",
       x,
       y,
       width: geom(rect, "width", "x", viewport),
@@ -4781,6 +4781,21 @@ function tableFromGroup(group: Element, matrix: Matrix, id: number, inheritedSty
     rows: yEdges.slice(1).map((edge, index) => edge - (yEdges[index] || 0)),
     cells: tableCells,
   };
+}
+
+function semanticTableRects(group: Element): Array<{ rect: Element; source: Element }> {
+  const directCells = Array.from(group.querySelectorAll("rect"))
+    .filter((rect) => rect.getAttribute("data-kind") === "cell" || rect.getAttribute("data-role") === "cell")
+    .map((rect) => ({ rect, source: rect }));
+  const groupedCells = Array.from(group.querySelectorAll("g"))
+    .filter((cell) => cell.getAttribute("data-kind") === "cell" || cell.getAttribute("data-role") === "cell")
+    .flatMap((cell) => Array.from(cell.querySelectorAll("rect")).slice(0, 1).map((rect) => ({ rect, source: cell })));
+  const seen = new Set<Element>();
+  return [...directCells, ...groupedCells].filter(({ rect }) => {
+    if (seen.has(rect)) return false;
+    seen.add(rect);
+    return true;
+  });
 }
 
 function extractSvgTables(shapes: Shape[]): Shape[] {

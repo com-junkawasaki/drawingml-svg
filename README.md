@@ -50,6 +50,7 @@ npm run check:package
 
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Maturity matrix: [docs/maturity.md](docs/maturity.md)
 - Migration guide: [MIGRATION.md](MIGRATION.md)
 - Release checklist: [RELEASE.md](RELEASE.md)
 - Security policy: [SECURITY.md](SECURITY.md)

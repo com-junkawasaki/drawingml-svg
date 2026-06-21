@@ -18,6 +18,7 @@
 - [ ] `npm ci`
 - [ ] `npm run check:web`
 - [ ] `npm run build:web`
+- [ ] `npm run test:maturity`
 - [ ] `npm run check:package`
 - [ ] `git diff --exit-code docs/app.js`
 - [ ] `git diff --exit-code docs/app.d.ts`
