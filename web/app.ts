@@ -683,6 +683,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
 line</text>
     <text class="css-positioned-text" style="font-size:18;font-family:Arial;fill:#1d4ed8">CSS text position</text>
     <text id="tspan-position" style="font-size:18;font-family:Arial;fill:#334155"><tspan x="900" y="455" dx="10" dy="5">From tspan</tspan><tspan x="900" dy="28">Next line</tspan></text>
+    <text id="first-tspan-baseline" style="font-size:18;font-family:Arial;fill:#0f766e"><tspan x="900" y="500" dominant-baseline="middle">Tspan base</tspan></text>
     <g class="relative-font" fill="#111827" font-family="Arial">
       <text class="em-text" x="560" y="135">Em</text>
       <text class="calc-text" x="640" y="135">Calc</text>
@@ -1744,7 +1745,7 @@ function coverageAttributeIsSupportedOrNoop(element: Element, tag: string, name:
   if (name === "fill-rule") return !subtreeHasVisibleFill(element, style, refs, css, viewport);
   if (name === "isolation") return isolationIsRedundantWithBlend(element, tag, normalized, style, css, refs, viewport);
   if (name === "direction") return normalized === "ltr" || (tag === "text" && normalizeTextDirection(value) != null);
-  if (name === "dominant-baseline" || name === "alignment-baseline") return ["auto", "baseline", "alphabetic"].includes(normalized) || (tag === "text" && normalizeTextBaseline(value) != null);
+  if (name === "dominant-baseline" || name === "alignment-baseline") return ["auto", "baseline", "alphabetic"].includes(normalized) || (tag === "text" && normalizeTextBaseline(value) != null) || firstPositionedTspanBaselineIsSupported(element, name, value);
   if (name === "baseline-shift") return zeroLengthOrPercentage(value) || normalizeBaselineShift(value) != null;
   if (name === "font-stretch") return parseCssLength(value, 100, Number.NaN) === 100;
   if (name === "font-variant") return normalizeFontVariant(value) != null;
@@ -1809,6 +1810,20 @@ function coverageAttributeHasNoEffect(element: Element, name: string, value: str
   if (name === "stroke-dashoffset") return zeroLengthOrPercentage(value);
   if (name === "opacity") return normalized === "1" || normalized === "100%";
   return false;
+}
+
+function firstPositionedTspanBaselineIsSupported(element: Element, name: string, value: string): boolean {
+  if (localName(element) !== "tspan" || (name !== "dominant-baseline" && name !== "alignment-baseline")) return false;
+  if (normalizeTextBaseline(value) == null) return false;
+  const parent = element.parentElement;
+  if (!parent || localName(parent) !== "text") return false;
+  if (parent.hasAttribute("x") || parent.hasAttribute("y")) return false;
+  if (parent.childNodes[0]?.nodeType === Node.TEXT_NODE && (parent.childNodes[0].textContent || "").trim()) return false;
+  if (!element.hasAttribute("x") || !element.hasAttribute("y")) return false;
+  for (let sibling = element.previousElementSibling; sibling; sibling = sibling.previousElementSibling) {
+    if (localName(sibling) === "tspan" && (sibling.textContent || "").trim()) return false;
+  }
+  return true;
 }
 
 function renderingQualityHintHasNoEffect(value: string): boolean {

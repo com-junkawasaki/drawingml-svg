@@ -1228,6 +1228,9 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert 'decoration.includes("wavy")' in generated
         assert 'name === "text-decoration-style"' in generated
         assert "textDecorationStyleTokens.has(normalized)" in generated
+        assert 'id="first-tspan-baseline"' in generated
+        assert "function firstPositionedTspanBaselineIsSupported" in generated
+        assert "element.previousElementSibling" in generated
         unsupported_attributes = generated.split("const coverageUnsupportedAttributes", 1)[1].split(
             "const coverageSupportedPathCommands",
             1,
