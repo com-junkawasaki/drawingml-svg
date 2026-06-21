@@ -1792,13 +1792,22 @@ function dmlTableFrameToSvg(element) {
         return null;
     const xfrm = childByLocal(element, "xfrm");
     const off = childByLocal(xfrm, "off");
+    const ext = childByLocal(xfrm, "ext");
     const originX = emuToPx(off?.getAttribute("x"));
     const originY = emuToPx(off?.getAttribute("y"));
-    const columns = dmlTableColumns(tbl);
-    const rows = directChildrenByLocal(tbl, "tr").map((row) => emuToPx(row.getAttribute("h")));
-    if (!columns.length || !rows.length)
+    const rawColumns = dmlTableColumns(tbl);
+    const rawRows = directChildrenByLocal(tbl, "tr").map((row) => emuToPx(row.getAttribute("h")));
+    if (!rawColumns.length || !rawRows.length)
         return null;
     const name = childByLocal(childByLocal(element, "nvGraphicFramePr"), "cNvPr")?.getAttribute("name") || "table";
+    const rawWidth = rawColumns.reduce((total, value) => total + value, 0);
+    const rawHeight = rawRows.reduce((total, value) => total + value, 0);
+    const frameWidth = emuToPx(ext?.getAttribute("cx"));
+    const frameHeight = emuToPx(ext?.getAttribute("cy"));
+    const scaleX = frameWidth > 0 && rawWidth > 0 ? frameWidth / rawWidth : 1;
+    const scaleY = frameHeight > 0 && rawHeight > 0 ? frameHeight / rawHeight : 1;
+    const columns = rawColumns.map((value) => value * scaleX);
+    const rows = rawRows.map((value) => value * scaleY);
     const width = columns.reduce((total, value) => total + value, 0);
     const height = rows.reduce((total, value) => total + value, 0);
     const occupied = rows.map(() => columns.map(() => false));
