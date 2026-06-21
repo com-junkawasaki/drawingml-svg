@@ -4,6 +4,10 @@
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+> Repository split notice: active development has moved to the split repositories:
+> `com-junkawasaki/svgraph-ts` for the TypeScript browser/npm package and GitHub Pages app, and
+> `com-junkawasaki/svgraph-py` for the Python package.
+
 `svgraph` is a small, dependency-free SVG presentation graph toolkit. The Python distribution, canonical CLI, Python import package, repository, browser editor, schema, and generated presentation metadata use SVGraph naming, while legacy CLI and import compatibility surfaces remain available.
 
 It targets the practical subset needed for generated Office graphics and simple round-trips:
@@ -56,7 +60,12 @@ npm run check:package
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - Repository: <https://github.com/com-junkawasaki/svgraph>
 - Issue tracker: <https://github.com/com-junkawasaki/svgraph/issues>
+- TypeScript repository: <https://github.com/com-junkawasaki/svgraph-ts>
+- Python repository: <https://github.com/com-junkawasaki/svgraph-py>
+- TypeScript issue tracker: <https://github.com/com-junkawasaki/svgraph-ts/issues>
+- Python issue tracker: <https://github.com/com-junkawasaki/svgraph-py/issues>
 - SVGraph web editor: <https://com-junkawasaki.github.io/svgraph/>
+- Active SVGraph web editor: <https://com-junkawasaki.github.io/svgraph-ts/>
 
 ## Install
 
@@ -64,7 +73,13 @@ npm run check:package
 pip install -e .
 ```
 
-The browser package is publishable to GitHub Packages as `@com-junkawasaki/svgraph`:
+The active browser package is published to GitHub Packages as `@com-junkawasaki/svgraph-ts` from `com-junkawasaki/svgraph-ts`:
+
+```bash
+npm install @com-junkawasaki/svgraph-ts --registry=https://npm.pkg.github.com
+```
+
+The legacy monorepo browser package remains available as `@com-junkawasaki/svgraph`:
 
 ```bash
 npm install @com-junkawasaki/svgraph --registry=https://npm.pkg.github.com
@@ -76,6 +91,9 @@ The npm package also installs a browser-runtime CLI that uses the TypeScript con
 npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- svg2dml input.svg -o shape.xml
 npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- dml2svg shape.xml -o shape.svg
 npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- svg2pptx deck.svg -o deck.pptx
+npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph-ts -- svg2dml input.svg -o shape.xml
+npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph-ts -- dml2svg shape.xml -o shape.svg
+npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph-ts -- svg2pptx deck.svg -o deck.pptx
 ```
 
 ```ts
