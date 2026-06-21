@@ -144,4 +144,5 @@ export declare function assistantPatchDiff(proposal: AssistantPatchProposal, svg
 export declare function applyAssistantPatch(svgText: string, proposal: AssistantPatchProposal, svgraph: SVGraphDocument): string;
 export declare function svgToPptx(svgText: string): Uint8Array;
 export declare function svgToDrawingMl(svgText: string): string;
+export declare function drawingMlToSvg(drawingMlText: string): string;
 export declare function initSVGraphEditor(): void;

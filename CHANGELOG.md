@@ -41,6 +41,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Made the browser npm package publishable to GitHub Packages as `@com-junkawasaki/svgraph`, including package metadata, release checks, and a publish workflow.
 - Added importable TypeScript browser package exports and generated declarations for `buildSVGraph`, `buildSVGraphSidecar`, `svgToDrawingMl`, `svgToPptx`, and `initSVGraphEditor`.
 - Added local Web LLM assistant worker hooks, browser policy controls for WebGPU/WASM/disabled inference, and importable assistant prompt, parser, validation, diff, and patch helpers.
+- Added browser TypeScript `drawingMlToSvg` import support for basic DrawingML shape fragments and XML Open flow conversion back into canonical SVG source.
 - Added `svgraph` as the canonical typed Python import package and console-script entry point target, including `svgraph.model`, `svgraph.converter`, `svgraph.coverage`, and `svgraph.pptx` wrapper modules, while preserving `drawingml_svg` and `drawingml-svg` compatibility surfaces.
 - Packaged the browser editor source, committed Pages artifact, and examples in the `svgraph` source distribution so OSS consumers can rebuild docs/app.js, inspect examples, and reproduce release smoke checks from the published sdist.
 - Aligned release checklist source distribution checks with packaged SVGraph docs, governance files, examples, and browser editor sources.

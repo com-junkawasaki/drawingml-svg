@@ -980,7 +980,7 @@ def test_pages_workflow_deploys_svgraph_docs_site() -> None:
     assert "actions/deploy-pages@v4" not in workflow
     assert (root / "docs" / ".nojekyll").is_file()
     assert "<title>SVGraph Editor</title>" in html
-    assert 'accept=".svg,.json,image/svg+xml,application/json"' in html
+    assert 'accept=".svg,.xml,.json,image/svg+xml,application/xml,text/xml,application/json"' in html
     assert (
         'content="Browser-only SVGraph editor for converting SVG presentation graphs into editable '
         'PresentationML and PPTX."'
@@ -1058,6 +1058,8 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
     assert 'id="undoBtn"' in html
     assert 'id="redoBtn"' in html
     assert 'id="clearSavedBtn"' in html
+    assert 'accept=".svg,.xml,.json,image/svg+xml,application/xml,text/xml,application/json"' in html
+    assert "Open SVG/XML" in html
     assert 'mustElement<HTMLButtonElement>("downloadSvgBtn")' in source
     assert 'mustElement<HTMLButtonElement>("downloadSVGraphBtn")' in source
     assert 'mustElement<HTMLButtonElement>("downloadSidecarBtn")' in source
@@ -1068,6 +1070,7 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
     assert "export function buildSVGraph" in source
     assert "export function buildSVGraphSidecar" in source
     assert "export function svgToDrawingMl" in source
+    assert "export function drawingMlToSvg" in source
     assert "export function svgToPptx" in source
     assert "export function buildSVGraphAssistantPrompt" in source
     assert "export function parseAssistantPatchProposal" in source
@@ -1089,6 +1092,7 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         "export declare function buildSVGraph",
         "export declare function buildSVGraphSidecar",
         "export declare function svgToDrawingMl",
+        "export declare function drawingMlToSvg",
         "export declare function svgToPptx",
         "export declare function buildSVGraphAssistantPrompt",
         "export declare function parseAssistantPatchProposal",
@@ -1121,10 +1125,14 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "function sourceFromOpenedFile" in generated
         assert 'obj.kind === "svgraph-sidecar"' in generated
         assert "Open failed:" in generated
+        assert "drawingMlToSvg(text)" in generated
         assert 'fileInput.value = ""' in generated
         assert "function buildSVGraphSidecar" in generated
         assert 'downloadBlob("svgraph-drawingml.xml"' in generated
         assert "function svgToDrawingMl" in generated
+        assert "function drawingMlToSvg" in generated
+        assert "function dmlShapeToSvg" in generated
+        assert "function dmlConnectorToSvg" in generated
         assert "function buildDrawingMlFragment" in generated
         assert 'value("text-decoration-style")' in generated
         assert "underlineStyle: underlineStyle(textStyle)" in generated
@@ -1481,18 +1489,21 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "`web/app.ts` builds SVGraph" in readme
     assert "`docs/app.js` is the compiled Pages artifact." in readme
     assert "Python or server APIs" in readme
+    assert "DrawingML-to-SVG import for basic shape fragments" in readme
     assert "underline/strike decoration including underline style, color, and thickness" in readme
     assert "npm ci" in readme
     assert "npm run check:web" in readme
     assert "npm run build:web" in readme
     assert "npm run check:package" in readme
     assert 'from "@com-junkawasaki/svgraph";' in readme
+    assert "drawingMlToSvg" in readme
     assert "buildSVGraphAssistantPrompt" in readme
     assert "validateAssistantPatch" in readme
     assert "Browser Assistant can run a local Transformers.js worker" in readme
     assert package_metadata["scripts"]["build:web"] == "tsc -p tsconfig.web.json"
     assert package_metadata["scripts"]["check:web"] == "tsc -p tsconfig.web.json --noEmit"
     assert "check:package" in package_metadata["scripts"]
+    assert "drawingMlToSvg" in package_metadata["scripts"]["check:package"]
     assert "buildSVGraphAssistantPrompt" in package_metadata["scripts"]["check:package"]
     assert "applyAssistantPatch" in package_metadata["scripts"]["check:package"]
     assert "node-version: \"24\"" in workflow
@@ -1624,6 +1635,8 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "local Web LLM assistant worker hooks",
         "browser policy controls for WebGPU/WASM/disabled inference",
         "importable assistant prompt, parser, validation, diff, and patch helpers",
+        "browser TypeScript `drawingMlToSvg` import support",
+        "XML Open flow conversion back into canonical SVG source",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",
@@ -1833,6 +1846,8 @@ def test_web_editor_design_uses_browser_only_svgraph_contract() -> None:
         "reports invalid Open inputs without replacing the current source",
         "semantic sidecar with metadata, dependencies, coverage, and presentation package state",
         "DrawingML fragments and `.pptx` without Python",
+        "import basic DrawingML shape fragments back into canonical SVG source without Python",
+        'p:cxnSp` connectors as `data-kind="relation"` SVG lines',
         "deterministic patch proposal/validation preview",
         "can replace the proposal with local Web LLM output after validation",
         "deterministic patch diff preview rows",

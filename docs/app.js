@@ -1110,6 +1110,157 @@ export function svgToDrawingMl(svgText) {
     const slides = declaredSlides(root);
     return buildDrawingMlFragment((slides.length ? slides : [root])[0]);
 }
+export function drawingMlToSvg(drawingMlText) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(drawingMlText, "application/xml");
+    const error = doc.querySelector("parsererror");
+    if (error)
+        throw new Error((error.textContent || "").trim());
+    const items = dmlSvgItems(doc.documentElement);
+    const bounds = items.map((item) => item.bounds);
+    const minX = Math.min(0, ...bounds.map((box) => box.x));
+    const minY = Math.min(0, ...bounds.map((box) => box.y));
+    const maxX = Math.max(0, ...bounds.map((box) => box.x + box.width));
+    const maxY = Math.max(0, ...bounds.map((box) => box.y + box.height));
+    const width = Math.max(1, maxX - minX);
+    const height = Math.max(1, maxY - minY);
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${formatNumber(minX)} ${formatNumber(minY)} ${formatNumber(width)} ${formatNumber(height)}">${items.map((item) => item.svg).join("")}</svg>`;
+}
+function dmlSvgItems(root) {
+    return descendantsByLocal(root, "sp")
+        .map(dmlShapeToSvg)
+        .concat(descendantsByLocal(root, "cxnSp").map(dmlConnectorToSvg))
+        .filter((item) => item !== null);
+}
+function dmlShapeToSvg(element) {
+    const spPr = childByLocal(element, "spPr");
+    if (!spPr)
+        return null;
+    const box = dmlXfrmBox(spPr);
+    if (!box)
+        return null;
+    const preset = childByLocal(spPr, "prstGeom")?.getAttribute("prst") || "rect";
+    const name = childByLocal(childByLocal(element, "nvSpPr"), "cNvPr")?.getAttribute("name") || preset;
+    const paint = dmlSvgPaint(spPr);
+    const style = dmlSvgStyle(paint);
+    const text = dmlText(element);
+    const textAttrs = text ? ` data-text="${xml(text)}"` : "";
+    const idAttr = name ? ` id="${xml(dmlSvgId(name))}"` : "";
+    const body = text ? `<text x="${formatNumber(box.x + box.width / 2)}" y="${formatNumber(box.y + box.height / 2)}" text-anchor="middle" dominant-baseline="middle">${xml(text)}</text>` : "";
+    if (preset === "ellipse" || preset === "oval") {
+        return {
+            bounds: box,
+            svg: `<g${idAttr}${textAttrs}><ellipse cx="${formatNumber(box.x + box.width / 2)}" cy="${formatNumber(box.y + box.height / 2)}" rx="${formatNumber(box.width / 2)}" ry="${formatNumber(box.height / 2)}"${style}/>${body}</g>`,
+        };
+    }
+    if (preset === "line" || preset === "straightConnector1") {
+        const [x1, x2] = dmlFlip(spPr, "flipH") ? [box.x + box.width, box.x] : [box.x, box.x + box.width];
+        const [y1, y2] = dmlFlip(spPr, "flipV") ? [box.y + box.height, box.y] : [box.y, box.y + box.height];
+        return { bounds: box, svg: `<line${idAttr} x1="${formatNumber(x1)}" y1="${formatNumber(y1)}" x2="${formatNumber(x2)}" y2="${formatNumber(y2)}"${style}/>` };
+    }
+    const rx = preset === "roundRect" ? Math.min(box.width, box.height) * 0.12 : 0;
+    return {
+        bounds: box,
+        svg: `<g${idAttr}${textAttrs}><rect x="${formatNumber(box.x)}" y="${formatNumber(box.y)}" width="${formatNumber(box.width)}" height="${formatNumber(box.height)}"${rx ? ` rx="${formatNumber(rx)}" ry="${formatNumber(rx)}"` : ""}${style}/>${body}</g>`,
+    };
+}
+function dmlConnectorToSvg(element) {
+    const spPr = childByLocal(element, "spPr");
+    if (!spPr)
+        return null;
+    const box = dmlXfrmBox(spPr);
+    if (!box)
+        return null;
+    const name = childByLocal(childByLocal(element, "nvCxnSpPr"), "cNvPr")?.getAttribute("name") || "connector";
+    const [x1, x2] = dmlFlip(spPr, "flipH") ? [box.x + box.width, box.x] : [box.x, box.x + box.width];
+    const [y1, y2] = dmlFlip(spPr, "flipV") ? [box.y + box.height, box.y] : [box.y, box.y + box.height];
+    return {
+        bounds: box,
+        svg: `<line id="${xml(dmlSvgId(name))}" x1="${formatNumber(x1)}" y1="${formatNumber(y1)}" x2="${formatNumber(x2)}" y2="${formatNumber(y2)}"${dmlSvgStyle(dmlSvgPaint(spPr))} data-kind="relation"/>`,
+    };
+}
+function dmlXfrmBox(spPr) {
+    const xfrm = childByLocal(spPr, "xfrm");
+    const off = childByLocal(xfrm, "off");
+    const ext = childByLocal(xfrm, "ext");
+    if (!off || !ext)
+        return null;
+    return {
+        x: emuToPx(off.getAttribute("x")),
+        y: emuToPx(off.getAttribute("y")),
+        width: Math.max(0, emuToPx(ext.getAttribute("cx"))),
+        height: Math.max(0, emuToPx(ext.getAttribute("cy"))),
+    };
+}
+function dmlSvgPaint(spPr) {
+    const fill = childByLocal(spPr, "noFill") ? null : dmlColor(childByLocal(spPr, "solidFill")) ?? "#000000";
+    const ln = childByLocal(spPr, "ln");
+    const stroke = ln && !childByLocal(ln, "noFill") ? dmlColor(childByLocal(ln, "solidFill")) : null;
+    const strokeWidth = ln ? emuToPx(ln.getAttribute("w")) : null;
+    return { fill, stroke, strokeWidth };
+}
+function dmlSvgStyle(paint) {
+    const attrs = [
+        `fill="${paint.fill ?? "none"}"`,
+        paint.stroke ? `stroke="${paint.stroke}"` : "",
+        paint.stroke && paint.strokeWidth != null ? `stroke-width="${formatNumber(paint.strokeWidth)}"` : "",
+    ].filter(Boolean);
+    return attrs.length ? ` ${attrs.join(" ")}` : "";
+}
+function dmlColor(parent) {
+    if (!parent)
+        return null;
+    const srgb = childByLocal(parent, "srgbClr")?.getAttribute("val");
+    if (srgb)
+        return `#${srgb}`;
+    const scheme = childByLocal(parent, "schemeClr")?.getAttribute("val");
+    if (scheme)
+        return dmlSchemeColor(scheme);
+    return null;
+}
+function dmlSchemeColor(value) {
+    const colors = {
+        accent1: "#4472c4",
+        accent2: "#ed7d31",
+        accent3: "#a5a5a5",
+        accent4: "#ffc000",
+        accent5: "#5b9bd5",
+        accent6: "#70ad47",
+        bg1: "#ffffff",
+        bg2: "#000000",
+        tx1: "#000000",
+        tx2: "#ffffff",
+    };
+    return colors[value] ?? "#000000";
+}
+function dmlText(element) {
+    return descendantsByLocal(element, "t").map((node) => node.textContent || "").join("\n").trim();
+}
+function dmlFlip(spPr, name) {
+    return childByLocal(spPr, "xfrm")?.getAttribute(name) === "1";
+}
+function dmlSvgId(value) {
+    return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "dml-shape";
+}
+function childByLocal(element, name) {
+    return element ? Array.from(element.children).find((child) => localName(child) === name) ?? null : null;
+}
+function descendantsByLocal(element, name) {
+    const result = [];
+    const visit = (current) => {
+        for (const child of Array.from(current.children)) {
+            if (localName(child) === name)
+                result.push(child);
+            visit(child);
+        }
+    };
+    visit(element);
+    return result;
+}
+function emuToPx(value) {
+    const parsed = Number(value ?? 0);
+    return Number.isFinite(parsed) ? parsed / emuPerPx : 0;
+}
 const coverageSupportedElements = new Set([
     "a",
     "circle",
@@ -5040,8 +5191,14 @@ function downloadBlob(name, blob) {
     URL.revokeObjectURL(url);
 }
 function sourceFromOpenedFile(text) {
-    if (text.trimStart().startsWith("<"))
-        return text;
+    if (text.trimStart().startsWith("<")) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "application/xml");
+        const error = doc.querySelector("parsererror");
+        if (error)
+            throw new Error((error.textContent || "").trim());
+        return localName(doc.documentElement) === "svg" ? text : drawingMlToSvg(text);
+    }
     const payload = JSON.parse(text);
     const obj = asObject(payload);
     if (obj.kind === "svgraph-sidecar" && typeof obj.source_svg === "string")
