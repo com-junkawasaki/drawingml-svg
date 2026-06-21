@@ -1112,6 +1112,11 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "css-image-frame" in generated
         assert 'style="x:90px;y:465px;width:360px;height:90px"' in generated
         assert "shapesFromForeignObject(element, ownMatrix, nextId, ownStyle, css, childViewport)" in generated
+        assert 'id="cell-width-html-table"' in generated
+        assert "function htmlTableFirstRowColumnWidths" in generated
+        assert "function htmlTableSizes" in generated
+        assert 'htmlStyleValue(cell, "width") ?? cell.getAttribute("width")' in generated
+        assert 'htmlSpan(col, "span")' in generated
         assert "coverageHasNonRenderingGeometry(element, tag, style, css, viewport)" in generated
         assert "styleTransformMatrix(element, ownStyle, currentViewport, css)" in generated
         assert "elementReferenceBox(element, viewport, css, inheritedStyle)" in generated

@@ -564,6 +564,20 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
         </table>
       </body>
     </foreignObject>
+    <foreignObject id="cell-width-html-table" x="760" y="600" width="360" height="80">
+      <body xmlns="http://www.w3.org/1999/xhtml">
+        <table>
+          <tr>
+            <th style="width:25%">Label</th>
+            <th width="270">Value</th>
+          </tr>
+          <tr>
+            <td>First row width</td>
+            <td>Native grid</td>
+          </tr>
+        </table>
+      </body>
+    </foreignObject>
     <foreignObject id="alpha-html-table" style="x:90px;y:465px;width:360px;height:90px">
       <body xmlns="http://www.w3.org/1999/xhtml">
         <table>
@@ -3436,12 +3450,54 @@ function htmlSpan(element: Element, name: string): number {
 }
 
 function htmlTableColumns(table: Element, count: number, width: number): number[] {
-  const cols = Array.from(table.querySelectorAll("col")).filter((item) => localName(item) === "col");
-  const explicit = cols.slice(0, count).map((col) => htmlCssLength(htmlStyleValue(col, "width") ?? col.getAttribute("width"), width));
-  const fixedTotal = explicit.reduce<number>((sum, item) => sum + (item ?? 0), 0);
-  const missing = Math.max(0, count - explicit.filter((item) => item != null).length);
-  const fallback = missing ? Math.max(1, (width - fixedTotal) / missing) : Math.max(1, width / count);
-  return Array.from({ length: count }, (_, index) => explicit[index] ?? fallback);
+  const specs: Array<number | null> = [];
+  for (const child of Array.from(table.children)) {
+    const tag = localName(child);
+    const cols = tag === "colgroup"
+      ? Array.from(child.children).filter((item) => localName(item) === "col")
+      : tag === "col" ? [child] : [];
+    for (const col of cols) {
+      const columnWidth = htmlCssLength(htmlStyleValue(col, "width") ?? col.getAttribute("width"), width);
+      const span = Math.max(1, htmlSpan(col, "span"));
+      for (let index = 0; index < span; index += 1) specs.push(columnWidth);
+      if (specs.length >= count) break;
+    }
+    if (specs.length >= count) break;
+  }
+  return htmlTableSizes(specs.length ? specs : htmlTableFirstRowColumnWidths(table, count, width), count, width);
+}
+
+function htmlTableFirstRowColumnWidths(table: Element, count: number, width: number): Array<number | null> {
+  const specs: Array<number | null> = [];
+  for (const row of Array.from(table.querySelectorAll("tr")).filter((item) => localName(item) === "tr")) {
+    for (const cell of htmlRowCells(row)) {
+      const cellWidth = htmlCssLength(htmlStyleValue(cell, "width") ?? cell.getAttribute("width"), width);
+      const colSpan = Math.max(1, htmlSpan(cell, "colspan"));
+      const columnWidth = cellWidth != null ? cellWidth / colSpan : null;
+      for (let index = 0; index < colSpan; index += 1) specs.push(columnWidth);
+      if (specs.length >= count) return specs;
+    }
+    if (specs.length) return specs;
+  }
+  return specs;
+}
+
+function htmlTableSizes(specs: Array<number | null>, count: number, size: number): number[] {
+  if (count <= 0) return [];
+  const normalized = specs.slice(0, count);
+  while (normalized.length < count) normalized.push(null);
+  const fixedTotal = normalized.reduce<number>((sum, item) => sum + (item ?? 0), 0);
+  const missing = normalized.filter((item) => item == null).length;
+  if (fixedTotal <= 0) return Array.from({ length: count }, () => Math.max(1, size / count));
+  if (missing) {
+    const fallback = fixedTotal < size ? (size - fixedTotal) / missing : size / count;
+    const sized = normalized.map((item) => item != null && item > 0 ? item : fallback);
+    const sizedTotal = sized.reduce((sum, item) => sum + item, 0);
+    const scale = sizedTotal > 0 ? size / sizedTotal : 1;
+    return sized.map((item) => Math.max(1, item * scale));
+  }
+  const scale = fixedTotal > 0 ? size / fixedTotal : 1;
+  return normalized.map((item) => Math.max(1, (item ?? 0) * scale));
 }
 
 function htmlTableElementSize(table: Element, axis: "width" | "height", basis: number): number | null {
