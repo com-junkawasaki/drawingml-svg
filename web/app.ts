@@ -2159,10 +2159,10 @@ function dmlPictureToSvg(element: Element): DmlSvgItem | null {
 function dmlPicturePreserveAspectRatio(element: Element): string | null {
   const rect = descendantsByLocal(element, "srcRect")[0];
   if (!rect) return null;
-  const left = optionalInt(rect.getAttribute("l")) ?? 0;
-  const top = optionalInt(rect.getAttribute("t")) ?? 0;
-  const right = optionalInt(rect.getAttribute("r")) ?? 0;
-  const bottom = optionalInt(rect.getAttribute("b")) ?? 0;
+  const left = dmlInt(rect.getAttribute("l"), 0);
+  const top = dmlInt(rect.getAttribute("t"), 0);
+  const right = dmlInt(rect.getAttribute("r"), 0);
+  const bottom = dmlInt(rect.getAttribute("b"), 0);
   if (!left && !top && !right && !bottom) return null;
   const x = dmlCropAlignment(left, right, "x");
   const y = dmlCropAlignment(top, bottom, "y");
