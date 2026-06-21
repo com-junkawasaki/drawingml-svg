@@ -69,17 +69,24 @@ npm run check:package
 
 ## Install
 
+Active packages:
+
 ```bash
+# Python package development moved to com-junkawasaki/svgraph-py
 pip install -e .
-```
-
-The active browser package is published to GitHub Packages as `@com-junkawasaki/svgraph-ts` from `com-junkawasaki/svgraph-ts`:
-
-```bash
 npm install @com-junkawasaki/svgraph-ts --registry=https://npm.pkg.github.com
 ```
 
-The legacy monorepo browser package remains available as `@com-junkawasaki/svgraph`:
+The active browser package is published to GitHub Packages as `@com-junkawasaki/svgraph-ts` from `com-junkawasaki/svgraph-ts`; use its explicit `svgraph-ts` bin with `npm exec`:
+
+```bash
+npm install @com-junkawasaki/svgraph-ts --registry=https://npm.pkg.github.com
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph-ts -- svgraph-ts svg2dml input.svg -o shape.xml
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph-ts -- svgraph-ts dml2svg shape.xml -o shape.svg
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph-ts -- svgraph-ts svg2pptx deck.svg -o deck.pptx
+```
+
+The legacy monorepo browser package remains available as `@com-junkawasaki/svgraph` for compatibility only:
 
 ```bash
 npm install @com-junkawasaki/svgraph --registry=https://npm.pkg.github.com
@@ -88,12 +95,13 @@ npm install @com-junkawasaki/svgraph --registry=https://npm.pkg.github.com
 The npm package also installs a browser-runtime CLI that uses the TypeScript converter with a Node XML DOM shim:
 
 ```bash
+# Legacy monorepo package compatibility examples:
 npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- svg2dml input.svg -o shape.xml
 npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- dml2svg shape.xml -o shape.svg
 npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- svg2pptx deck.svg -o deck.pptx
-npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph-ts -- svg2dml input.svg -o shape.xml
-npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph-ts -- dml2svg shape.xml -o shape.svg
-npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph-ts -- svg2pptx deck.svg -o deck.pptx
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph-ts -- svgraph-ts svg2dml input.svg -o shape.xml
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph-ts -- svgraph-ts dml2svg shape.xml -o shape.svg
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph-ts -- svgraph-ts svg2pptx deck.svg -o deck.pptx
 ```
 
 ```ts
@@ -107,6 +115,9 @@ import {
   svgToPptx,
   validateAssistantPatch,
 } from "@com-junkawasaki/svgraph";
+
+// New TypeScript consumers should import from:
+// import { buildSVGraph, svgToDrawingMl, svgToPptx } from "@com-junkawasaki/svgraph-ts";
 
 const svgraph = buildSVGraph(svgText);
 const drawingMl = svgToDrawingMl(svgText);

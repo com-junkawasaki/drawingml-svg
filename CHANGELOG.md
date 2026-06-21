@@ -6,6 +6,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 
 ## Unreleased
 
+- Clarified the legacy monorepo README to point active TypeScript/npm usage at `@com-junkawasaki/svgraph-ts` while keeping `@com-junkawasaki/svgraph` documented as compatibility-only.
 - Renamed the SVG semantic graph model and presentation projection to SVGraph across the Python API, CLI, package metadata, README, ADR, examples, and browser editor.
 - Renamed the Python distribution metadata and wheel/sdist artifacts from `drawingml-svg` to `svgraph`, keeping legacy console and import compatibility surfaces.
 - Moved the converter, coverage analyzer, PPTX exporter, SVGraph model, and CLI implementation under the canonical `svgraph` package, leaving `drawingml_svg` as a compatibility wrapper.
