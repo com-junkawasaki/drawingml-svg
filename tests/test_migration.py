@@ -1235,6 +1235,11 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "function inspectCoverageTspanRunAttributes" in generated
         assert 'addCoverageCount(stats.unsupported_attributes, "text-anchor")' in generated
         assert "function tspanPositionIsSupportedOrNoop" in generated
+        assert 'id="empty-gradient"' in generated
+        assert 'id="empty-gradient-fill"' in generated
+        assert "function inspectReferencedPaintServerAttributes" in generated
+        assert 'addCoverageCount(stats.unsupported_attributes, "gradientTransform")' in generated
+        assert "function subtreeReferencesPaintServer" in generated
         unsupported_attributes = generated.split("const coverageUnsupportedAttributes", 1)[1].split(
             "const coverageSupportedPathCommands",
             1,

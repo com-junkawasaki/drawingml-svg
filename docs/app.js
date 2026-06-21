@@ -126,6 +126,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
       <clipPath id="group-clip"><rect x="1150" y="615" width="70" height="50"/></clipPath>
       <linearGradient id="linear-fallback"><stop offset="0" stop-color="#ef4444"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
       <radialGradient id="radial-fallback"><stop offset="0" stop-color="#fef08a"/><stop offset="1" stop-color="#16a34a"/></radialGradient>
+      <linearGradient id="empty-gradient" spreadMethod="repeat" gradientUnits="userSpaceOnUse" gradientTransform="rotate(15)"/>
       <pattern id="pattern-fallback" width="12" height="12" patternUnits="userSpaceOnUse">
         <rect width="12" height="12" fill="#f97316"/>
         <circle cx="6" cy="6" r="4" fill="#22c55e"/>
@@ -233,6 +234,7 @@ line</text>
       <text class="calc-text" x="640" y="135">Calc</text>
     </g>
     <rect id="gradient-fill" x="900" y="615" width="120" height="50" style="fill:url(#linear-fallback);stroke:url(#radial-fallback)"/>
+    <rect id="empty-gradient-fill" x="1030" y="615" width="40" height="50" style="fill:url(#empty-gradient)"/>
     <circle id="pattern-fill" cx="1080" cy="640" r="32" style="fill:url(#pattern-fallback);stroke:#334155"/>
     <g id="group-clipped-shapes" clip-path="url(#group-clip)">
       <rect x="1130" y="615" width="90" height="50" fill="#fef9c3" stroke="#a16207"/>
@@ -1051,6 +1053,7 @@ function analyzeSvgCoverage(root) {
             walk(child, style, childViewport, inDefs || tag === "defs");
     };
     walk(root, {}, viewport);
+    inspectReferencedPaintServerAttributes(root, refs, css, viewport, stats);
     const measurable = Math.max(stats.total_elements - stats.ignored_elements, 0);
     stats.estimated_element_coverage = measurable ? Math.round((stats.convertible_elements / measurable) * 10000) / 10000 : 1;
     stats.unsupported_elements = sortedCoverageCounts(stats.unsupported_elements);
@@ -1240,6 +1243,56 @@ function inspectCoveragePaintServers(element, style, tag, stats, refs, css) {
             addCoverageCount(stats.unsupported_attributes, `${attr}:paint-server`);
         }
     }
+}
+function inspectReferencedPaintServerAttributes(root, refs, css, viewport, stats) {
+    for (const [id, server] of refs.entries()) {
+        const tag = localName(server);
+        if (tag !== "linearGradient" && tag !== "radialGradient")
+            continue;
+        if (!subtreeReferencesPaintServer(root, id, css, refs, {}, viewport, new Set()))
+            continue;
+        if (paintServerColor(id, refs, {}, new Set(), css))
+            continue;
+        if (server.hasAttribute("gradientTransform"))
+            addCoverageCount(stats.unsupported_attributes, "gradientTransform");
+        if (server.hasAttribute("gradientUnits"))
+            addCoverageCount(stats.unsupported_attributes, "gradientUnits");
+        if (server.hasAttribute("spreadMethod"))
+            addCoverageCount(stats.unsupported_attributes, "spreadMethod");
+        const href = hrefValue(server);
+        if (href && (!href.startsWith("#") || !refs.has(href.slice(1))))
+            addCoverageCount(stats.unsupported_attributes, "href");
+    }
+}
+function subtreeReferencesPaintServer(element, paintServerId, css, refs, inheritedStyle, viewport, refStack) {
+    const tag = localName(element);
+    if (tag === "defs")
+        return false;
+    const style = computedStyle(element, inheritedStyle, css, refs, viewport);
+    if (style.display === "none")
+        return false;
+    const childViewport = tag === "svg" ? renderedSvgViewport(element, viewport, css, style) : viewport;
+    if (tag === "use") {
+        const href = hrefValue(element);
+        const refId = href.startsWith("#") ? href.slice(1) : "";
+        const ref = refId ? refs.get(refId) : null;
+        if (!ref || refStack.has(refId))
+            return false;
+        const refViewport = ["svg", "symbol"].includes(localName(ref)) ? useViewport(ref, element, viewport, css, style) : viewport;
+        return subtreeReferencesPaintServer(ref, paintServerId, css, refs, style, refViewport, new Set([...refStack, refId]));
+    }
+    if (!["linearGradient", "pattern", "radialGradient", "stop"].includes(tag) && style.visibility !== "hidden" && style.visibility !== "collapse" && !coverageHasNonRenderingGeometry(element, tag, style, css, viewport)) {
+        for (const attr of ["fill", "stroke"]) {
+            const ref = paintUrlRef(style[attr] || "");
+            if (ref?.id === paintServerId && !ref.fallback && coveragePaintChannelIsVisible(tag, attr, style))
+                return true;
+        }
+    }
+    if (tag === "switch") {
+        const selected = switchSelectedChild(element);
+        return selected ? subtreeReferencesPaintServer(selected, paintServerId, css, refs, style, childViewport, refStack) : false;
+    }
+    return Array.from(element.children).some((child) => subtreeReferencesPaintServer(child, paintServerId, css, refs, style, childViewport, refStack));
 }
 function inspectCoverageUseReference(element, inheritedStyle, stats, refs, css, viewport, refStack) {
     const href = hrefValue(element);
