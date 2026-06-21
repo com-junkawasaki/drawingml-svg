@@ -2283,16 +2283,14 @@ function dmlXfrmBox(spPr: Element): Box | null {
   };
 }
 
+type DmlPaint = { color: string | null; alpha: number | null };
+
 function dmlSvgPaint(spPr: Element): { fill: string | null; fillAlpha: number | null; stroke: string | null; strokeAlpha: number | null; strokeWidth: number | null } {
-  const fillElement = childByLocal(spPr, "solidFill");
-  const fill = childByLocal(spPr, "noFill") ? null : dmlColor(fillElement) ?? "#000000";
-  const fillAlpha = fillElement ? dmlAlpha(fillElement) : null;
+  const fillPaint = childByLocal(spPr, "noFill") ? { color: null, alpha: null } : dmlFillPaint(spPr) ?? { color: "#000000", alpha: null };
   const ln = childByLocal(spPr, "ln");
-  const strokeElement = childByLocal(ln, "solidFill");
-  const stroke = ln && !childByLocal(ln, "noFill") ? dmlColor(strokeElement) : null;
-  const strokeAlpha = strokeElement ? dmlAlpha(strokeElement) : null;
+  const strokePaint = ln && !childByLocal(ln, "noFill") ? dmlFillPaint(ln) : null;
   const strokeWidth = ln ? emuToPx(ln.getAttribute("w")) : null;
-  return { fill, fillAlpha, stroke, strokeAlpha, strokeWidth };
+  return { fill: fillPaint.color, fillAlpha: fillPaint.alpha, stroke: strokePaint?.color ?? null, strokeAlpha: strokePaint?.alpha ?? null, strokeWidth };
 }
 
 function dmlSvgStyle(paint: { fill: string | null; fillAlpha?: number | null; stroke: string | null; strokeAlpha?: number | null; strokeWidth: number | null }): string {
@@ -2304,6 +2302,41 @@ function dmlSvgStyle(paint: { fill: string | null; fillAlpha?: number | null; st
     paint.stroke && paint.strokeWidth != null ? `stroke-width="${formatNumber(paint.strokeWidth)}"` : "",
   ].filter(Boolean);
   return attrs.length ? ` ${attrs.join(" ")}` : "";
+}
+
+function dmlFillPaint(parent: Element): DmlPaint | null {
+  const solidFill = childByLocal(parent, "solidFill");
+  if (solidFill) return { color: dmlColor(solidFill), alpha: dmlAlpha(solidFill) };
+  const gradFill = childByLocal(parent, "gradFill");
+  if (gradFill) return dmlAveragePaint(directChildrenByLocal(childByLocal(gradFill, "gsLst"), "gs"));
+  const patternFill = childByLocal(parent, "pattFill");
+  if (patternFill) return dmlAveragePaint(["fgClr", "bgClr"].map((name) => childByLocal(patternFill, name)).filter((item): item is Element => Boolean(item)));
+  return null;
+}
+
+function dmlAveragePaint(elements: Element[]): DmlPaint | null {
+  const colors = elements.map((element) => {
+    const color = dmlColor(element);
+    const rgb = hexToRgb(color || "");
+    if (!rgb) return null;
+    return { rgb, alpha: dmlAlpha(element) ?? 1 };
+  }).filter((item): item is { rgb: [number, number, number]; alpha: number } => Boolean(item));
+  if (!colors.length) return null;
+  const count = colors.length;
+  return {
+    color: rgbToHex([
+      dmlRound(colors.reduce((total, item) => total + item.rgb[0], 0) / count),
+      dmlRound(colors.reduce((total, item) => total + item.rgb[1], 0) / count),
+      dmlRound(colors.reduce((total, item) => total + item.rgb[2], 0) / count),
+    ]),
+    alpha: dmlAverageAlpha(colors.map((item) => item.alpha)),
+  };
+}
+
+function dmlAverageAlpha(values: number[]): number | null {
+  if (!values.length) return null;
+  const alpha = values.reduce((total, value) => total + value, 0) / values.length;
+  return alpha < 1 ? alpha : null;
 }
 
 function dmlColor(parent: Element | null | undefined): string | null {
