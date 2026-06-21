@@ -25,4 +25,20 @@
       <a:solidFill><a:srgbClr val="fef3c7"/></a:solidFill>
     </p:spPr>
   </p:sp>
+  <p:sp>
+    <p:nvSpPr><p:cNvPr id="5" name="preset document"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+    <p:spPr>
+      <a:xfrm><a:off x="1143000" y="190500"/><a:ext cx="381000" cy="190500"/></a:xfrm>
+      <a:prstGeom prst="flowChartDocument"><a:avLst/></a:prstGeom>
+      <a:solidFill><a:srgbClr val="dcfce7"/></a:solidFill>
+    </p:spPr>
+  </p:sp>
+  <p:sp>
+    <p:nvSpPr><p:cNvPr id="6" name="preset chevron"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+    <p:spPr>
+      <a:xfrm><a:off x="1619250" y="190500"/><a:ext cx="381000" cy="190500"/></a:xfrm>
+      <a:prstGeom prst="chevron"><a:avLst/></a:prstGeom>
+      <a:solidFill><a:srgbClr val="e0f2fe"/></a:solidFill>
+    </p:spPr>
+  </p:sp>
 </p:spTree>

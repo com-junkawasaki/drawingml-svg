@@ -1520,7 +1520,7 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "`web/app.ts` builds SVGraph" in readme
     assert "`docs/app.js` is the compiled Pages artifact." in readme
     assert "Python or server APIs" in readme
-    assert "DrawingML-to-SVG import for basic shape, common preset polygon/flowchart shape, custom geometry/freeform, grouped shape, connector, picture, and native table fragments" in readme
+    assert "DrawingML-to-SVG import for basic shape, common preset polygon/flowchart/bevel/snip shape, custom geometry/freeform, grouped shape, connector, picture, and native table fragments" in readme
     assert "underline/strike decoration including underline style, color, and thickness" in readme
     assert "npm ci" in readme
     assert "npm run check:web" in readme
@@ -1545,6 +1545,8 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert 'transform=\\\"matrix(2 0 0 2 10 20)\\\"' in package_metadata["scripts"]["check:package"]
     assert 'transform=\\\"rotate(30 20 25) translate(20 25) scale(-1 1) translate(-20 -25)\\\"' in package_metadata["scripts"]["check:package"]
     assert 'points=\\\"30,20 50,40 10,40\\\"' in package_metadata["scripts"]["check:package"]
+    assert 'points=\\\"120,20 160,20 160,36.4 150,40 140,37.6 130,40 120,36.4\\\"' in package_metadata["scripts"]["check:package"]
+    assert 'points=\\\"170,20 200,20 210,30 200,40 170,40 180,30\\\"' in package_metadata["scripts"]["check:package"]
     assert "package-freeform.svg" in package_metadata["scripts"]["check:package"]
     assert "package-picture.svg" in package_metadata["scripts"]["check:package"]
     assert "package-preset.svg" in package_metadata["scripts"]["check:package"]
@@ -1695,6 +1697,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser TypeScript `drawingMlToSvg` import support for DrawingML pictures as SVG images",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML rotation/flip transforms",
         "browser TypeScript `drawingMlToSvg` import support for common DrawingML preset polygon",
+        "browser TypeScript `drawingMlToSvg` preset import support for DrawingML document/data/display flowchart",
         "XML Open flow conversion back into canonical SVG source",
         "native DrawingML table fragments as semantic SVG table and cell nodes",
         "npm package CLI backed by the TypeScript/browser converter",

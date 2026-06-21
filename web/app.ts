@@ -1796,6 +1796,12 @@ function dmlPresetPoints(kind: string, box: Box): [number, number][] {
   if (kind === "trapezoid" || kind === "flowChartManualInput") return [[quarterX, top], [threeQuarterX, top], [right, bottom], [left, bottom]];
   if (kind === "nonIsoscelesTrapezoid") return [[box.x + box.width * 0.18, top], [right, top], [box.x + box.width * 0.82, bottom], [left, bottom]];
   if (kind === "flowChartManualOperation") return [[left, top], [right, top], [threeQuarterX, bottom], [quarterX, bottom]];
+  if (kind === "flowChartDocument") return [[left, top], [right, top], [right, box.y + box.height * 0.82], [threeQuarterX, bottom], [centerX, box.y + box.height * 0.88], [quarterX, bottom], [left, box.y + box.height * 0.82]];
+  if (kind === "flowChartPunchedCard") return [[box.x + box.width * 0.18, top], [right, top], [right, bottom], [left, bottom], [left, box.y + box.height * 0.18]];
+  if (kind === "flowChartPunchedTape") return [[left, box.y + box.height * 0.12], [quarterX, top], [centerX, box.y + box.height * 0.12], [threeQuarterX, top], [right, box.y + box.height * 0.12], [right, box.y + box.height * 0.88], [threeQuarterX, bottom], [centerX, box.y + box.height * 0.88], [quarterX, bottom], [left, box.y + box.height * 0.88]];
+  if (kind === "flowChartDelay") return [[left, top], [box.x + box.width * 0.7, top], [right, centerY], [box.x + box.width * 0.7, bottom], [left, bottom]];
+  if (kind === "flowChartStoredData") return [[box.x + box.width * 0.15, top], [right, top], [right, bottom], [box.x + box.width * 0.15, bottom], [left, centerY]];
+  if (kind === "flowChartDisplay") return [[left, top], [box.x + box.width * 0.8, top], [right, centerY], [box.x + box.width * 0.8, bottom], [left, bottom], [box.x + box.width * 0.15, centerY]];
   if (kind === "flowChartOffpageConnector") return [[left, top], [right, top], [right, threeQuarterY], [centerX, bottom], [left, threeQuarterY]];
   if (kind === "pentagon") return [[centerX, top], [right, box.y + box.height * 0.38], [box.x + box.width * 0.81, bottom], [box.x + box.width * 0.19, bottom], [left, box.y + box.height * 0.38]];
   if (kind === "hexagon" || kind === "flowChartPreparation") return [[quarterX, top], [threeQuarterX, top], [right, centerY], [threeQuarterX, bottom], [quarterX, bottom], [left, centerY]];
@@ -1803,6 +1809,16 @@ function dmlPresetPoints(kind: string, box: Box): [number, number][] {
   if (kind === "octagon") return [[quarterX, top], [threeQuarterX, top], [right, quarterY], [right, threeQuarterY], [threeQuarterX, bottom], [quarterX, bottom], [left, threeQuarterY], [left, quarterY]];
   if (kind === "decagon") return regularPolygonPoints(10, box);
   if (kind === "dodecagon" || kind === "flowChartOr" || kind === "flowChartSummingJunction") return regularPolygonPoints(12, box);
+  if (kind === "bevel") return [[box.x + box.width * 0.18, top], [right - box.width * 0.18, top], [right, box.y + box.height * 0.18], [right, bottom - box.height * 0.18], [right - box.width * 0.18, bottom], [box.x + box.width * 0.18, bottom], [left, bottom - box.height * 0.18], [left, box.y + box.height * 0.18]];
+  if (kind === "snip1Rect") return [[left, top], [threeQuarterX, top], [right, quarterY], [right, bottom], [left, bottom]];
+  if (kind === "snip2SameRect") return [[quarterX, top], [right, top], [right, threeQuarterY], [threeQuarterX, bottom], [left, bottom], [left, quarterY]];
+  if (kind === "snip2DiagRect") return [[left, top], [threeQuarterX, top], [right, quarterY], [right, bottom], [quarterX, bottom], [left, threeQuarterY]];
+  if (kind === "chevron") return [[left, top], [threeQuarterX, top], [right, centerY], [threeQuarterX, bottom], [left, bottom], [quarterX, centerY]];
+  if (kind === "homePlate") return [[left, top], [threeQuarterX, top], [right, centerY], [threeQuarterX, bottom], [left, bottom]];
+  if (kind === "foldedCorner") return [[left, top], [threeQuarterX, top], [right, quarterY], [right, bottom], [left, bottom]];
+  if (kind === "corner" || kind === "halfFrame") return [[left, top], [right, top], [right, quarterY], [quarterX, quarterY], [quarterX, bottom], [left, bottom]];
+  if (kind === "diagStripe") return [[left, bottom], [quarterX, bottom], [right, top], [threeQuarterX, top]];
+  if (kind === "plaque") return [[box.x + box.width * 0.2, top], [box.x + box.width * 0.8, top], [right, box.y + box.height * 0.2], [right, box.y + box.height * 0.8], [box.x + box.width * 0.8, bottom], [box.x + box.width * 0.2, bottom], [left, box.y + box.height * 0.8], [left, box.y + box.height * 0.2]];
   return [];
 }
 
