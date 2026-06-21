@@ -1521,7 +1521,7 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "`web/app.ts` builds SVGraph" in readme
     assert "`docs/app.js` is the compiled Pages artifact." in readme
     assert "Python or server APIs" in readme
-    assert "DrawingML-to-SVG import for basic shape, common preset polygon/flowchart/bevel/snip/symbol/star/arrow shape, custom geometry/freeform, grouped shape, connector, picture, and native table fragments" in readme
+    assert "DrawingML-to-SVG import for basic shape, common preset polygon/flowchart/bevel/snip/symbol/star/arrow/callout/ribbon/action shape, custom geometry/freeform, grouped shape, connector, picture, and native table fragments" in readme
     assert "underline/strike decoration including underline style, color, and thickness" in readme
     assert "npm ci" in readme
     assert "npm run check:web" in readme
@@ -1550,6 +1550,8 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert 'points=\\\"170,20 200,20 210,30 200,40 170,40 180,30\\\"' in package_metadata["scripts"]["check:package"]
     assert 'points=\\\"227,20 233,20 233,27 240,27 240,33 233,33 233,40 227,40 227,33 220,33 220,27 227,27\\\"' in package_metadata["scripts"]["check:package"]
     assert 'points=\\\"280,25 306,25 306,20 320,30 306,40 306,35 280,35\\\"' in package_metadata["scripts"]["check:package"]
+    assert 'points=\\\"330,20 370,20 354.8,31.6 354.8,40 345.2,40 345.2,31.6\\\"' in package_metadata["scripts"]["check:package"]
+    assert 'points=\\\"450,20 470,25 460,25 460,28 470,28 470,32 460,32 460,40 440,40 440,32 430,32 430,28 440,28 440,25 430,25\\\"' in package_metadata["scripts"]["check:package"]
     assert "package-freeform.svg" in package_metadata["scripts"]["check:package"]
     assert "package-picture.svg" in package_metadata["scripts"]["check:package"]
     assert "package-preset.svg" in package_metadata["scripts"]["check:package"]
@@ -1702,6 +1704,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser TypeScript `drawingMlToSvg` import support for common DrawingML preset polygon",
         "browser TypeScript `drawingMlToSvg` preset import support for DrawingML document/data/display flowchart",
         "browser TypeScript `drawingMlToSvg` preset import support for DrawingML bracket, brace, math symbol",
+        "browser TypeScript `drawingMlToSvg` preset import support for DrawingML action buttons, funnel, wedge callouts",
         "XML Open flow conversion back into canonical SVG source",
         "native DrawingML table fragments as semantic SVG table and cell nodes",
         "npm package CLI backed by the TypeScript/browser converter",

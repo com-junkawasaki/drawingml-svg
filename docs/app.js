@@ -1366,6 +1366,22 @@ function dmlPresetPoints(kind, box) {
         return [[left, bottom], [quarterX, bottom], [right, top], [threeQuarterX, top]];
     if (kind === "plaque")
         return [[box.x + box.width * 0.2, top], [box.x + box.width * 0.8, top], [right, box.y + box.height * 0.2], [right, box.y + box.height * 0.8], [box.x + box.width * 0.8, bottom], [box.x + box.width * 0.2, bottom], [left, box.y + box.height * 0.8], [left, box.y + box.height * 0.2]];
+    if (["actionButtonBackPrevious", "actionButtonBeginning", "actionButtonBlank", "actionButtonDocument", "actionButtonEnd", "actionButtonForwardNext", "actionButtonHelp", "actionButtonHome", "actionButtonInformation", "actionButtonMovie", "actionButtonReturn", "actionButtonSound"].includes(kind))
+        return [[box.x + box.width * 0.12, top], [right - box.width * 0.12, top], [right, box.y + box.height * 0.12], [right, bottom - box.height * 0.12], [right - box.width * 0.12, bottom], [box.x + box.width * 0.12, bottom], [left, bottom - box.height * 0.12], [left, box.y + box.height * 0.12]];
+    if (kind === "funnel")
+        return [[left, top], [right, top], [box.x + box.width * 0.62, box.y + box.height * 0.58], [box.x + box.width * 0.62, bottom], [box.x + box.width * 0.38, bottom], [box.x + box.width * 0.38, box.y + box.height * 0.58]];
+    if (kind === "wedgeRectCallout")
+        return [[left, top], [right, top], [right, box.y + box.height * 0.68], [box.x + box.width * 0.62, box.y + box.height * 0.68], [box.x + box.width * 0.42, bottom], [box.x + box.width * 0.48, box.y + box.height * 0.68], [left, box.y + box.height * 0.68]];
+    if (kind === "wedgeRoundRectCallout")
+        return [[box.x + box.width * 0.12, top], [box.x + box.width * 0.88, top], [right, box.y + box.height * 0.12], [right, box.y + box.height * 0.68], [box.x + box.width * 0.62, box.y + box.height * 0.68], [box.x + box.width * 0.42, bottom], [box.x + box.width * 0.48, box.y + box.height * 0.68], [box.x + box.width * 0.12, box.y + box.height * 0.68], [left, box.y + box.height * 0.56], [left, box.y + box.height * 0.12]];
+    if (kind === "wedgeEllipseCallout")
+        return [[centerX, top], [box.x + box.width * 0.85, box.y + box.height * 0.08], [right, box.y + box.height * 0.34], [box.x + box.width * 0.88, box.y + box.height * 0.58], [box.x + box.width * 0.62, box.y + box.height * 0.68], [box.x + box.width * 0.42, bottom], [box.x + box.width * 0.48, box.y + box.height * 0.68], [box.x + box.width * 0.18, box.y + box.height * 0.64], [left, box.y + box.height * 0.38], [box.x + box.width * 0.12, box.y + box.height * 0.12]];
+    if (kind === "ribbon")
+        return [[left, box.y + box.height * 0.18], [box.x + box.width * 0.2, box.y + box.height * 0.3], [box.x + box.width * 0.2, top], [box.x + box.width * 0.8, top], [box.x + box.width * 0.8, box.y + box.height * 0.3], [right, box.y + box.height * 0.18], [box.x + box.width * 0.9, centerY], [right, box.y + box.height * 0.82], [box.x + box.width * 0.8, box.y + box.height * 0.7], [box.x + box.width * 0.8, bottom], [box.x + box.width * 0.2, bottom], [box.x + box.width * 0.2, box.y + box.height * 0.7], [left, box.y + box.height * 0.82], [box.x + box.width * 0.1, centerY]];
+    if (kind === "ribbon2")
+        return [[left, box.y + box.height * 0.32], [box.x + box.width * 0.2, box.y + box.height * 0.2], [box.x + box.width * 0.2, top], [box.x + box.width * 0.8, top], [box.x + box.width * 0.8, box.y + box.height * 0.2], [right, box.y + box.height * 0.32], [box.x + box.width * 0.9, centerY], [right, box.y + box.height * 0.68], [box.x + box.width * 0.8, box.y + box.height * 0.8], [box.x + box.width * 0.8, bottom], [box.x + box.width * 0.2, bottom], [box.x + box.width * 0.2, box.y + box.height * 0.8], [left, box.y + box.height * 0.68], [box.x + box.width * 0.1, centerY]];
+    if (kind === "leftRightRibbon")
+        return [[left, top], [box.x + box.width * 0.18, box.y + box.height * 0.22], [box.x + box.width * 0.18, box.y + box.height * 0.08], [box.x + box.width * 0.82, box.y + box.height * 0.08], [box.x + box.width * 0.82, box.y + box.height * 0.22], [right, top], [box.x + box.width * 0.9, centerY], [right, bottom], [box.x + box.width * 0.82, box.y + box.height * 0.78], [box.x + box.width * 0.82, box.y + box.height * 0.92], [box.x + box.width * 0.18, box.y + box.height * 0.92], [box.x + box.width * 0.18, box.y + box.height * 0.78], [left, bottom], [box.x + box.width * 0.1, centerY]];
     if (kind === "leftBracket")
         return [[right, top], [left, top], [left, bottom], [right, bottom], [right, threeQuarterY], [quarterX, threeQuarterY], [quarterX, quarterY], [right, quarterY]];
     if (kind === "rightBracket")
@@ -1420,6 +1436,18 @@ function dmlPresetPoints(kind, box) {
         return [[left, centerY], [quarterX, top], [quarterX, quarterY], [threeQuarterX, quarterY], [threeQuarterX, top], [right, centerY], [threeQuarterX, bottom], [threeQuarterX, threeQuarterY], [quarterX, threeQuarterY], [quarterX, bottom]];
     if (kind === "upDownArrow")
         return [[centerX, top], [right, quarterY], [threeQuarterX, quarterY], [threeQuarterX, threeQuarterY], [right, threeQuarterY], [centerX, bottom], [left, threeQuarterY], [quarterX, threeQuarterY], [quarterX, quarterY], [left, quarterY]];
+    if (kind === "quadArrow")
+        return [[centerX, top], [threeQuarterX, quarterY], [box.x + box.width * 0.6, quarterY], [box.x + box.width * 0.6, arrowShaftTop], [threeQuarterX, arrowShaftTop], [right, centerY], [threeQuarterX, arrowShaftBottom], [box.x + box.width * 0.6, arrowShaftBottom], [box.x + box.width * 0.6, threeQuarterY], [threeQuarterX, threeQuarterY], [centerX, bottom], [quarterX, threeQuarterY], [box.x + box.width * 0.4, threeQuarterY], [box.x + box.width * 0.4, arrowShaftBottom], [quarterX, arrowShaftBottom], [left, centerY], [quarterX, arrowShaftTop], [box.x + box.width * 0.4, arrowShaftTop], [box.x + box.width * 0.4, quarterY], [quarterX, quarterY]];
+    if (kind === "leftRightUpArrow")
+        return [[centerX, top], [right, quarterY], [threeQuarterX, quarterY], [threeQuarterX, arrowShaftTop], [right, arrowShaftTop], [right, arrowShaftBottom], [threeQuarterX, arrowShaftBottom], [threeQuarterX, bottom], [quarterX, bottom], [quarterX, arrowShaftBottom], [left, arrowShaftBottom], [left, arrowShaftTop], [quarterX, arrowShaftTop], [quarterX, quarterY], [left, quarterY]];
+    if (kind === "bentUpArrow")
+        return [[box.x + box.width * 0.55, bottom], [box.x + box.width * 0.55, quarterY], [box.x + box.width * 0.35, quarterY], [box.x + box.width * 0.7, top], [right, quarterY], [box.x + box.width * 0.8, quarterY], [box.x + box.width * 0.8, bottom]];
+    if (kind === "bentArrow")
+        return [[left, top], [box.x + box.width * 0.55, top], [box.x + box.width * 0.55, arrowShaftTop], [arrowHeadX, arrowShaftTop], [arrowHeadX, quarterY], [right, centerY], [arrowHeadX, threeQuarterY], [arrowHeadX, arrowShaftBottom], [box.x + box.width * 0.35, arrowShaftBottom], [box.x + box.width * 0.35, bottom], [left, bottom]];
+    if (kind === "uturnArrow")
+        return [[centerX, top], [right, quarterY], [box.x + box.width * 0.7, quarterY], [box.x + box.width * 0.7, bottom], [box.x + box.width * 0.45, bottom], [box.x + box.width * 0.45, quarterY], [quarterX, quarterY], [quarterX, box.y + box.height * 0.08], [left, centerY], [quarterX, box.y + box.height * 0.92], [quarterX, threeQuarterY], [centerX, threeQuarterY]];
+    if (kind === "leftUpArrow")
+        return [[centerX, top], [threeQuarterX, quarterY], [box.x + box.width * 0.6, quarterY], [box.x + box.width * 0.6, bottom], [box.x + box.width * 0.4, bottom], [box.x + box.width * 0.4, arrowShaftBottom], [quarterX, arrowShaftBottom], [quarterX, threeQuarterY], [left, centerY], [quarterX, quarterY], [quarterX, arrowShaftTop], [box.x + box.width * 0.4, arrowShaftTop], [box.x + box.width * 0.4, quarterY], [quarterX, quarterY]];
     return [];
 }
 function regularPolygonPoints(sides, box) {

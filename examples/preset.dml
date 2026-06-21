@@ -65,4 +65,28 @@
       <a:solidFill><a:srgbClr val="bfdbfe"/></a:solidFill>
     </p:spPr>
   </p:sp>
+  <p:sp>
+    <p:nvSpPr><p:cNvPr id="10" name="preset funnel"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+    <p:spPr>
+      <a:xfrm><a:off x="3143250" y="190500"/><a:ext cx="381000" cy="190500"/></a:xfrm>
+      <a:prstGeom prst="funnel"><a:avLst/></a:prstGeom>
+      <a:solidFill><a:srgbClr val="ddd6fe"/></a:solidFill>
+    </p:spPr>
+  </p:sp>
+  <p:sp>
+    <p:nvSpPr><p:cNvPr id="11" name="preset ribbon"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+    <p:spPr>
+      <a:xfrm><a:off x="3619500" y="190500"/><a:ext cx="381000" cy="190500"/></a:xfrm>
+      <a:prstGeom prst="ribbon"><a:avLst/></a:prstGeom>
+      <a:solidFill><a:srgbClr val="fed7aa"/></a:solidFill>
+    </p:spPr>
+  </p:sp>
+  <p:sp>
+    <p:nvSpPr><p:cNvPr id="12" name="preset compound arrow"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+    <p:spPr>
+      <a:xfrm><a:off x="4095750" y="190500"/><a:ext cx="381000" cy="190500"/></a:xfrm>
+      <a:prstGeom prst="leftRightUpArrow"><a:avLst/></a:prstGeom>
+      <a:solidFill><a:srgbClr val="bbf7d0"/></a:solidFill>
+    </p:spPr>
+  </p:sp>
 </p:spTree>
