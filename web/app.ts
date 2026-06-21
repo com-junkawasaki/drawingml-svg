@@ -1613,11 +1613,73 @@ type DmlSvgItem = {
 };
 
 function dmlSvgItems(root: Element): DmlSvgItem[] {
-  return elementsByLocal(root, "sp")
-    .map(dmlShapeToSvg)
-    .concat(elementsByLocal(root, "cxnSp").map(dmlConnectorToSvg))
-    .concat(elementsByLocal(root, "graphicFrame").map(dmlTableFrameToSvg))
-    .filter((item): item is DmlSvgItem => item !== null);
+  return dmlSvgItemsWalk(root, [1, 0, 0, 1, 0, 0]);
+}
+
+function dmlSvgItemsWalk(element: Element, matrix: Matrix): DmlSvgItem[] {
+  const tag = localName(element);
+  if (tag === "grpSp") {
+    const groupMatrix = multiply(matrix, dmlGroupMatrix(element));
+    return Array.from(element.children).flatMap((child) => dmlSvgItemsWalk(child, groupMatrix));
+  }
+  const item = tag === "sp" ? dmlShapeToSvg(element) : tag === "cxnSp" ? dmlConnectorToSvg(element) : tag === "graphicFrame" ? dmlTableFrameToSvg(element) : null;
+  if (item) return [transformDmlSvgItem(item, matrix)];
+  return Array.from(element.children).flatMap((child) => dmlSvgItemsWalk(child, matrix));
+}
+
+function transformDmlSvgItem(item: DmlSvgItem, matrix: Matrix): DmlSvgItem {
+  if (matrixIsIdentity(matrix)) return item;
+  const bounds = transformedBox(matrix, item.bounds.x, item.bounds.y, item.bounds.width, item.bounds.height);
+  return {
+    bounds,
+    svg: `<g transform="${svgMatrix(matrix)}">${item.svg}</g>`,
+  };
+}
+
+function dmlGroupMatrix(element: Element): Matrix {
+  const xfrm = childByLocal(childByLocal(element, "grpSpPr"), "xfrm");
+  if (!xfrm) return [1, 0, 0, 1, 0, 0];
+  const off = childByLocal(xfrm, "off");
+  const ext = childByLocal(xfrm, "ext");
+  const chOff = childByLocal(xfrm, "chOff");
+  const chExt = childByLocal(xfrm, "chExt");
+  const x = emuToPx(off?.getAttribute("x"));
+  const y = emuToPx(off?.getAttribute("y"));
+  const width = emuToPx(ext?.getAttribute("cx"));
+  const height = emuToPx(ext?.getAttribute("cy"));
+  const childX = emuToPx(chOff?.getAttribute("x"));
+  const childY = emuToPx(chOff?.getAttribute("y"));
+  const childWidth = chExt ? emuToPx(chExt.getAttribute("cx")) : width;
+  const childHeight = chExt ? emuToPx(chExt.getAttribute("cy")) : height;
+  const scaleX = childWidth ? width / childWidth : 1;
+  const scaleY = childHeight ? height / childHeight : 1;
+  let matrix: Matrix = [scaleX, 0, 0, scaleY, x - childX * scaleX, y - childY * scaleY];
+  if (childByLocal(element, "grpSpPr") && dmlBool(xfrm.getAttribute("flipH"))) {
+    matrix = multiply([-1, 0, 0, 1, x * 2 + width, 0], matrix);
+  }
+  if (childByLocal(element, "grpSpPr") && dmlBool(xfrm.getAttribute("flipV"))) {
+    matrix = multiply([1, 0, 0, -1, 0, y * 2 + height], matrix);
+  }
+  const rotation = Number(xfrm.getAttribute("rot"));
+  if (Number.isFinite(rotation) && rotation) {
+    const radians = (rotation / 60000 / 180) * Math.PI;
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    matrix = multiply(multiply([1, 0, 0, 1, centerX, centerY], [Math.cos(radians), Math.sin(radians), -Math.sin(radians), Math.cos(radians), 0, 0]), multiply([1, 0, 0, 1, -centerX, -centerY], matrix));
+  }
+  return matrix;
+}
+
+function matrixIsIdentity(matrix: Matrix): boolean {
+  return Math.abs(matrix[0] - 1) < 1e-9 && Math.abs(matrix[1]) < 1e-9 && Math.abs(matrix[2]) < 1e-9 && Math.abs(matrix[3] - 1) < 1e-9 && Math.abs(matrix[4]) < 1e-9 && Math.abs(matrix[5]) < 1e-9;
+}
+
+function svgMatrix(matrix: Matrix): string {
+  return `matrix(${matrix.map(formatNumber).join(" ")})`;
+}
+
+function dmlBool(value: string | null): boolean {
+  return value === "1" || value === "true";
 }
 
 function dmlShapeToSvg(element: Element): DmlSvgItem | null {
@@ -1823,10 +1885,6 @@ function descendantsByLocal(element: Element, name: string): Element[] {
   };
   visit(element);
   return result;
-}
-
-function elementsByLocal(element: Element, name: string): Element[] {
-  return localName(element) === name ? [element, ...descendantsByLocal(element, name)] : descendantsByLocal(element, name);
 }
 
 function emuToPx(value: string | null | undefined): number {
