@@ -685,7 +685,8 @@ def _html_table_cell_text_runs(
     _append_html_text_runs(cell, css, inherited_style, (), (), scale, runs, False)
     if not runs:
         return ()
-    if len(runs) == 1 and not runs[0].break_before:
+    text_transform = (inherited_style.get("text-transform") or "").strip().lower()
+    if len(runs) == 1 and not runs[0].break_before and text_transform in {"", "none", "normal"}:
         default_run = _html_text_run(runs[0].text, inherited_style, scale, False)
         if runs[0] == default_run:
             return ()
@@ -780,8 +781,9 @@ def _add_html_text_decoration(style: dict[str, str], decoration: str) -> None:
 def _html_text_run(text: str, style: dict[str, str], scale: float, break_before: bool) -> TextRun:
     fill, fill_alpha = _html_text_fill(style)
     decoration_color, decoration_alpha = _text_decoration_color(style)
+    transformed = _apply_text_transform(text, style.get("text-transform"))
     return TextRun(
-        text=text,
+        text=transformed,
         paint=Paint(fill=fill or "#000000", stroke="none", fill_alpha=fill_alpha),
         break_before=break_before,
         font_size=_svg_font_size(style.get("font-size")) * scale,

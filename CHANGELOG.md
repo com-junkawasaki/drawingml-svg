@@ -36,6 +36,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Aligned browser `foreignObject` HTML table margin and padding shorthand tokenization with Python.
 - Aligned browser `foreignObject` HTML table hidden border shorthand handling with Python.
 - Aligned browser `foreignObject` HTML table inline `strong`/`em` defaults with Python so explicit normal font styles are preserved.
+- Added `foreignObject` HTML table `text-transform` support to Python and browser rich text runs.
 - Added `svgraph` as the canonical typed Python import package and console-script entry point target, including `svgraph.model`, `svgraph.converter`, `svgraph.coverage`, and `svgraph.pptx` wrapper modules, while preserving `drawingml_svg` and `drawingml-svg` compatibility surfaces.
 - Packaged the browser editor source, committed Pages artifact, and examples in the `svgraph` source distribution so OSS consumers can rebuild docs/app.js, inspect examples, and reproduce release smoke checks from the published sdist.
 - Aligned release checklist source distribution checks with packaged SVGraph docs, governance files, examples, and browser editor sources.
