@@ -1749,6 +1749,14 @@ function dmlShapeToSvg(element: Element): DmlSvgItem | null {
     const customShape = dmlCustomGeometryToSvg(custom, box, idAttr, textAttrs, style, body, transform, bounds);
     if (customShape) return customShape;
   }
+  const presetPoints = dmlPresetPoints(preset, box);
+  if (presetPoints.length) {
+    const pointsAttr = presetPoints.map(([x, y]) => `${formatNumber(x)},${formatNumber(y)}`).join(" ");
+    return {
+      bounds,
+      svg: `<g${idAttr}${textAttrs}${transform}><polygon points="${pointsAttr}"${style}/>${body}</g>`,
+    };
+  }
   if (preset === "ellipse" || preset === "oval") {
     return {
       bounds,
@@ -1765,6 +1773,48 @@ function dmlShapeToSvg(element: Element): DmlSvgItem | null {
     bounds,
     svg: `<g${idAttr}${textAttrs}${transform}><rect x="${formatNumber(box.x)}" y="${formatNumber(box.y)}" width="${formatNumber(box.width)}" height="${formatNumber(box.height)}"${rx ? ` rx="${formatNumber(rx)}" ry="${formatNumber(rx)}"` : ""}${style}/>${body}</g>`,
   };
+}
+
+function dmlPresetPoints(kind: string, box: Box): [number, number][] {
+  if (box.width <= 0 || box.height <= 0) return [];
+  const left = box.x;
+  const centerX = box.x + box.width / 2;
+  const right = box.x + box.width;
+  const top = box.y;
+  const centerY = box.y + box.height / 2;
+  const bottom = box.y + box.height;
+  const quarterX = box.x + box.width / 4;
+  const threeQuarterX = box.x + box.width * 3 / 4;
+  const quarterY = box.y + box.height / 4;
+  const threeQuarterY = box.y + box.height * 3 / 4;
+  if (kind === "triangle" || kind === "flowChartExtract") return [[centerX, top], [right, bottom], [left, bottom]];
+  if (kind === "flowChartMerge") return [[left, top], [right, top], [centerX, bottom]];
+  if (kind === "rtTriangle") return [[left, top], [right, bottom], [left, bottom]];
+  if (kind === "diamond" || kind === "flowChartDecision" || kind === "flowChartSort") return [[centerX, top], [right, centerY], [centerX, bottom], [left, centerY]];
+  if (kind === "flowChartCollate") return [[left, top], [right, top], [centerX, centerY], [right, bottom], [left, bottom], [centerX, centerY]];
+  if (kind === "parallelogram" || kind === "flowChartData" || kind === "flowChartInputOutput") return [[quarterX, top], [right, top], [threeQuarterX, bottom], [left, bottom]];
+  if (kind === "trapezoid" || kind === "flowChartManualInput") return [[quarterX, top], [threeQuarterX, top], [right, bottom], [left, bottom]];
+  if (kind === "nonIsoscelesTrapezoid") return [[box.x + box.width * 0.18, top], [right, top], [box.x + box.width * 0.82, bottom], [left, bottom]];
+  if (kind === "flowChartManualOperation") return [[left, top], [right, top], [threeQuarterX, bottom], [quarterX, bottom]];
+  if (kind === "flowChartOffpageConnector") return [[left, top], [right, top], [right, threeQuarterY], [centerX, bottom], [left, threeQuarterY]];
+  if (kind === "pentagon") return [[centerX, top], [right, box.y + box.height * 0.38], [box.x + box.width * 0.81, bottom], [box.x + box.width * 0.19, bottom], [left, box.y + box.height * 0.38]];
+  if (kind === "hexagon" || kind === "flowChartPreparation") return [[quarterX, top], [threeQuarterX, top], [right, centerY], [threeQuarterX, bottom], [quarterX, bottom], [left, centerY]];
+  if (kind === "heptagon") return regularPolygonPoints(7, box);
+  if (kind === "octagon") return [[quarterX, top], [threeQuarterX, top], [right, quarterY], [right, threeQuarterY], [threeQuarterX, bottom], [quarterX, bottom], [left, threeQuarterY], [left, quarterY]];
+  if (kind === "decagon") return regularPolygonPoints(10, box);
+  if (kind === "dodecagon" || kind === "flowChartOr" || kind === "flowChartSummingJunction") return regularPolygonPoints(12, box);
+  return [];
+}
+
+function regularPolygonPoints(sides: number, box: Box): [number, number][] {
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+  const radiusX = box.width / 2;
+  const radiusY = box.height / 2;
+  return Array.from({ length: sides }, (_, index) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * index) / sides;
+    return [centerX + radiusX * Math.cos(angle), centerY + radiusY * Math.sin(angle)] as [number, number];
+  });
 }
 
 function dmlCustomGeometryToSvg(custom: Element, box: Box, idAttr: string, textAttrs: string, style: string, body: string, transform = "", transformedBounds: Box | null = null): DmlSvgItem | null {

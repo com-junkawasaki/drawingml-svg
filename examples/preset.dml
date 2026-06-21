@@ -1,0 +1,28 @@
+<p:spTree xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+  <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
+  <p:sp>
+    <p:nvSpPr><p:cNvPr id="2" name="preset triangle"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+    <p:spPr>
+      <a:xfrm><a:off x="95250" y="190500"/><a:ext cx="381000" cy="190500"/></a:xfrm>
+      <a:prstGeom prst="triangle"><a:avLst/></a:prstGeom>
+      <a:solidFill><a:srgbClr val="fee2e2"/></a:solidFill>
+    </p:spPr>
+  </p:sp>
+  <p:sp>
+    <p:nvSpPr><p:cNvPr id="3" name="preset decision"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+    <p:spPr>
+      <a:xfrm><a:off x="571500" y="190500"/><a:ext cx="190500" cy="190500"/></a:xfrm>
+      <a:prstGeom prst="flowChartDecision"><a:avLst/></a:prstGeom>
+      <a:solidFill><a:srgbClr val="dbeafe"/></a:solidFill>
+    </p:spPr>
+  </p:sp>
+  <p:sp>
+    <p:nvSpPr><p:cNvPr id="4" name="preset preparation"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+    <p:spPr>
+      <a:xfrm><a:off x="857250" y="190500"/><a:ext cx="190500" cy="190500"/></a:xfrm>
+      <a:prstGeom prst="flowChartPreparation"><a:avLst/></a:prstGeom>
+      <a:solidFill><a:srgbClr val="fef3c7"/></a:solidFill>
+    </p:spPr>
+  </p:sp>
+</p:spTree>
