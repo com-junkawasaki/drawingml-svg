@@ -2912,7 +2912,9 @@ function dmlTextRunAttrsFromCandidates(candidates: Element[], fallbackFill: DmlP
   if (fontSize > 0) attrs.push(`font-size="${formatNumber(fontSize / 100)}"`);
   if (dmlBool(dmlFirstTextAttr(candidates, "b"))) attrs.push('font-weight="bold"');
   if (dmlBool(dmlFirstTextAttr(candidates, "i"))) attrs.push('font-style="italic"');
-  if (["small", "all"].includes(dmlFirstTextAttr(candidates, "cap") || "")) attrs.push('font-variant="small-caps"');
+  const cap = dmlFirstTextAttr(candidates, "cap");
+  if (cap === "small") attrs.push('font-variant="small-caps"');
+  if (cap === "all") attrs.push('font-variant="all-small-caps"');
   const typeface = dmlTextTypeface(candidates);
   if (typeface) attrs.push(`font-family="${xml(typeface)}"`);
   attrs.push(...dmlTextFillAttrs(candidates, fallbackFill));

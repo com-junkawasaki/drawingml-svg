@@ -31,6 +31,7 @@ This project follows a simple, human-readable changelog. Until the project reach
 - Added browser TypeScript `drawingMlToSvg` import support for DrawingML rich text run fill, font, outline, decoration, baseline, and spacing details.
 - Added browser TypeScript `drawingMlToSvg` import support for DrawingML underline style, color, alpha, and thickness details.
 - Added browser TypeScript `drawingMlToSvg` import support for Python-compatible DrawingML baseline shift thresholds.
+- Aligned browser TypeScript `drawingMlToSvg` all-caps text run imports with Python as SVG `font-variant="all-small-caps"`.
 - Added browser TypeScript `drawingMlToSvg` import support for DrawingML paragraph default and end-paragraph text run fallback styles.
 - Added browser TypeScript `drawingMlToSvg` import support for DrawingML paragraph bullets, auto-numbering, tabs, and explicit line breaks.
 - Aligned browser TypeScript `drawingMlToSvg` Roman auto-numbered bullets with Python by falling back to numeric text above 3999.

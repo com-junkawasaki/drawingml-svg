@@ -1068,6 +1068,7 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
     assert "examples/table-rich.dml" in package_metadata["files"]
     assert "examples/table-scaled.dml" in package_metadata["files"]
     assert "examples/table-scaled-insets.dml" in package_metadata["files"]
+    assert "examples/text-caps.dml" in package_metadata["files"]
     assert "examples/text-baseline-threshold.dml" in package_metadata["files"]
     assert "examples/text-bullets.dml" in package_metadata["files"]
     assert "examples/text-defaults.dml" in package_metadata["files"]
@@ -1631,6 +1632,7 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "node ./bin/svgraph.mjs dml2svg examples/line-flip-bool.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/line-style.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/style-ref.dml" in package_metadata["scripts"]["check:package"]
+    assert "node ./bin/svgraph.mjs dml2svg examples/text-caps.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/text-baseline-threshold.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/text-style.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/text-defaults.dml" in package_metadata["scripts"]["check:package"]
@@ -1668,6 +1670,7 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "package-line-flip-bool.svg" in package_metadata["scripts"]["check:package"]
     assert "package-line-style.svg" in package_metadata["scripts"]["check:package"]
     assert "package-style-ref.svg" in package_metadata["scripts"]["check:package"]
+    assert "package-text-caps.svg" in package_metadata["scripts"]["check:package"]
     assert "package-text-baseline-threshold.svg" in package_metadata["scripts"]["check:package"]
     assert "package-text-style.svg" in package_metadata["scripts"]["check:package"]
     assert "package-text-defaults.svg" in package_metadata["scripts"]["check:package"]
@@ -1715,6 +1718,7 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert 'fill-opacity=\\\"0.7\\\"' in package_metadata["scripts"]["check:package"]
     assert 'stroke-opacity=\\\"0.4\\\"' in package_metadata["scripts"]["check:package"]
     assert 'font-weight=\\\"bold\\\"' in package_metadata["scripts"]["check:package"]
+    assert 'font-variant=\\\"all-small-caps\\\"' in package_metadata["scripts"]["check:package"]
     assert 'baseline-shift=\\\"super\\\"' in package_metadata["scripts"]["check:package"]
     assert 'baseline-shift=\\\"sub\\\"' in package_metadata["scripts"]["check:package"]
     assert 'text-decoration-style=\\\"dashed\\\"' in package_metadata["scripts"]["check:package"]
@@ -1849,6 +1853,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser TypeScript `drawingMlToSvg` import support for DrawingML rich text run fill, font, outline, decoration, baseline, and spacing details",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML underline style, color, alpha, and thickness details",
         "browser TypeScript `drawingMlToSvg` import support for Python-compatible DrawingML baseline shift thresholds",
+        "browser TypeScript `drawingMlToSvg` all-caps text run imports with Python as SVG `font-variant=\"all-small-caps\"`",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML paragraph default and end-paragraph text run fallback styles",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML paragraph bullets, auto-numbering, tabs, and explicit line breaks",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML text body insets, vertical anchors, paragraph/list alignment, and RTL direction",
