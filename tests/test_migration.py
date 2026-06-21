@@ -1133,6 +1133,16 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "function drawingMlToSvg" in generated
         assert "function dmlShapeToSvg" in generated
         assert "function dmlConnectorToSvg" in generated
+        assert "function dmlTableFrameToSvg" in generated
+        assert "function dmlTableColumns" in generated
+        assert "function elementsByLocal" in generated
+        assert "function directChildrenByLocal" in generated
+        assert 'data-kind="table"' in generated
+        assert 'data-kind="cell"' in generated
+        assert "gridSpan" in generated
+        assert "rowSpan" in generated
+        assert "hMerge" in generated
+        assert "vMerge" in generated
         assert "function buildDrawingMlFragment" in generated
         assert 'value("text-decoration-style")' in generated
         assert "underlineStyle: underlineStyle(textStyle)" in generated
@@ -1489,7 +1499,7 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "`web/app.ts` builds SVGraph" in readme
     assert "`docs/app.js` is the compiled Pages artifact." in readme
     assert "Python or server APIs" in readme
-    assert "DrawingML-to-SVG import for basic shape fragments" in readme
+    assert "DrawingML-to-SVG import for basic shape and native table fragments" in readme
     assert "underline/strike decoration including underline style, color, and thickness" in readme
     assert "npm ci" in readme
     assert "npm run check:web" in readme
@@ -1637,6 +1647,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "importable assistant prompt, parser, validation, diff, and patch helpers",
         "browser TypeScript `drawingMlToSvg` import support",
         "XML Open flow conversion back into canonical SVG source",
+        "native DrawingML table fragments as semantic SVG table and cell nodes",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",
@@ -1848,6 +1859,7 @@ def test_web_editor_design_uses_browser_only_svgraph_contract() -> None:
         "DrawingML fragments and `.pptx` without Python",
         "import basic DrawingML shape fragments back into canonical SVG source without Python",
         'p:cxnSp` connectors as `data-kind="relation"` SVG lines',
+        "native `p:graphicFrame`/`a:tbl` tables as `data-kind=\"table\"`",
         "deterministic patch proposal/validation preview",
         "can replace the proposal with local Web LLM output after validation",
         "deterministic patch diff preview rows",

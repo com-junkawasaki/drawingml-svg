@@ -1127,9 +1127,10 @@ export function drawingMlToSvg(drawingMlText) {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${formatNumber(minX)} ${formatNumber(minY)} ${formatNumber(width)} ${formatNumber(height)}">${items.map((item) => item.svg).join("")}</svg>`;
 }
 function dmlSvgItems(root) {
-    return descendantsByLocal(root, "sp")
+    return elementsByLocal(root, "sp")
         .map(dmlShapeToSvg)
-        .concat(descendantsByLocal(root, "cxnSp").map(dmlConnectorToSvg))
+        .concat(elementsByLocal(root, "cxnSp").map(dmlConnectorToSvg))
+        .concat(elementsByLocal(root, "graphicFrame").map(dmlTableFrameToSvg))
         .filter((item) => item !== null);
 }
 function dmlShapeToSvg(element) {
@@ -1178,6 +1179,80 @@ function dmlConnectorToSvg(element) {
         bounds: box,
         svg: `<line id="${xml(dmlSvgId(name))}" x1="${formatNumber(x1)}" y1="${formatNumber(y1)}" x2="${formatNumber(x2)}" y2="${formatNumber(y2)}"${dmlSvgStyle(dmlSvgPaint(spPr))} data-kind="relation"/>`,
     };
+}
+function dmlTableFrameToSvg(element) {
+    const tbl = descendantsByLocal(element, "tbl")[0];
+    if (!tbl)
+        return null;
+    const xfrm = childByLocal(element, "xfrm");
+    const off = childByLocal(xfrm, "off");
+    const originX = emuToPx(off?.getAttribute("x"));
+    const originY = emuToPx(off?.getAttribute("y"));
+    const columns = dmlTableColumns(tbl);
+    const rows = directChildrenByLocal(tbl, "tr").map((row) => emuToPx(row.getAttribute("h")));
+    if (!columns.length || !rows.length)
+        return null;
+    const name = childByLocal(childByLocal(element, "nvGraphicFramePr"), "cNvPr")?.getAttribute("name") || "table";
+    const width = columns.reduce((total, value) => total + value, 0);
+    const height = rows.reduce((total, value) => total + value, 0);
+    const occupied = rows.map(() => columns.map(() => false));
+    const children = [];
+    let rowY = originY;
+    directChildrenByLocal(tbl, "tr").forEach((row, rowIndex) => {
+        let colX = originX;
+        let colIndex = 0;
+        for (const cell of directChildrenByLocal(row, "tc")) {
+            while (occupied[rowIndex]?.[colIndex]) {
+                colX += columns[colIndex] ?? 0;
+                colIndex += 1;
+            }
+            const colSpan = Math.max(1, Number(cell.getAttribute("gridSpan") || 1) || 1);
+            const rowSpan = Math.max(1, Number(cell.getAttribute("rowSpan") || 1) || 1);
+            const isMerge = cell.getAttribute("hMerge") === "1" || cell.getAttribute("vMerge") === "1";
+            const cellWidth = columns.slice(colIndex, colIndex + colSpan).reduce((total, value) => total + value, 0);
+            const cellHeight = rows.slice(rowIndex, rowIndex + rowSpan).reduce((total, value) => total + value, 0);
+            for (let r = rowIndex; r < Math.min(rows.length, rowIndex + rowSpan); r += 1) {
+                for (let c = colIndex; c < Math.min(columns.length, colIndex + colSpan); c += 1)
+                    occupied[r][c] = true;
+            }
+            if (!isMerge && cellWidth > 0 && cellHeight > 0) {
+                const text = dmlText(cell);
+                const fill = dmlColor(childByLocal(childByLocal(cell, "tcPr"), "solidFill")) ?? "#ffffff";
+                const border = dmlTableCellBorder(childByLocal(cell, "tcPr"));
+                const cellAttrs = [
+                    `data-kind="cell"`,
+                    `data-row="${rowIndex}"`,
+                    `data-col="${colIndex}"`,
+                    colSpan > 1 ? `data-colspan="${colSpan}"` : "",
+                    rowSpan > 1 ? `data-rowspan="${rowSpan}"` : "",
+                    text ? `data-text="${xml(text)}"` : "",
+                ].filter(Boolean).join(" ");
+                children.push(`<rect ${cellAttrs} x="${formatNumber(colX)}" y="${formatNumber(rowY)}" width="${formatNumber(cellWidth)}" height="${formatNumber(cellHeight)}" fill="${fill}"${border}/>`);
+                if (text) {
+                    children.push(`<text x="${formatNumber(colX + cellWidth / 2)}" y="${formatNumber(rowY + cellHeight / 2)}" text-anchor="middle" dominant-baseline="middle">${xml(text)}</text>`);
+                }
+            }
+            colX += cellWidth;
+            colIndex += colSpan;
+        }
+        rowY += rows[rowIndex] ?? 0;
+    });
+    return {
+        bounds: { x: originX, y: originY, width, height },
+        svg: `<g id="${xml(dmlSvgId(name))}" data-kind="table">${children.join("")}</g>`,
+    };
+}
+function dmlTableColumns(tbl) {
+    const grid = childByLocal(tbl, "tblGrid");
+    return grid ? directChildrenByLocal(grid, "gridCol").map((col) => emuToPx(col.getAttribute("w"))) : [];
+}
+function dmlTableCellBorder(tcPr) {
+    const line = childByLocal(tcPr, "lnL") ?? childByLocal(tcPr, "lnR") ?? childByLocal(tcPr, "lnT") ?? childByLocal(tcPr, "lnB");
+    if (!line)
+        return "";
+    const stroke = dmlColor(childByLocal(line, "solidFill"));
+    const strokeWidth = emuToPx(line.getAttribute("w"));
+    return stroke ? ` stroke="${stroke}"${strokeWidth ? ` stroke-width="${formatNumber(strokeWidth)}"` : ""}` : "";
 }
 function dmlXfrmBox(spPr) {
     const xfrm = childByLocal(spPr, "xfrm");
@@ -1245,6 +1320,9 @@ function dmlSvgId(value) {
 function childByLocal(element, name) {
     return element ? Array.from(element.children).find((child) => localName(child) === name) ?? null : null;
 }
+function directChildrenByLocal(element, name) {
+    return element ? Array.from(element.children).filter((child) => localName(child) === name) : [];
+}
 function descendantsByLocal(element, name) {
     const result = [];
     const visit = (current) => {
@@ -1256,6 +1334,9 @@ function descendantsByLocal(element, name) {
     };
     visit(element);
     return result;
+}
+function elementsByLocal(element, name) {
+    return localName(element) === name ? [element, ...descendantsByLocal(element, name)] : descendantsByLocal(element, name);
 }
 function emuToPx(value) {
     const parsed = Number(value ?? 0);
