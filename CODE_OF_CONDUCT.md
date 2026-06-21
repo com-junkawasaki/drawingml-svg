@@ -20,4 +20,4 @@ This project is intended to be a practical and respectful place to improve SVG a
 
 Maintainers may edit, hide, or remove comments; close issues or pull requests; block users; or take other reasonable action to keep the project usable.
 
-For conduct concerns, contact the maintainer listed in `pyproject.toml`. For security vulnerabilities, follow `SECURITY.md` instead of opening a public issue.
+For conduct concerns, contact the maintainer listed in `package.json`. For security vulnerabilities, follow `SECURITY.md` instead of opening a public issue.

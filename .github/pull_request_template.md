@@ -15,19 +15,15 @@
 
 ## Testing
 
-- [ ] `ruff check .`
 - [ ] `npm ci`
 - [ ] `npm run check:web`
 - [ ] `npm run build:web`
 - [ ] `npm run check:package`
 - [ ] `git diff --exit-code docs/app.js`
 - [ ] `git diff --exit-code docs/app.d.ts`
-- [ ] `PYTHONPATH=src python -m pytest -q`
-- [ ] `PYTHONPATH=src python -m svgraph analyze examples/coverage.svg`
-- [ ] `PYTHONPATH=src python -m svgraph svgraph examples/svgraph.svg > tmp/svgraph.json`
-- [ ] `PYTHONPATH=src python -m svgraph svgraph-presentation examples/svgraph.svg > tmp/svgraph-presentation.json`
-- [ ] `PYTHONPATH=src python examples/make_pptx.py examples/coverage.svg -o tmp/svgraph-coverage.pptx`
-- [ ] `python -m zipfile --test tmp/svgraph-coverage.pptx`
+- [ ] `npm pack --dry-run --json`
+- [ ] `node ./bin/svgraph.mjs svg2pptx examples/svgraph.svg -o tmp/svgraph-smoke.pptx`
+- [ ] `node ./bin/svgraph.mjs svgraph-presentation examples/svgraph.svg > tmp/svgraph-presentation.json`
 
 ## Notes
 

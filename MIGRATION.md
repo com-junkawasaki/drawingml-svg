@@ -1,110 +1,59 @@
-# Migrating to SVGraph
+# Migrating to SVGraph TypeScript
 
-SVGraph is the canonical project name for the repository, Python distribution, import package, CLI, browser editor, schema, generated artifacts, and presentation metadata.
+SVGraph is maintained as a TypeScript-only browser/npm project:
 
-Legacy names remain only as compatibility surfaces. New code should use the SVGraph names below.
+- Repository: <https://github.com/com-junkawasaki/svgraph>
+- Browser editor: <https://com-junkawasaki.github.io/svgraph/>
+- npm package: `@com-junkawasaki/svgraph`
+
+This repository contains the TypeScript browser runtime, GitHub Pages editor, npm package, Node CLI shim, generated Pages artifacts, and browser-side SVGraph/PPTX conversion code.
 
 ## Name Mapping
 
-| Legacy surface | Canonical SVGraph surface |
+| Legacy surface | TypeScript SVGraph surface |
 | --- | --- |
-| `com-junkawasaki/drawingml-svg` | `com-junkawasaki/svgraph` |
-| `drawingml-svg` Python distribution | `svgraph` Python distribution |
-| `drawingml_svg` import package | `svgraph` import package |
-| `drawingml_svg.converter` | `svgraph.converter` |
-| `drawingml_svg.coverage` | `svgraph.coverage` |
-| `drawingml_svg.pptx` | `svgraph.pptx` |
-| `drawingml_svg.svgraph` | `svgraph.model` |
-| `drawingml_svg.ir.svg_to_ir()` | `svgraph.model.svg_to_svgraph()` |
-| `drawingml_svg.ir.svg_to_pptx_ir()` | `svgraph.model.svg_to_svgraph_presentation()` |
-| `ir` CLI command | `svgraph` CLI command |
-| `pptxsvg` CLI command | `svgraph-presentation` CLI command |
-| `drawingml-svg` executable | `svgraph` executable |
-| `drawingml-svg-analyze` executable | `svgraph analyze` command |
-| `svg2dml` executable | `svgraph svg2dml` command |
-| `dml2svg` executable | `svgraph dml2svg` command |
-| `svg2pptx` executable | `svgraph svg2pptx` command |
+| `com-junkawasaki/drawingml-svg` web/editor code | `com-junkawasaki/svgraph` |
+| `com-junkawasaki/svgraph` browser package | `@com-junkawasaki/svgraph` |
+| legacy Pages editor | <https://com-junkawasaki.github.io/svgraph/> |
+| browser CLI executable | `svgraph` |
+| browser SVGraph API | `buildSVGraph()` |
+| browser presentation API | `svgToPptx()` and `buildSVGraphSidecar()` |
 
-Retained legacy executable aliases emit deprecation warnings that point to their canonical SVGraph commands when used for conversions. They remain available for compatibility smoke tests and existing automation.
+Python imports, Python CLI aliases, wheel/sdist packaging, and compatibility wrappers have been removed from this repository. New integrations should use the TypeScript API, browser editor, or `svgraph` Node CLI from `com-junkawasaki/svgraph`.
 
-## Python Imports
+## Install
 
-Use the canonical package for new code:
-
-```python
-from svgraph import (
-    analyze_svg,
-    drawingml_to_svg,
-    svg_to_drawingml,
-    svg_to_pptx,
-    svg_to_pptx_bytes,
-    svg_to_svgraph,
-    svg_to_svgraph_presentation,
-)
-```
-
-The `drawingml_svg` package remains installable for existing callers, but its main modules are compatibility wrappers over `svgraph`. Those main modules re-export the canonical module `__all__` values so star imports keep the same public surface as `svgraph`. Deprecated pre-SVGraph IR APIs continue to emit `DeprecationWarning` and point callers to `svgraph.model`. The legacy `drawingml_svg.ir` module intentionally exports only pre-SVGraph `SvgIR*` aliases; import canonical `SVGraph*` types from `svgraph.model`.
-
-## CLI
-
-Use `svgraph` as the executable and command namespace:
-
-```bash
-svgraph svg2dml input.svg -o shape.xml
-svgraph svg2pptx deck.svg -o deck.pptx
-svgraph analyze input.svg
-svgraph input.svg
-svgraph svgraph-presentation input.svg
-python -m svgraph --version
-```
-
-Legacy executable and command aliases are retained for compatibility smoke tests and existing automation, not as documentation targets for new integrations.
-
-## Generated Artifacts
-
-Generated files should use `svgraph` naming:
-
-```bash
-PYTHONPATH=src python examples/make_pptx.py examples/sample.svg -o tmp/svgraph-sample.pptx
-svgraph examples/svgraph.svg > tmp/release-svgraph.json
-svgraph svgraph-presentation examples/svgraph.svg > tmp/release-svgraph-presentation.json
-```
-
-The browser editor is published at:
-
-```text
-https://com-junkawasaki.github.io/svgraph/
-```
-
-The browser npm package is published through GitHub Packages as:
+The browser npm package is published through GitHub Packages:
 
 ```bash
 npm install @com-junkawasaki/svgraph --registry=https://npm.pkg.github.com
 ```
 
-It also exposes a TypeScript/browser-runtime CLI with a Node XML DOM shim:
+## CLI
+
+The package exposes a TypeScript/browser-runtime CLI with a Node XML DOM shim:
 
 ```bash
-npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- svg2dml input.svg -o shape.xml
-npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- dml2svg shape.xml -o shape.svg
-npm exec --registry=https://npm.pkg.github.com @com-junkawasaki/svgraph -- svg2pptx deck.svg -o deck.pptx
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph -- svgraph svg2dml input.svg -o shape.xml
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph -- svgraph dml2svg shape.xml -o shape.svg
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph -- svgraph svg2pptx deck.svg -o deck.pptx
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph -- svgraph svgraph deck.svg -o deck.svgraph.json
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph -- svgraph svgraph-presentation deck.svg -o deck.presentation.json
+npm exec --registry=https://npm.pkg.github.com --package @com-junkawasaki/svgraph -- svgraph analyze deck.svg
 ```
 
 ## Verification
 
-Run the migration guard tests before publishing:
+Run these checks before publishing or changing generated Pages artifacts:
 
 ```bash
-find src -maxdepth 1 -name "*.egg-info" -exec rm -rf {} +
-rm -rf build tmp/dist
-ruff check .
 npm ci
 npm run check:web
 npm run build:web
 npm run check:package
 git diff --exit-code docs/app.js
 git diff --exit-code docs/app.d.ts
-PYTHONPATH=src python -m pytest -q tests/test_migration.py tests/test_svgraph.py
+npm pack --dry-run --json
 ```
 
-The full test suite also validates that public links, package metadata, wheel and sdist artifact names, CLI smoke checks, browser editor artifacts, and packaged documentation stay on SVGraph naming.
+The package and CI checks validate that public links, package metadata, generated browser artifacts, CLI smoke checks, and packaged documentation stay on TypeScript SVGraph naming.

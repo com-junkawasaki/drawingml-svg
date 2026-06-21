@@ -39,7 +39,7 @@ body:
     id: command
     attributes:
       label: Command or API call
-      description: Include the exact CLI command or Python API call.
+      description: Include the exact browser action, CLI command, or TypeScript API call.
       render: shell
     validations:
       required: true
@@ -66,5 +66,5 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Python version, operating system, and any relevant Office/PowerPoint version.
+      description: Browser or Node.js version, operating system, and any relevant Office/PowerPoint version.
       render: text

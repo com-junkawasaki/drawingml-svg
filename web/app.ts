@@ -101,6 +101,46 @@ export type SVGraphSidecar = {
   presentation: SVGraphPresentationProjection;
 };
 
+export type OfficeCausalNode = {
+  id: `ocz1:${string}`;
+  kind: "document" | "slide" | "shape" | "table" | "image" | "entity" | "claim";
+  part: string;
+  path: string;
+  label?: string;
+  text?: string;
+  bbox?: { x: number; y: number; w: number; h: number; unit: "px" };
+  tags?: string[];
+};
+
+export type OfficeCausalEdge = {
+  id: string;
+  kind: "contains" | "references" | "mentions" | "causes";
+  from: `ocz1:${string}`;
+  to: `ocz1:${string}`;
+  weight?: number;
+  causal?: {
+    polarity: "+" | "-" | "?";
+    mechanism: string;
+    confidence: number;
+    evidence: { nodeId: `ocz1:${string}`; quote: string }[];
+    status: "hypothesis" | "supported" | "refuted";
+  };
+};
+
+export type OfficeCausalPayload = {
+  version: 1;
+  generator: "office-causal";
+  nodes: OfficeCausalNode[];
+  edges: OfficeCausalEdge[];
+  analysis?: {
+    svgraph?: {
+      version: string;
+      coverage: SvgCoverage;
+      presentation: SVGraphPresentationProjection;
+    };
+  };
+};
+
 export type AssistantPatchOp = {
   op: string;
   node_id: string;
@@ -1351,6 +1391,163 @@ export function buildSVGraphSidecar(svgraph: SVGraphDocument, svgText = ""): SVG
   };
 }
 
+export function buildOfficeCausalPayload(svgraph: SVGraphDocument): OfficeCausalPayload {
+  const nodes = flatten(svgraph.root);
+  const idByNode = new Map(nodes.map((node) => [node.node_id, officeCausalDataId(node)]));
+  const bySvgId = new Map(nodes.flatMap((node) => (node.attributes.id ? [[node.attributes.id, node] as const] : [])));
+  const partByNodeId = slideMembership(svgraph);
+  const causalNodes = nodes.map((node) => officeCausalNode(node, partByNodeId.get(node.node_id) ?? null, idByNode.get(node.node_id)!));
+  const edges: OfficeCausalEdge[] = [];
+  for (const node of nodes) {
+    for (const child of node.children) {
+      edges.push(officeCausalEdge("contains", idByNode.get(node.node_id)!, idByNode.get(child.node_id)!));
+    }
+    for (const dependency of node.dependencies) {
+      const target = dependency.target.startsWith("#") ? bySvgId.get(dependency.target.slice(1)) : null;
+      if (target) edges.push(officeCausalEdge("references", idByNode.get(node.node_id)!, idByNode.get(target.node_id)!, dependency.kind));
+    }
+    if (node.data.kind === "relation" || node.data.role === "relation") {
+      edges.push(...officeCausalRelationEdges(node, idByNode, bySvgId));
+    }
+    if (node.text) {
+      const semanticParent = nearestSemanticAncestor(node, nodes);
+      if (semanticParent && semanticParent.node_id !== node.node_id) {
+        edges.push(officeCausalEdge("mentions", idByNode.get(semanticParent.node_id)!, idByNode.get(node.node_id)!, "text"));
+      }
+    }
+  }
+  return {
+    version: 1,
+    generator: "office-causal",
+    nodes: causalNodes,
+    edges: uniqueOfficeCausalEdges(edges),
+    analysis: {
+      svgraph: {
+        version: svgraph.version,
+        coverage: svgraph.coverage,
+        presentation: svgraph.presentation,
+      },
+    },
+  };
+}
+
+export function buildOfficeCausalJsonl(svgraph: SVGraphDocument): string {
+  const payload = buildOfficeCausalPayload(svgraph);
+  return [
+    JSON.stringify({ t: "meta", version: payload.version, generator: payload.generator }),
+    JSON.stringify({ t: "analysis", analysis: payload.analysis }),
+    ...payload.nodes.map((node) => JSON.stringify({ t: "node", ...node })),
+    ...payload.edges.map((edge) => JSON.stringify({ t: "edge", ...edge })),
+  ].join("\n") + "\n";
+}
+
+function officeCausalDataId(node: SVGraphNode): `ocz1:${string}` {
+  const stable = node.attributes.id || node.node_id;
+  return `ocz1:svgraph-${stable.replace(/[^A-Za-z0-9_.:-]+/g, "-")}` as `ocz1:${string}`;
+}
+
+function officeCausalNode(node: SVGraphNode, part: string | null, id: `ocz1:${string}`): OfficeCausalNode {
+  const bbox = nodeBBox(node);
+  return {
+    id,
+    kind: officeCausalNodeKind(node),
+    part: part ?? "svgraph/source.svg",
+    path: `${node.tag}[${node.node_id}]`,
+    ...(nodeLabel(node) ? { label: nodeLabel(node)! } : {}),
+    ...(node.text ? { text: node.text } : {}),
+    ...(bbox ? { bbox } : {}),
+    tags: officeCausalTags(node),
+  };
+}
+
+function officeCausalNodeKind(node: SVGraphNode): OfficeCausalNode["kind"] {
+  const kind = node.data.kind || node.data.role;
+  if (kind === "slide") return "slide";
+  if (kind === "table" || kind === "cell") return "table";
+  if (kind === "entity" || kind === "service" || kind === "database" || kind === "actor") return "entity";
+  if (kind === "claim" || kind === "annotation") return "claim";
+  if (node.tag === "svg") return "document";
+  if (node.tag === "image") return "image";
+  return "shape";
+}
+
+function officeCausalTags(node: SVGraphNode): string[] {
+  return [...new Set([node.tag, node.data.kind, node.data.role, node.data.group].filter((value): value is string => !!value))];
+}
+
+function nodeLabel(node: SVGraphNode): string | null {
+  return node.data.title || node.data.label || node.attributes["aria-label"] || node.attributes.id || node.text || null;
+}
+
+function nodeBBox(node: SVGraphNode): OfficeCausalNode["bbox"] | null {
+  const x = Number(node.attributes.x ?? node.attributes.cx ?? node.attributes.x1 ?? 0);
+  const y = Number(node.attributes.y ?? node.attributes.cy ?? node.attributes.y1 ?? 0);
+  const width = Number(node.attributes.width ?? node.attributes.r ?? node.attributes.rx ?? 0);
+  const height = Number(node.attributes.height ?? node.attributes.r ?? node.attributes.ry ?? 0);
+  if (![x, y, width, height].every(Number.isFinite) || (width === 0 && height === 0)) return null;
+  const isCenter = node.attributes.cx != null || node.attributes.cy != null;
+  return { x: isCenter ? x - width : x, y: isCenter ? y - height : y, w: isCenter ? width * 2 : width, h: isCenter ? height * 2 : height, unit: "px" };
+}
+
+function officeCausalEdge(kind: OfficeCausalEdge["kind"], from: `ocz1:${string}`, to: `ocz1:${string}`, reason = ""): OfficeCausalEdge {
+  return { id: `${kind}:${from}->${to}${reason ? `#${reason}` : ""}`, kind, from, to };
+}
+
+function officeCausalRelationEdges(
+  node: SVGraphNode,
+  idByNode: Map<string, `ocz1:${string}`>,
+  bySvgId: Map<string, SVGraphNode>,
+): OfficeCausalEdge[] {
+  const relationId = idByNode.get(node.node_id)!;
+  const bind = node.data.bind || node.data.relation || "";
+  const from = node.data.from || bind.split(/->|→/)[0]?.trim();
+  const to = node.data.to || bind.split(/->|→/)[1]?.trim();
+  const source = from ? bySvgId.get(from.replace(/^#/, "")) : null;
+  const target = to ? bySvgId.get(to.replace(/^#/, "")) : null;
+  const edges: OfficeCausalEdge[] = [];
+  if (source) edges.push(officeCausalEdge("references", relationId, idByNode.get(source.node_id)!, "relation-from"));
+  if (target) edges.push(officeCausalEdge("references", relationId, idByNode.get(target.node_id)!, "relation-to"));
+  if (source && target && (node.data.edge === "causes" || node.data.kind === "causal" || node.data.type === "causes")) {
+    edges.push({
+      ...officeCausalEdge("causes", idByNode.get(source.node_id)!, idByNode.get(target.node_id)!, "svgraph-relation"),
+      causal: {
+        polarity: node.data.polarity === "-" ? "-" : node.data.polarity === "+" ? "+" : "?",
+        mechanism: node.data.mechanism || node.text || "SVGraph semantic relation",
+        confidence: Number(node.data.confidence) || 0.5,
+        evidence: [{ nodeId: relationId, quote: node.text || nodeLabel(node) || "relation" }],
+        status: "hypothesis",
+      },
+    });
+  }
+  return edges;
+}
+
+function uniqueOfficeCausalEdges(edges: OfficeCausalEdge[]): OfficeCausalEdge[] {
+  return [...new Map(edges.map((edge) => [edge.id, edge])).values()];
+}
+
+function slideMembership(svgraph: SVGraphDocument): Map<string, string> {
+  const map = new Map<string, string>();
+  const slideRoots = new Map(svgraph.presentation.slides.map((slide, index) => [slide.node_id, `ppt/slides/slide${index + 1}.xml`]));
+  const visit = (node: SVGraphNode, current: string | null) => {
+    const next = slideRoots.get(node.node_id) ?? current;
+    if (next) map.set(node.node_id, next);
+    node.children.forEach((child) => visit(child, next));
+  };
+  visit(svgraph.root, null);
+  return map;
+}
+
+function nearestSemanticAncestor(node: SVGraphNode, nodes: SVGraphNode[]): SVGraphNode | null {
+  const parts = node.node_id.split(".");
+  while (parts.length > 1) {
+    parts.pop();
+    const candidate = nodes.find((item) => item.node_id === parts.join("."));
+    if (candidate && Object.keys(candidate.data).length > 0) return candidate;
+  }
+  return null;
+}
+
 export function assistantPatchProposal(svgraph: SVGraphDocument, presentation: SVGraphPresentationProjection): AssistantPatchProposal {
   const semanticNodeIds = new Set(flatten(svgraph.root).filter((node) => Object.keys(node.data).length > 0).map((node) => node.node_id));
   const ops = presentation.slides
@@ -1711,7 +1908,7 @@ export function svgToPptx(svgText: string): Uint8Array {
   const slides = declaredSlides(root);
   const selectedSlides = slides.length ? slides : [root];
   const slideXmls = selectedSlides.map((slide, index) => buildSlideXml(slide, index + 1));
-  return writePptx(slideXmls, svgraph.presentation, svgText);
+  return writePptx(slideXmls, svgraph, svgText);
 }
 
 export function svgToDrawingMl(svgText: string): string {
@@ -5180,7 +5377,8 @@ function htmlCaptionShape(caption: Element, style: SvgStyle, id: number, x: numb
 }
 
 function htmlSpan(element: Element, name: string): number {
-  const value = Number.parseInt(element.getAttribute(name) || "1", 10);
+  const raw = element.getAttribute(name);
+  const value = raw == null ? 1 : dmlInt(raw, 1);
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
@@ -6494,15 +6692,17 @@ function blipAlphaXml(value: number | null | undefined): string {
   return `<a:alphaModFix amt="${Math.round(clamp(value, 0, 1) * 100000)}"/>`;
 }
 
-function writePptx(slideXmls: string[], presentation: SVGraphPresentationProjection, sourceSvg: string): Uint8Array {
+function writePptx(slideXmls: string[], svgraph: SVGraphDocument, sourceSvg: string): Uint8Array {
+  const presentation = svgraph.presentation;
   const masterCount = Math.max(1, presentation.masters.length);
   const layoutCount = Math.max(1, presentation.layouts.length);
   const files: Record<string, string | Uint8Array> = {
-    "[Content_Types].xml": contentTypes(slideXmls.length, masterCount, layoutCount, true),
-    "_rels/.rels": rootRels(true),
+    "[Content_Types].xml": contentTypes(slideXmls.length, masterCount, layoutCount, true, true),
+    "_rels/.rels": rootRels(true, true),
     "docProps/app.xml": appProps(slideXmls.length),
     "docProps/core.xml": coreProps,
     "customXml/item1.xml": svgraphPresentationSidecar(presentation, sourceSvg),
+    "ocz/causal.jsonl": buildOfficeCausalJsonl(svgraph),
     "ppt/presentation.xml": presentationXml(slideXmls.length, presentation.slide_size, masterCount),
     "ppt/_rels/presentation.xml.rels": presentationRels(slideXmls.length, masterCount),
     "ppt/theme/theme1.xml": themeXml,
@@ -9088,12 +9288,13 @@ const nsA = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const nsP = "http://schemas.openxmlformats.org/presentationml/2006/main";
 const nsR = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
-function contentTypes(slideCount: number, masterCount = 1, layoutCount = 1, hasCustomXml = false): string {
+function contentTypes(slideCount: number, masterCount = 1, layoutCount = 1, hasCustomXml = false, hasOfficeCausal = false): string {
   const masters = Array.from({ length: masterCount }, (_, index) => `  <Override PartName="/ppt/slideMasters/slideMaster${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>`).join("\n");
   const layouts = Array.from({ length: layoutCount }, (_, index) => `  <Override PartName="/ppt/slideLayouts/slideLayout${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>`).join("\n");
   const slides = Array.from({ length: slideCount }, (_, index) => `  <Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join("\n");
   const customXml = hasCustomXml ? '<Override PartName="/customXml/item1.xml" ContentType="application/xml"/>' : "";
-  return xmlDecl(`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="gif" ContentType="image/gif"/><Default Extension="webp" ContentType="image/webp"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>${masters}${layouts}<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>${slides}${customXml}</Types>`);
+  const officeCausal = hasOfficeCausal ? '<Default Extension="jsonl" ContentType="application/jsonl"/>' : "";
+  return xmlDecl(`<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${officeCausal}<Default Extension="png" ContentType="image/png"/><Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="gif" ContentType="image/gif"/><Default Extension="webp" ContentType="image/webp"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>${masters}${layouts}<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>${slides}${customXml}</Types>`);
 }
 
 function appProps(slideCount: number): string {
@@ -9112,9 +9313,10 @@ function presentationRels(slideCount: number, masterCount = 1): string {
   return xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${masters}${slides}<Relationship Id="rId${masterCount + slideCount + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/></Relationships>`);
 }
 
-function rootRels(hasCustomXml = false): string {
+function rootRels(hasCustomXml = false, hasOfficeCausal = false): string {
   const customXml = hasCustomXml ? '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml" Target="customXml/item1.xml"/>' : "";
-  return xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>${customXml}</Relationships>`);
+  const officeCausal = hasOfficeCausal ? '<Relationship Id="rIdOfficeCasual" Type="https://com-junkawasaki.org/office-causal/relationship" Target="ocz/causal.jsonl"/>' : "";
+  return xmlDecl(`<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>${customXml}${officeCausal}</Relationships>`);
 }
 
 function svgraphPresentationSidecar(presentation: SVGraphPresentationProjection, sourceSvg: string): string {

@@ -10,7 +10,7 @@ SVG can carry visual geometry, document metadata, and application-specific data 
 
 ## Decision
 
-Introduce SVGraph, an SVG-based semantic graph model exposed as `svgraph.svg_to_svgraph()` and `svgraph.model.svg_to_svgraph()`. The legacy `drawingml_svg.ir.svg_to_ir()` API remains a deprecated compatibility alias that warns toward `svgraph.model`. SVGraph preserves:
+Introduce SVGraph, an SVG-based semantic graph model exposed by the TypeScript browser/npm package. SVGraph preserves:
 
 - element tree structure with stable node ids
 - normal SVG attributes
@@ -156,6 +156,7 @@ The package emitter can then map:
 - root presentation metadata to `ppt/presentation.xml`, theme, layout, notes, tags, or custom XML
 - semantic `data-kind="table"` / `data-kind="cell"` nodes to native PresentationML tables where possible
 - semantic relations to connectors when they have visual counterparts
+- an Office Causal graph part at `/ocz/causal.jsonl` when the package writer needs downstream causal analysis
 - unresolved semantics to a package sidecar or custom XML part
 
 ## Target Mapping
@@ -184,6 +185,18 @@ PresentationML can add slide-level structure beyond DrawingML fragments. Emitter
 - map relationships to connectors when they are visually represented
 - map `data-order` and metadata to animation, reading order, notes, custom XML, or tags when the package writer supports it
 - use `svgraph-presentation` as the package-level contract instead of treating `svg_to_drawingml()` output as a whole deck
+
+### Office Causal
+
+`com-junkawasaki/office-causal` treats Office files as a typed causal graph with deterministic `ocz1:` data ids. SVGraph can interoperate with it without making Office Causal a runtime dependency:
+
+- every SVGraph node projects to an Office Causal payload node with a deterministic `ocz1:svgraph-*` id
+- the SVG element tree projects to `contains` edges
+- local references such as `href`, `xlink:href`, and `url(#id)` project to `references` edges when the target node is resolvable
+- semantic text under a node with `data-*` semantics can project to `mentions` edges
+- `data-kind="relation"` / `data-role="relation"` nodes can bind source and target entities with `data-bind="from->to"` or `data-from` / `data-to`
+- relation nodes become causal hypotheses only when explicitly marked as causal, for example `data-edge="causes"` or `data-type="causes"`
+- generated PPTX packages may include `/ocz/causal.jsonl` plus the Office Causal root relationship so `office-causal readDataPart()` can recover the graph without reparsing slides
 
 ## Consequences
 

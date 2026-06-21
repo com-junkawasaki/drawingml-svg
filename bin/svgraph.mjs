@@ -14,6 +14,8 @@ globalThis.XMLSerializer ??= XMLSerializer;
 globalThis.Node ??= { ELEMENT_NODE: 1, TEXT_NODE: 3 };
 
 const {
+  buildOfficeCausalJsonl,
+  buildOfficeCausalPayload,
   buildSVGraph,
   drawingMlToSvg,
   svgToDrawingMl,
@@ -26,6 +28,8 @@ const usage = `Usage:
   svgraph svg2pptx <input.svg|-> [-o output.pptx]
   svgraph svgraph <input.svg|-> [-o output.json]
   svgraph svgraph-presentation <input.svg|-> [-o output.json]
+  svgraph office-causal <input.svg|-> [-o output.json]
+  svgraph office-causal-jsonl <input.svg|-> [-o output.jsonl]
   svgraph analyze <input.svg|-> [-o output.json]
   svgraph --version`;
 
@@ -55,6 +59,10 @@ try {
     await writeOutput(output, `${JSON.stringify(buildSVGraph(text), null, 2)}\n`);
   } else if (command === "svgraph-presentation") {
     await writeOutput(output, `${JSON.stringify(buildSVGraph(text).presentation, null, 2)}\n`);
+  } else if (command === "office-causal") {
+    await writeOutput(output, `${JSON.stringify(buildOfficeCausalPayload(buildSVGraph(text)), null, 2)}\n`);
+  } else if (command === "office-causal-jsonl") {
+    await writeOutput(output, buildOfficeCausalJsonl(buildSVGraph(text)));
   } else if (command === "analyze") {
     await writeOutput(output, `${JSON.stringify(buildSVGraph(text).coverage, null, 2)}\n`);
   } else {

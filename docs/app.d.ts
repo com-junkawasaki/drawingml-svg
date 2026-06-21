@@ -101,6 +101,52 @@ export type SVGraphSidecar = {
     coverage: SvgCoverage;
     presentation: SVGraphPresentationProjection;
 };
+export type OfficeCausalNode = {
+    id: `ocz1:${string}`;
+    kind: "document" | "slide" | "shape" | "table" | "image" | "entity" | "claim";
+    part: string;
+    path: string;
+    label?: string;
+    text?: string;
+    bbox?: {
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+        unit: "px";
+    };
+    tags?: string[];
+};
+export type OfficeCausalEdge = {
+    id: string;
+    kind: "contains" | "references" | "mentions" | "causes";
+    from: `ocz1:${string}`;
+    to: `ocz1:${string}`;
+    weight?: number;
+    causal?: {
+        polarity: "+" | "-" | "?";
+        mechanism: string;
+        confidence: number;
+        evidence: {
+            nodeId: `ocz1:${string}`;
+            quote: string;
+        }[];
+        status: "hypothesis" | "supported" | "refuted";
+    };
+};
+export type OfficeCausalPayload = {
+    version: 1;
+    generator: "office-causal";
+    nodes: OfficeCausalNode[];
+    edges: OfficeCausalEdge[];
+    analysis?: {
+        svgraph?: {
+            version: string;
+            coverage: SvgCoverage;
+            presentation: SVGraphPresentationProjection;
+        };
+    };
+};
 export type AssistantPatchOp = {
     op: string;
     node_id: string;
@@ -136,6 +182,8 @@ export type SvgCoverage = {
 export declare const assistantAllowedOps: readonly ["mark-slide", "set-data", "set-metadata", "mark-table", "mark-cell", "bind-relation", "set-reading-order"];
 export declare function buildSVGraph(svgText: string): SVGraphDocument;
 export declare function buildSVGraphSidecar(svgraph: SVGraphDocument, svgText?: string): SVGraphSidecar;
+export declare function buildOfficeCausalPayload(svgraph: SVGraphDocument): OfficeCausalPayload;
+export declare function buildOfficeCausalJsonl(svgraph: SVGraphDocument): string;
 export declare function assistantPatchProposal(svgraph: SVGraphDocument, presentation: SVGraphPresentationProjection): AssistantPatchProposal;
 export declare function buildSVGraphAssistantPrompt(svgraph: SVGraphDocument, presentation: SVGraphPresentationProjection): string;
 export declare function parseAssistantPatchProposal(value: unknown): AssistantPatchProposal;

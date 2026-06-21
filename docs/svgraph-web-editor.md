@@ -18,7 +18,8 @@ Current implementation status:
 - GitHub Pages loads the compiled `docs/app.js`.
 - The browser can export `svgraph-sidecar.json` with metadata, dependencies, coverage diagnostics, and the presentation/package projection for targets that need semantic state outside the visual output.
 - The browser embeds `source_svg` in `svgraph-sidecar.json`, can restore the editable SVG source by opening that sidecar JSON, and reports invalid Open inputs without replacing the current source.
-- Browser-generated PPTX custom XML also preserves `source_svg` beside the SVGraph presentation payload for source recovery parity with the Python exporter.
+- Browser-generated PPTX custom XML also preserves `source_svg` beside the SVGraph presentation payload for source recovery.
+- Browser-generated PPTX also embeds `ocz/causal.jsonl`, an Office Causal compatible graph projection generated from the same SVGraph source. `office-causal readDataPart()` can recover this graph without reparsing slide XML.
 - The browser can export DrawingML fragments and `.pptx` without Python for the SVGraph presentation MVP subset: multi-slide SVG groups, editable rect/ellipse/line/text shapes with CSS/presentation geometry, inline `tspan` rich text runs, `text`/`tspan` positioning, basic `text-anchor`/baseline alignment, local `text`/`tspan` `word-spacing`, and absolute `textLength` spacing approximation including `spacingAndGlyphs` when `letter-spacing` is unset/normal, polygon/polyline/quadratic/cubic/arc path custom geometry, embedded data URI images with CSS/presentation frame geometry, marker arrows, SVG line direction flips, local `defs`/`use`, linear/radial gradient and pattern fallback colors, named colors, CSS `rgb()`/`hsl()` colors, `currentColor`, fill/stroke alpha from opacity properties and alpha colors, stroke dash/cap/join styles, negative stroke-width fallback, transform-scaled strokes, line/polyline/basic path `pathLength` dash scaling including CSS-positioned lines, `vector-effect="non-scaling-stroke"`, rectangular `clipPath` in user-space and normalized object bounding-box units with CSS-resolved rect geometry, axis-aligned transforms, and container propagation, nested SVG and `use` viewport clipping with CSS/presentation frame geometry, simple selector styles, inline style/inherited paint, basic transforms with CSS-resolved reference boxes, relation connectors, inferred rect/text and line/text SVG grid tables, semantic tables, and `foreignObject` table CSS/presentation frame sizing/alignment plus alpha fills and text runs.
 - The browser can import basic DrawingML shape fragments back into canonical SVG source without Python, including `p:sp` rect/roundRect/ellipse/line fragments, `p:cxnSp` connectors as `data-kind="relation"` SVG lines, native `p:graphicFrame`/`a:tbl` tables as `data-kind="table"` and `data-kind="cell"` SVG semantics, solid fill/stroke colors, stroke width, flips, and simple text body extraction.
 - Rect export follows SVG defaults for invalid negative `rx`/`ry`, including fallback from the valid paired radius.
@@ -32,7 +33,7 @@ Current implementation status:
 - The browser Assistant panel can lazy-load a dedicated Transformers.js worker from the page, choose WebGPU, WASM, or disabled backend policy, prompt with compact SVGraph context, parse JSON-only LLM output, reject invalid operations, and fall back to deterministic proposals without server APIs.
 - The browser keeps SVG source undo/redo history across manual edits, file/sample loads, and assistant patch application.
 - The browser persists the active SVG source document in IndexedDB, restores it on reload without a server, provides a control for clearing the saved document, and reports storage status in the UI.
-- The Python converter remains the fuller reference implementation for complex SVG features such as paths, images, advanced CSS, clipping, markers, and richer table extraction.
+- The TypeScript browser/npm package is the only active implementation surface in this repository.
 
 ## Product Shape
 
@@ -57,6 +58,7 @@ Browser UI
   |     |-- DOM tree
   |     |-- SVGraph JSON
   |     |-- SVGraph presentation JSON
+  |     `-- Office Causal JSON/JSONL projection
   |
   |-- Workers
   |     |-- parser/analyzer worker
@@ -67,6 +69,7 @@ Browser UI
         |-- IndexedDB documents
         |-- IndexedDB model cache
         |-- File System Access API exports
+        `-- PPTX sidecars: customXml/item1.xml + ocz/causal.jsonl
 ```
 
 The editor should not let the LLM directly mutate the raw document. LLM output is always a proposed patch against SVGraph-level commands, then validated by deterministic code before applying.
@@ -79,6 +82,7 @@ Client-side state should keep four synchronized layers:
 2. Parsed SVG DOM.
 3. `SVGraphDocument`.
 4. `SVGraphPresentation` projection.
+5. Office Causal projection for downstream causal graph tools.
 
 The app treats SVG as canonical. SVGraph is derived and cached. UI actions should preferably emit structured edit operations and then serialize back to SVG:
 
@@ -300,6 +304,6 @@ Use a TypeScript frontend with:
 - Web Workers for parsing/export and LLM
 - IndexedDB through a typed wrapper
 - SVG canvas as the primary editable surface
-- WASM/Python package only for tests/build tooling, not runtime parsing in the browser
+- WASM only for browser fallback execution, not server-side runtime parsing
 
-Keep SVGraph as the conversion core and publish the schema as stable JSON so the web editor, CLI, and future package emitter share the same contract. The canonical Python import package is `svgraph`; `drawingml_svg` remains available only as a compatibility path.
+Keep SVGraph as the conversion core and publish the schema as stable JSON so the web editor, CLI, and future package emitter share the same contract.
