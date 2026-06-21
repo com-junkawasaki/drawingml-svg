@@ -1124,6 +1124,9 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert "function htmlFirstColorFill" in generated
         assert "background:padding-box #ffffff" in generated
         assert "padding:calc(0.5px + 0.5px)" in generated
+        assert "border:hidden 2px #94a3b8" in generated
+        assert "function htmlBorderIsNone" in generated
+        assert '["none", "hidden"].includes' in generated
         assert "const parts = cssValueTokens(value).slice(0, 4)" in generated
         assert "const tokens = cssValueTokens(value).slice(0, 4)" in generated
         assert "const parts = cssValueTokens(value)" in generated

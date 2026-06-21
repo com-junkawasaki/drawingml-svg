@@ -67,7 +67,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
             <td style="background-color:#f8fafc;color:#111827;border:1px solid #94a3b8;border-right:3px dotted #dc2626;border-top:4px double #2563eb;border-bottom-style:dashed;border-bottom-width:2px;border-bottom-color:#16a34a">Browser</td>
           </tr>
           <tr>
-            <td style="background:padding-box #ffffff;color:#111827;border:none;padding:calc(0.5px + 0.5px)">PPTX</td>
+            <td style="background:padding-box #ffffff;color:#111827;border:hidden 2px #94a3b8;padding:calc(0.5px + 0.5px)">PPTX</td>
             <td id="cascade-cell" style="border:1px solid #94a3b8;border-left:2px solid #dc2626">Cascade</td>
           </tr>
         </table>
@@ -3527,7 +3527,7 @@ function htmlSideBorder(declarations, side, fallback, style) {
     };
 }
 function parseHtmlBorder(value, style) {
-    if (!value || value.trim().toLowerCase() === "none")
+    if (!value || htmlBorderIsNone(value))
         return { stroke: null, strokeAlpha: null, strokeWidth: 0, strokeLineCap: null, strokeLineJoin: null, strokeMiterlimit: null, strokeDasharray: null, compound: null };
     const parts = cssValueTokens(value);
     const width = parts.map((part) => htmlCssLength(part, style.fontSize ?? rootFontSize)).find((item) => item != null) ?? null;
@@ -3543,6 +3543,9 @@ function parseHtmlBorder(value, style) {
         strokeDasharray: dasharray,
         compound: stylePart === "double" ? "dbl" : null,
     };
+}
+function htmlBorderIsNone(value) {
+    return cssValueTokens(value).some((token) => ["none", "hidden"].includes(token.replace(/,$/, "").toLowerCase()));
 }
 function applyHtmlBorderStyle(style, value) {
     const stylePart = value.trim().toLowerCase().split(/\s+/).find((part) => ["none", "hidden", "solid", "dashed", "dotted", "double"].includes(part));

@@ -524,7 +524,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
             <td style="background-color:#f8fafc;color:#111827;border:1px solid #94a3b8;border-right:3px dotted #dc2626;border-top:4px double #2563eb;border-bottom-style:dashed;border-bottom-width:2px;border-bottom-color:#16a34a">Browser</td>
           </tr>
           <tr>
-            <td style="background:padding-box #ffffff;color:#111827;border:none;padding:calc(0.5px + 0.5px)">PPTX</td>
+            <td style="background:padding-box #ffffff;color:#111827;border:hidden 2px #94a3b8;padding:calc(0.5px + 0.5px)">PPTX</td>
             <td id="cascade-cell" style="border:1px solid #94a3b8;border-left:2px solid #dc2626">Cascade</td>
           </tr>
         </table>
@@ -3777,7 +3777,7 @@ function htmlSideBorder(declarations: Record<string, string>, side: string, fall
 }
 
 function parseHtmlBorder(value: string | null, style: SvgStyle): TableBorder {
-  if (!value || value.trim().toLowerCase() === "none") return { stroke: null, strokeAlpha: null, strokeWidth: 0, strokeLineCap: null, strokeLineJoin: null, strokeMiterlimit: null, strokeDasharray: null, compound: null };
+  if (!value || htmlBorderIsNone(value)) return { stroke: null, strokeAlpha: null, strokeWidth: 0, strokeLineCap: null, strokeLineJoin: null, strokeMiterlimit: null, strokeDasharray: null, compound: null };
   const parts = cssValueTokens(value);
   const width = parts.map((part) => htmlCssLength(part, style.fontSize ?? rootFontSize)).find((item): item is number => item != null) ?? null;
   const colorPart = parts.find((part) => parseCssColor(part, style));
@@ -3792,6 +3792,10 @@ function parseHtmlBorder(value: string | null, style: SvgStyle): TableBorder {
     strokeDasharray: dasharray,
     compound: stylePart === "double" ? "dbl" : null,
   };
+}
+
+function htmlBorderIsNone(value: string): boolean {
+  return cssValueTokens(value).some((token) => ["none", "hidden"].includes(token.replace(/,$/, "").toLowerCase()));
 }
 
 function applyHtmlBorderStyle(style: SvgStyle, value: string): void {
