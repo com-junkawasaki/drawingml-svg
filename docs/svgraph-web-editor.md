@@ -25,9 +25,10 @@ Current implementation status:
 - Image sizing scans segmented JPEG data URIs so `preserveAspectRatio` still works when APP/EXIF segments precede the SOF size marker.
 - Data URI image handling validates base64 before conversion or PPTX media embedding.
 - CSS keyword handling resets converted properties to SVG defaults for `initial` and falls back correctly for `unset`.
-- The browser Assistant panel exposes a deterministic patch proposal/validation preview for SVGraph-level edit operations before any future LLM suggestion is applied.
+- The browser Assistant panel exposes deterministic patch proposal/validation preview for SVGraph-level edit operations and can replace the proposal with local Web LLM output after validation.
 - The browser Assistant panel shows deterministic patch diff preview rows for SVGraph data and metadata edits before applying future LLM suggestions.
 - The browser Assistant panel can apply validated SVGraph patch operations back into the canonical SVG source as `data-*` attributes and `<metadata>` JSON.
+- The browser Assistant panel can lazy-load a dedicated Transformers.js worker from the page, choose WebGPU, WASM, or disabled backend policy, prompt with compact SVGraph context, parse JSON-only LLM output, reject invalid operations, and fall back to deterministic proposals without server APIs.
 - The browser keeps SVG source undo/redo history across manual edits, file/sample loads, and assistant patch application.
 - The browser persists the active SVG source document in IndexedDB, restores it on reload without a server, provides a control for clearing the saved document, and reports storage status in the UI.
 - The Python converter remains the fuller reference implementation for complex SVG features such as paths, images, advanced CSS, clipping, markers, and richer table extraction.
@@ -143,7 +144,7 @@ The `.pptx` exporter should consume the SVGraph `presentation.parts` projection 
 
 ## Web LLM Integration
 
-The Web LLM should run in a dedicated worker. Based on the referenced WebGPU browser guide, the default path should use Transformers.js with `device: "webgpu"` when `navigator.gpu` is available, and cache model files locally in browser storage after the first download.
+The Web LLM runs in a dedicated worker. Based on the referenced WebGPU browser guide, the default path uses Transformers.js with `device: "webgpu"` when `navigator.gpu` is available, and the runtime/model cache is left to the browser and Transformers.js cache after the first download. The editor also exposes `wasm` and `disabled` policies so conversion remains available when WebGPU is missing or AI must be off.
 
 Minimal worker loading shape:
 

@@ -101,6 +101,29 @@ export type SVGraphSidecar = {
     coverage: SvgCoverage;
     presentation: SVGraphPresentationProjection;
 };
+export type AssistantPatchOp = {
+    op: string;
+    node_id: string;
+    [key: string]: JsonValue;
+};
+export type AssistantPatchProposal = {
+    summary: string;
+    ops: AssistantPatchOp[];
+    confidence: number;
+};
+export type AssistantPatchValidation = {
+    status: "accepted" | "rejected";
+    errors: string[];
+};
+export type AssistantPatchDiff = {
+    op: string;
+    node_id: string;
+    field: string;
+    before: JsonValue;
+    after: JsonValue;
+    status: "pending" | "unchanged" | "unsupported";
+};
+export type AssistantBackendPolicy = "webgpu" | "wasm" | "disabled";
 export type SvgCoverage = {
     total_elements: number;
     convertible_elements: number;
@@ -110,8 +133,15 @@ export type SvgCoverage = {
     unsupported_path_commands: Record<string, number>;
     estimated_element_coverage: number;
 };
+export declare const assistantAllowedOps: readonly ["mark-slide", "set-data", "set-metadata", "mark-table", "mark-cell", "bind-relation", "set-reading-order"];
 export declare function buildSVGraph(svgText: string): SVGraphDocument;
 export declare function buildSVGraphSidecar(svgraph: SVGraphDocument, svgText?: string): SVGraphSidecar;
+export declare function assistantPatchProposal(svgraph: SVGraphDocument, presentation: SVGraphPresentationProjection): AssistantPatchProposal;
+export declare function buildSVGraphAssistantPrompt(svgraph: SVGraphDocument, presentation: SVGraphPresentationProjection): string;
+export declare function parseAssistantPatchProposal(value: unknown): AssistantPatchProposal;
+export declare function validateAssistantPatch(proposal: AssistantPatchProposal, svgraph: SVGraphDocument): AssistantPatchValidation;
+export declare function assistantPatchDiff(proposal: AssistantPatchProposal, svgraph: SVGraphDocument): AssistantPatchDiff[];
+export declare function applyAssistantPatch(svgText: string, proposal: AssistantPatchProposal, svgraph: SVGraphDocument): string;
 export declare function svgToPptx(svgText: string): Uint8Array;
 export declare function svgToDrawingMl(svgText: string): string;
 export declare function initSVGraphEditor(): void;

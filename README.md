@@ -37,6 +37,7 @@ The GitHub Pages editor runs a TypeScript converter entirely in the browser:
 - Browser image sizing scans segmented JPEG data URIs so `preserveAspectRatio` works when APP/EXIF segments precede the SOF size marker.
 - Browser data URI image handling validates base64 before conversion or PPTX media embedding.
 - Browser CSS keyword handling resets converted properties to SVG defaults for `initial` and falls back correctly for `unset`.
+- Browser Assistant can run a local Transformers.js worker with WebGPU, WASM, or disabled policy to propose SVGraph patch JSON; deterministic validation, diff preview, and apply controls remain the only mutation path.
 
 ```bash
 npm ci
@@ -70,11 +71,23 @@ npm install @com-junkawasaki/svgraph --registry=https://npm.pkg.github.com
 ```
 
 ```ts
-import { buildSVGraph, svgToDrawingMl, svgToPptx } from "@com-junkawasaki/svgraph";
+import {
+  applyAssistantPatch,
+  buildSVGraph,
+  buildSVGraphAssistantPrompt,
+  parseAssistantPatchProposal,
+  svgToDrawingMl,
+  svgToPptx,
+  validateAssistantPatch,
+} from "@com-junkawasaki/svgraph";
 
 const svgraph = buildSVGraph(svgText);
 const drawingMl = svgToDrawingMl(svgText);
 const pptxBytes = svgToPptx(svgText);
+const prompt = buildSVGraphAssistantPrompt(svgraph, svgraph.presentation);
+const proposal = parseAssistantPatchProposal(llmJsonText);
+const validation = validateAssistantPatch(proposal, svgraph);
+const updatedSvg = validation.status === "accepted" ? applyAssistantPatch(svgText, proposal, svgraph) : svgText;
 ```
 
 ## CLI

@@ -1,6 +1,6 @@
 {
   "name": "@com-junkawasaki/svgraph",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Browser-only SVGraph editor and SVG to PresentationML/PPTX converter.",
   "keywords": [
     "svg",
@@ -43,7 +43,7 @@
   "scripts": {
     "build:web": "tsc -p tsconfig.web.json",
     "check:web": "tsc -p tsconfig.web.json --noEmit",
-    "check:package": "node -e \"import('./docs/app.js').then((m) => { for (const name of ['buildSVGraph','buildSVGraphSidecar','svgToDrawingMl','svgToPptx','initSVGraphEditor']) if (typeof m[name] !== 'function') throw new Error(name); })\""
+    "check:package": "node -e \"import('./docs/app.js').then((m) => { for (const name of ['buildSVGraph','buildSVGraphSidecar','svgToDrawingMl','svgToPptx','initSVGraphEditor','assistantPatchProposal','buildSVGraphAssistantPrompt','parseAssistantPatchProposal','validateAssistantPatch','assistantPatchDiff','applyAssistantPatch']) if (typeof m[name] !== 'function') throw new Error(name); if (!Array.isArray(m.assistantAllowedOps)) throw new Error('assistantAllowedOps'); })\""
   },
   "devDependencies": {
     "typescript": "^5.9.3"

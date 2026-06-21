@@ -1,5 +1,7 @@
 const emuPerPx = 9525;
-const assistantAllowedOps = ["mark-slide", "set-data", "set-metadata", "mark-table", "mark-cell", "bind-relation", "set-reading-order"];
+export const assistantAllowedOps = ["mark-slide", "set-data", "set-metadata", "mark-table", "mark-cell", "bind-relation", "set-reading-order"];
+const assistantAllowedOpNames = assistantAllowedOps;
+const assistantModelId = "onnx-community/gemma-4-e2b-it-ONNX";
 const rootFontSize = 16;
 const namedColors = {
     black: "#000000",
@@ -284,6 +286,12 @@ const state = {
     redoStack: [],
     lastSourceValue: "",
     storageStatus: "Storage idle",
+    assistantBackendPolicy: "webgpu",
+    assistantStatus: "Local LLM idle",
+    assistantRawOutput: "",
+    assistantProposal: null,
+    assistantProposalSource: "",
+    assistantWorker: null,
 };
 let source;
 let preview;
@@ -707,7 +715,7 @@ export function buildSVGraphSidecar(svgraph, svgText = "") {
         presentation: svgraph.presentation,
     };
 }
-function assistantPatchProposal(svgraph, presentation) {
+export function assistantPatchProposal(svgraph, presentation) {
     const semanticNodeIds = new Set(flatten(svgraph.root).filter((node) => Object.keys(node.data).length > 0).map((node) => node.node_id));
     const ops = presentation.slides
         .filter((slide) => !semanticNodeIds.has(slide.node_id))
@@ -723,7 +731,185 @@ function assistantPatchProposal(svgraph, presentation) {
         confidence: ops.length ? 0.72 : 1,
     };
 }
-function validateAssistantPatch(proposal, svgraph) {
+export function buildSVGraphAssistantPrompt(svgraph, presentation) {
+    const nodes = flatten(svgraph.root)
+        .filter((node) => node.tag !== "metadata")
+        .slice(0, 80)
+        .map((node) => ({
+        node_id: node.node_id,
+        tag: node.tag,
+        id: node.attributes.id ?? null,
+        data: node.data,
+        text: node.text,
+        child_count: node.children.length,
+    }));
+    return JSON.stringify({
+        task: "suggest-svgraph-patch",
+        instructions: [
+            "Return only JSON.",
+            "Suggest conservative SVGraph patch operations for slide, table, relation, reading-order, or metadata semantics.",
+            "Do not invent node_id values; use only provided nodes.",
+            "Allowed ops are mark-slide, set-data, set-metadata, mark-table, mark-cell, bind-relation, and set-reading-order.",
+        ],
+        output_schema: {
+            summary: "string",
+            confidence: "number from 0 to 1",
+            ops: [{ op: "allowed op", node_id: "existing node_id" }],
+        },
+        slide_size: presentation.slide_size,
+        slides: presentation.slides,
+        dependencies: svgraph.dependencies.slice(0, 80),
+        coverage: svgraph.coverage,
+        nodes,
+    }, null, 2);
+}
+export function parseAssistantPatchProposal(value) {
+    const payload = typeof value === "string" ? JSON.parse(extractJsonObject(value)) : value;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload))
+        throw new Error("assistant output must be a JSON object");
+    const object = payload;
+    const summary = typeof object.summary === "string" ? object.summary : "";
+    const confidence = typeof object.confidence === "number" ? object.confidence : 0;
+    const rawOps = Array.isArray(object.ops) ? object.ops : [];
+    const ops = rawOps.map((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item))
+            return { op: "", node_id: "" };
+        const op = item;
+        const result = {
+            op: typeof op.op === "string" ? op.op : "",
+            node_id: typeof op.node_id === "string" ? op.node_id : "",
+        };
+        for (const [key, itemValue] of Object.entries(op)) {
+            if (key === "op" || key === "node_id")
+                continue;
+            if (isJsonValue(itemValue))
+                result[key] = itemValue;
+        }
+        return result;
+    });
+    return { summary, confidence, ops };
+}
+function extractJsonObject(value) {
+    const start = value.indexOf("{");
+    const end = value.lastIndexOf("}");
+    if (start < 0 || end < start)
+        throw new Error("assistant output did not contain a JSON object");
+    return value.slice(start, end + 1);
+}
+function isJsonValue(value) {
+    if (value == null || typeof value === "boolean" || typeof value === "number" || typeof value === "string")
+        return true;
+    if (Array.isArray(value))
+        return value.every(isJsonValue);
+    return typeof value === "object" && Object.values(value).every(isJsonValue);
+}
+function deterministicAssistantProposal(svgraph, presentation) {
+    return assistantPatchProposal(svgraph, presentation);
+}
+function activeAssistantProposal(svgraph, presentation) {
+    return state.assistantProposal && state.assistantProposalSource === source.value ? state.assistantProposal : deterministicAssistantProposal(svgraph, presentation);
+}
+function createAssistantWorker() {
+    const code = `
+    let generator = null;
+    let loadedKey = "";
+    const modelId = ${JSON.stringify(assistantModelId)};
+    function postStatus(status) {
+      self.postMessage({ type: "status", status });
+    }
+    async function loadGenerator(policy) {
+      const key = policy + ":" + modelId;
+      if (generator && loadedKey === key) return generator;
+      postStatus("Loading Transformers.js runtime");
+      const mod = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers");
+      postStatus("Loading local model " + modelId);
+      generator = await mod.pipeline("text-generation", modelId, {
+        device: policy === "webgpu" ? "webgpu" : "wasm",
+        dtype: policy === "webgpu" ? "q4" : "q8",
+      });
+      loadedKey = key;
+      return generator;
+    }
+    self.onmessage = async (event) => {
+      const message = event.data || {};
+      if (message.type !== "generate") return;
+      try {
+        if (message.policy === "disabled") {
+          self.postMessage({ type: "error", error: "Local LLM is disabled" });
+          return;
+        }
+        const run = await loadGenerator(message.policy);
+        postStatus("Generating SVGraph patch proposal");
+        const output = await run(message.prompt, {
+          max_new_tokens: 512,
+          temperature: 0.2,
+          do_sample: false,
+          return_full_text: false,
+        });
+        const first = Array.isArray(output) ? output[0] : output;
+        const raw = typeof first === "string" ? first : String(first?.generated_text || first?.text || JSON.stringify(first));
+        self.postMessage({ type: "proposal", raw, proposal: JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) });
+      } catch (error) {
+        self.postMessage({ type: "error", error: error && error.message ? error.message : String(error) });
+      }
+    };
+  `;
+    return new Worker(URL.createObjectURL(new Blob([code], { type: "text/javascript" })), { type: "module" });
+}
+async function requestAssistantPatch(policy) {
+    if (!state.svgraph || !state.presentation)
+        return;
+    if (policy === "disabled") {
+        state.assistantStatus = "Local LLM disabled; deterministic proposal is active";
+        state.assistantProposal = null;
+        state.assistantRawOutput = "";
+        renderPanel();
+        return;
+    }
+    if (typeof Worker === "undefined") {
+        state.assistantStatus = "Web Worker unavailable; deterministic proposal is active";
+        renderPanel();
+        return;
+    }
+    state.assistantBackendPolicy = policy;
+    state.assistantStatus = "Preparing local LLM worker";
+    state.assistantRawOutput = "";
+    renderPanel();
+    const prompt = buildSVGraphAssistantPrompt(state.svgraph, state.presentation);
+    const worker = state.assistantWorker ?? createAssistantWorker();
+    state.assistantWorker = worker;
+    worker.onmessage = (event) => {
+        const message = event.data;
+        if (message.type === "status") {
+            state.assistantStatus = message.status;
+        }
+        else if (message.type === "proposal") {
+            try {
+                const proposal = parseAssistantPatchProposal(message.proposal);
+                const validation = state.svgraph ? validateAssistantPatch(proposal, state.svgraph) : { status: "rejected", errors: ["missing SVGraph"] };
+                if (validation.status !== "accepted")
+                    throw new Error(validation.errors.join("; "));
+                state.assistantProposal = proposal;
+                state.assistantProposalSource = source.value;
+                state.assistantRawOutput = message.raw;
+                state.assistantStatus = "Local LLM proposal ready for review";
+            }
+            catch (error) {
+                state.assistantStatus = `Local LLM proposal rejected: ${error instanceof Error ? error.message : String(error)}`;
+            }
+        }
+        else {
+            state.assistantStatus = `Local LLM failed: ${message.error}`;
+        }
+        renderPanel();
+    };
+    worker.onerror = (error) => {
+        state.assistantStatus = `Local LLM worker error: ${error.message}`;
+        renderPanel();
+    };
+    worker.postMessage({ type: "generate", policy, prompt });
+}
+export function validateAssistantPatch(proposal, svgraph) {
     const errors = [];
     const nodeIds = new Set(flatten(svgraph.root).map((node) => node.node_id));
     if (!proposal.summary || typeof proposal.summary !== "string")
@@ -735,7 +921,7 @@ function validateAssistantPatch(proposal, svgraph) {
     }
     else {
         proposal.ops.forEach((op, index) => {
-            if (!assistantAllowedOps.includes(op.op))
+            if (!assistantAllowedOpNames.includes(op.op))
                 errors.push(`ops[${index}].op is not allowed`);
             if (!op.node_id || !nodeIds.has(op.node_id))
                 errors.push(`ops[${index}].node_id does not reference an SVGraph node`);
@@ -747,7 +933,7 @@ function validateAssistantPatch(proposal, svgraph) {
     }
     return { status: errors.length ? "rejected" : "accepted", errors };
 }
-function assistantPatchDiff(proposal, svgraph) {
+export function assistantPatchDiff(proposal, svgraph) {
     const nodes = new Map(flatten(svgraph.root).map((node) => [node.node_id, node]));
     return proposal.ops.flatMap((op) => {
         const node = nodes.get(op.node_id);
@@ -811,7 +997,7 @@ function assistantUnsupportedDiff(op, field) {
 function patchValue(value) {
     return value === undefined ? null : value;
 }
-function applyAssistantPatch(svgText, proposal, svgraph) {
+export function applyAssistantPatch(svgText, proposal, svgraph) {
     const validation = validateAssistantPatch(proposal, svgraph);
     if (validation.status !== "accepted")
         throw new Error(validation.errors.join("; "));
@@ -4706,6 +4892,11 @@ function concat(chunks) {
 function render() {
     try {
         const text = source.value;
+        if (state.assistantProposalSource && state.assistantProposalSource !== text) {
+            state.assistantProposal = null;
+            state.assistantProposalSource = "";
+            state.assistantRawOutput = "";
+        }
         state.svgraph = buildSVGraph(text);
         state.presentation = state.svgraph.presentation;
         preview.innerHTML = text;
@@ -4759,26 +4950,57 @@ function renderPanel() {
       </div>`;
     }
     else if (state.tab === "assistant") {
-        const proposal = assistantPatchProposal(state.svgraph, state.presentation);
+        const proposal = activeAssistantProposal(state.svgraph, state.presentation);
         const validation = validateAssistantPatch(proposal, state.svgraph);
         const diff = assistantPatchDiff(proposal, state.svgraph);
+        const proposalSource = state.assistantProposal ? "local LLM" : "deterministic";
         panel.innerHTML = `
-      <div class="notice">Web LLM integration is designed as a local WebGPU worker. Conversion is deterministic and runs fully in this page.</div>
+      <div class="notice">Local Web LLM suggestions run in a browser worker and only produce reviewable SVGraph patch proposals. Conversion remains deterministic in this page.</div>
       <div class="status"><span class="dot ${state.webgpu ? "ok" : ""}"></span>${state.webgpu ? "WebGPU available" : "WebGPU unavailable or blocked"}</div>
+      <div class="status" style="margin-top:8px">${escapeHtml(state.assistantStatus)} · proposal source: ${escapeHtml(proposalSource)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <select id="assistantBackendPolicy" aria-label="Assistant backend policy">
+          <option value="webgpu" ${state.assistantBackendPolicy === "webgpu" ? "selected" : ""}>WebGPU</option>
+          <option value="wasm" ${state.assistantBackendPolicy === "wasm" ? "selected" : ""}>WASM</option>
+          <option value="disabled" ${state.assistantBackendPolicy === "disabled" ? "selected" : ""}>Disabled</option>
+        </select>
+        <button class="btn" id="runAssistantLlmBtn" type="button">Suggest With Local LLM</button>
+        <button class="btn" id="resetAssistantProposalBtn" type="button" ${state.assistantProposal ? "" : "disabled"}>Use Deterministic</button>
+      </div>
       <div class="list" style="margin-top:12px">
         ${diff.length ? diff.map((row) => `<div class="item"><div class="item-title">${escapeHtml(row.status)} · ${escapeHtml(row.op)} · ${escapeHtml(row.field)}</div><div class="item-meta">${escapeHtml(row.node_id)} · ${escapeHtml(JSON.stringify(row.before))} -> ${escapeHtml(JSON.stringify(row.after))}</div></div>`).join("") : '<div class="item"><div class="item-title">unchanged</div><div class="item-meta">No pending SVGraph patch changes.</div></div>'}
       </div>
       <button class="btn primary" id="applyAssistantPatchBtn" type="button" style="margin-top:12px" ${validation.status === "accepted" && diff.some((row) => row.status === "pending") ? "" : "disabled"}>Apply Patch</button>
       <pre style="margin-top:12px">${escapeHtml(JSON.stringify({
-            backendPolicy: state.webgpu ? "webgpu" : "wasm-or-disabled",
+            backendPolicy: state.assistantBackendPolicy,
             allowedOps: assistantAllowedOps,
-            model: "onnx-community/gemma-4-e2b-it-ONNX",
+            model: assistantModelId,
+            prompt: state.svgraph && state.presentation ? JSON.parse(buildSVGraphAssistantPrompt(state.svgraph, state.presentation)) : null,
+            rawLlmOutput: state.assistantRawOutput,
             patchValidation: validation,
             patchDiff: diff,
             patchProposal: proposal,
             coverage: state.svgraph.coverage
         }, null, 2))}</pre>`;
         const applyButton = document.getElementById("applyAssistantPatchBtn");
+        const policySelect = document.getElementById("assistantBackendPolicy");
+        const runButton = document.getElementById("runAssistantLlmBtn");
+        const resetButton = document.getElementById("resetAssistantProposalBtn");
+        policySelect?.addEventListener("change", () => {
+            const value = policySelect.value;
+            state.assistantBackendPolicy = value === "wasm" || value === "disabled" ? value : "webgpu";
+            renderPanel();
+        });
+        runButton?.addEventListener("click", () => {
+            void requestAssistantPatch(state.assistantBackendPolicy);
+        });
+        resetButton?.addEventListener("click", () => {
+            state.assistantProposal = null;
+            state.assistantProposalSource = "";
+            state.assistantRawOutput = "";
+            state.assistantStatus = "Deterministic proposal is active";
+            renderPanel();
+        });
         applyButton?.addEventListener("click", () => {
             if (!state.svgraph)
                 return;

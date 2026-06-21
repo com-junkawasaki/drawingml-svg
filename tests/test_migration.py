@@ -1069,17 +1069,32 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
     assert "export function buildSVGraphSidecar" in source
     assert "export function svgToDrawingMl" in source
     assert "export function svgToPptx" in source
+    assert "export function buildSVGraphAssistantPrompt" in source
+    assert "export function parseAssistantPatchProposal" in source
+    assert "export function validateAssistantPatch" in source
+    assert "export function assistantPatchDiff" in source
+    assert "export function applyAssistantPatch" in source
     assert "export function initSVGraphEditor" in source
+    assert "new Worker(URL.createObjectURL" in source
+    assert '"https://cdn.jsdelivr.net/npm/@huggingface/transformers"' in source
+    assert '"webgpu" | "wasm" | "disabled"' in source
     assert 'document.getElementById("source")' in source
     for expected in [
         "export type SVGraphDocument",
         "export type SVGraphPresentationProjection",
         "export type SVGraphSidecar",
         "export type SvgCoverage",
+        "export type AssistantPatchProposal",
+        "export type AssistantBackendPolicy",
         "export declare function buildSVGraph",
         "export declare function buildSVGraphSidecar",
         "export declare function svgToDrawingMl",
         "export declare function svgToPptx",
+        "export declare function buildSVGraphAssistantPrompt",
+        "export declare function parseAssistantPatchProposal",
+        "export declare function validateAssistantPatch",
+        "export declare function assistantPatchDiff",
+        "export declare function applyAssistantPatch",
         "export declare function initSVGraphEditor",
     ]:
         assert expected in app_dts
@@ -1367,12 +1382,22 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert 'case "text-decoration-thickness":' in generated
         assert "const assistantAllowedOps" in generated
         assert "function assistantPatchProposal" in generated
+        assert "function buildSVGraphAssistantPrompt" in generated
+        assert "function parseAssistantPatchProposal" in generated
+        assert "function createAssistantWorker" in generated
+        assert "function requestAssistantPatch" in generated
         assert "function validateAssistantPatch" in generated
         assert "function assistantPatchDiff" in generated
         assert "function assistantDataDiff" in generated
         assert "function applyAssistantPatch" in generated
         assert "function applyAssistantPatchOp" in generated
         assert "function elementByNodeId" in generated
+        assert "assistantBackendPolicy" in generated
+        assert "runAssistantLlmBtn" in generated
+        assert "resetAssistantProposalBtn" in generated
+        assert "Local Web LLM suggestions run in a browser worker" in generated
+        assert "Transformers.js runtime" in generated
+        assert "onnx-community/gemma-4-e2b-it-ONNX" in generated
         assert "applyAssistantPatchBtn" in generated
         assert "patchValidation" in generated
         assert "patchDiff" in generated
@@ -1461,10 +1486,15 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "npm run check:web" in readme
     assert "npm run build:web" in readme
     assert "npm run check:package" in readme
-    assert 'import { buildSVGraph, svgToDrawingMl, svgToPptx } from "@com-junkawasaki/svgraph";' in readme
+    assert 'from "@com-junkawasaki/svgraph";' in readme
+    assert "buildSVGraphAssistantPrompt" in readme
+    assert "validateAssistantPatch" in readme
+    assert "Browser Assistant can run a local Transformers.js worker" in readme
     assert package_metadata["scripts"]["build:web"] == "tsc -p tsconfig.web.json"
     assert package_metadata["scripts"]["check:web"] == "tsc -p tsconfig.web.json --noEmit"
     assert "check:package" in package_metadata["scripts"]
+    assert "buildSVGraphAssistantPrompt" in package_metadata["scripts"]["check:package"]
+    assert "applyAssistantPatch" in package_metadata["scripts"]["check:package"]
     assert "node-version: \"24\"" in workflow
     assert "run: npm ci" in workflow
     assert "npm run check:web" in workflow
@@ -1591,6 +1621,9 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser JPEG intrinsic-size detection with segmented JPEG files",
         "browser data URI image validation",
         "browser `initial` and `unset` CSS keyword handling",
+        "local Web LLM assistant worker hooks",
+        "browser policy controls for WebGPU/WASM/disabled inference",
+        "importable assistant prompt, parser, validation, diff, and patch helpers",
         "web editor design package part schema documentation",
         "compatibility submodule public-surface guards",
         "installed compatibility submodules prove their canonical `__all__` and callable parity",
@@ -1801,8 +1834,12 @@ def test_web_editor_design_uses_browser_only_svgraph_contract() -> None:
         "semantic sidecar with metadata, dependencies, coverage, and presentation package state",
         "DrawingML fragments and `.pptx` without Python",
         "deterministic patch proposal/validation preview",
+        "can replace the proposal with local Web LLM output after validation",
         "deterministic patch diff preview rows",
         "apply validated SVGraph patch operations back into the canonical SVG source",
+        "lazy-load a dedicated Transformers.js worker",
+        "choose WebGPU, WASM, or disabled backend policy",
+        "reject invalid operations",
         "SVG source undo/redo history",
         "persists the active SVG source document in IndexedDB",
         "control for clearing the saved document",
@@ -1814,7 +1851,8 @@ def test_web_editor_design_uses_browser_only_svgraph_contract() -> None:
         "`svgraph-presentation.json`",
         "The `.pptx` exporter should consume the SVGraph `presentation.parts` projection",
         "Each package part record carries `part_name`, `content_type`, `kind`, and `source_node_id`",
-        "Web LLM should run in a dedicated worker",
+        "The Web LLM runs in a dedicated worker",
+        "The editor also exposes `wasm` and `disabled` policies",
         'device: "webgpu"',
         "LLM output is always a proposed patch against SVGraph-level commands",
         "validated by deterministic code before applying",
