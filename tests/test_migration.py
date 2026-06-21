@@ -1050,6 +1050,7 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
     assert "bin" in package_metadata["files"]
     assert "examples/alpha.dml" in package_metadata["files"]
     assert "examples/color.dml" in package_metadata["files"]
+    assert "examples/color-invalid-modifier.dml" in package_metadata["files"]
     assert "examples/connector-style-ref.dml" in package_metadata["files"]
     assert "examples/fill-effects.dml" in package_metadata["files"]
     assert "examples/freeform-closed-duplicate.dml" in package_metadata["files"]
@@ -1626,6 +1627,7 @@ def test_browser_only_svgraph_build_is_documented_and_ci_guarded() -> None:
     assert "node ./bin/svgraph.mjs dml2svg examples/preset.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/alpha.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/color.dml" in package_metadata["scripts"]["check:package"]
+    assert "node ./bin/svgraph.mjs dml2svg examples/color-invalid-modifier.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/connector-style-ref.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/fill-effects.dml" in package_metadata["scripts"]["check:package"]
     assert "node ./bin/svgraph.mjs dml2svg examples/line-arrow.dml" in package_metadata["scripts"]["check:package"]
@@ -1904,6 +1906,7 @@ def test_changelog_documents_svgraph_migration_guard_surfaces() -> None:
         "browser TypeScript `drawingMlToSvg` primitive preset import mapping for DrawingML flowchart connector",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML solid fill and stroke alpha",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML color luminance modifiers",
+        "browser TypeScript `drawingMlToSvg` Python-compatible invalid DrawingML color modifier parsing",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML gradient and pattern fill fallback colors",
         "browser TypeScript `drawingMlToSvg` import support for DrawingML stroke cap, join, dash",
         "XML Open flow conversion back into canonical SVG source",

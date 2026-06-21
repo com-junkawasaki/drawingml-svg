@@ -2499,7 +2499,7 @@ function dmlScrgbColor(element: Element): string | null {
 
 function dmlHslColor(element: Element): string | null {
   if (element.getAttribute("hue") == null || element.getAttribute("sat") == null || element.getAttribute("lum") == null) return null;
-  const hue = (optionalInt(element.getAttribute("hue")) / 60000) % 360;
+  const hue = (dmlFloat(element.getAttribute("hue"), 0) / 60000) % 360;
   const color = rgbToHex(hslToRgb(String(hue), dmlPercentage(element.getAttribute("sat"), 0), dmlPercentage(element.getAttribute("lum"), 0)));
   return dmlApplyLuminanceModifiers(color, element);
 }
@@ -2619,7 +2619,7 @@ function dmlRound(value: number): number {
 }
 
 function dmlPercentage(value: string | null, defaultValue: number): number {
-  const parsed = Number.parseInt(value ?? String(defaultValue), 10);
+  const parsed = dmlInt(value, defaultValue);
   return Number.isFinite(parsed) ? parsed / 100000 : defaultValue / 100000;
 }
 
@@ -2627,10 +2627,30 @@ function dmlAlpha(parent: Element | null | undefined): number | null {
   if (!parent) return null;
   let result: number | null = null;
   const alpha = descendantsByLocal(parent, "alpha")[0];
-  if (alpha?.getAttribute("val") != null) result = optionalInt(alpha.getAttribute("val")) / 100000;
+  if (alpha?.getAttribute("val") != null) {
+    const value = dmlInt(alpha.getAttribute("val"), Number.NaN);
+    if (Number.isFinite(value)) result = value / 100000;
+  }
   const alphaMod = descendantsByLocal(parent, "alphaMod")[0];
-  if (alphaMod?.getAttribute("amt") != null) result = (result ?? 1) * (optionalInt(alphaMod.getAttribute("amt")) / 100000);
+  if (alphaMod?.getAttribute("amt") != null) {
+    const value = dmlInt(alphaMod.getAttribute("amt"), Number.NaN);
+    if (Number.isFinite(value)) result = (result ?? 1) * (value / 100000);
+  }
   return result;
+}
+
+function dmlInt(value: string | null, defaultValue: number): number {
+  if (value == null) return defaultValue;
+  if (!/^[+-]?\d+$/.test(value.trim())) return defaultValue;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : defaultValue;
+}
+
+function dmlFloat(value: string | null, defaultValue: number): number {
+  if (value == null) return defaultValue;
+  if (value.trim() === "") return defaultValue;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : defaultValue;
 }
 
 function dmlText(element: Element): string {

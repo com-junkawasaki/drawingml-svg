@@ -361,7 +361,7 @@ def test_cli_version_writes_installed_package_version(capsys) -> None:
     captured = capsys.readouterr()
 
     assert excinfo.value.code == 0
-    assert captured.out == "svgraph 0.1.41\n"
+    assert captured.out == "svgraph 0.1.42\n"
 
 
 def test_svgraph_module_cli_uses_canonical_program_name() -> None:
@@ -372,7 +372,7 @@ def test_svgraph_module_cli_uses_canonical_program_name() -> None:
         text=True,
     )
 
-    assert result.stdout == "svgraph 0.1.41\n"
+    assert result.stdout == "svgraph 0.1.42\n"
 
 
 def test_svgraph_cli_module_keeps_canonical_program_name() -> None:
@@ -383,7 +383,7 @@ def test_svgraph_cli_module_keeps_canonical_program_name() -> None:
         text=True,
     )
 
-    assert result.stdout == "svgraph 0.1.41\n"
+    assert result.stdout == "svgraph 0.1.42\n"
 
 
 def test_svgraph_module_cli_emits_canonical_svgraph_json_reports() -> None:
@@ -439,7 +439,7 @@ def test_svgraph_executable_keeps_svgraph_program_name(monkeypatch, capsys) -> N
     captured = capsys.readouterr()
 
     assert excinfo.value.code == 0
-    assert captured.out == "svgraph 0.1.41\n"
+    assert captured.out == "svgraph 0.1.42\n"
 
 
 def test_cli_converts_between_files_and_creates_output_parent(tmp_path) -> None:
@@ -5619,6 +5619,16 @@ def test_drawingml_invalid_numeric_paint_and_transform_values_do_not_crash() -> 
     assert "stroke-dasharray" not in svg
     assert "stroke-miterlimit" not in svg
     assert "transform=" not in svg
+
+
+def test_drawingml_invalid_numeric_color_modifiers_fall_back_to_defaults() -> None:
+    svg = drawingml_to_svg(Path("examples/color-invalid-modifier.dml").read_text(encoding="utf-8"))
+
+    assert 'fill="#336699"' in svg
+    assert 'stroke="#111111"' in svg
+    assert "fill-opacity" not in svg
+    assert "stroke-opacity" not in svg
+    assert analyze_svg(svg).unsupported_attributes == {}
 
 
 def test_drawingml_oval_preset_round_trips_to_svg_ellipse() -> None:
