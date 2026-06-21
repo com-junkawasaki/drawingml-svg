@@ -220,6 +220,7 @@ const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720
     <text id="length-glyphs-text" x="735" y="125" textLength="170" lengthAdjust=" SPACINGANDGLYPHS " style="font-size:22;font-family:Arial;fill:#334155;letter-spacing:NORMAL">Glyph fit</text>
     <text id="word-spacing-text" x="735" y="155" word-spacing="8px" style="font-size:22;font-family:Arial;fill:#334155">Wide gap</text>
     <g id="inherited-word-spacing" word-spacing="8px"><text x="735" y="185" style="font-size:22;font-family:Arial;fill:#334155">Inherited gap</text></g>
+    <g id="hidden-text-layout" word-spacing="8px"><text x="735" y="215" fill="none" stroke="none">Hidden gap</text></g>
     <text id="font-shorthand" class="font-short-title" x="760" y="135">Font short</text>
     <text id="rtl-text" x="560" y="95" direction="rtl" style="font-size:22;font-family:Arial;fill:#0f766e">RTL
 line</text>
@@ -1285,7 +1286,7 @@ function subtreeHasVisibleText(element, inheritedStyle, css, refs, viewport, ref
     const style = computedStyle(element, inheritedStyle, css, refs, viewport);
     if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse")
         return false;
-    if ((tag === "text" || tag === "tspan") && (element.textContent || "").trim())
+    if ((tag === "text" || tag === "tspan") && (element.textContent || "").trim() && !coverageHasNoVisiblePaint(element, tag, style, refs, css, viewport, refStack))
         return true;
     if (tag === "use") {
         const href = hrefValue(element);

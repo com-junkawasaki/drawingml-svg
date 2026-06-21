@@ -1219,6 +1219,8 @@ def test_web_source_and_package_metadata_use_svgraph_naming() -> None:
         assert 'lengthAdjust=" SPACINGANDGLYPHS "' in generated
         assert 'id="word-spacing-text"' in generated
         assert 'id="inherited-word-spacing"' in generated
+        assert 'id="hidden-text-layout"' in generated
+        assert "coverageHasNoVisiblePaint(element, tag, style, refs, css, viewport, refStack)" in generated
         assert 'text-rendering="optimizeLegibility"' in generated
         assert 'shape-rendering="crisp-edges"' in generated
         assert 'image-rendering="pixelated"' in generated
