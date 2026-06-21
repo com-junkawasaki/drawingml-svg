@@ -1386,7 +1386,10 @@ function dmlShapeToSvg(element) {
     const idAttr = name ? ` id="${xml(dmlSvgId(name))}"` : "";
     const transform = dmlXfrmTransformAttr(spPr, box);
     const bounds = dmlXfrmTransformBounds(spPr, box);
-    const body = dmlTextSvg(element, box, { fallbackFill: dmlStylePaint(element, "fontRef") });
+    const body = dmlTextSvg(element, box, {
+        fallbackFill: dmlStylePaint(element, "fontRef") ?? { color: paint.fill, alpha: paint.fillAlpha },
+        fallbackStroke: dmlTextFallbackStroke(paint),
+    });
     const custom = childByLocal(spPr, "custGeom");
     if (custom) {
         const customShape = dmlCustomGeometryToSvg(custom, box, idAttr, textAttrs, style, body, transform, bounds);
@@ -1937,6 +1940,19 @@ function dmlSvgStyle(paint) {
     ].filter(Boolean);
     return attrs.length ? ` ${attrs.join(" ")}` : "";
 }
+function dmlTextFallbackStroke(paint) {
+    if (!paint.stroke)
+        return null;
+    return {
+        color: paint.stroke,
+        alpha: paint.strokeAlpha ?? null,
+        width: paint.strokeWidth,
+        lineCap: paint.strokeLineCap ?? null,
+        lineJoin: paint.strokeLineJoin ?? null,
+        dasharray: paint.strokeDasharray ?? null,
+        miterlimit: paint.strokeMiterlimit ?? null,
+    };
+}
 function dmlStylePaint(element, name) {
     const ref = childByLocal(childByLocal(element, "style"), name);
     return ref ? { color: dmlColor(ref), alpha: dmlAlpha(ref) } : null;
@@ -2191,7 +2207,7 @@ function dmlText(element) {
     return descendantsByLocal(element, "t").map((node) => node.textContent || "").join("\n").trim();
 }
 function dmlTextSvg(element, box, options = {}) {
-    const runs = dmlTextRuns(element, options.fallbackFill).filter((run) => run.text);
+    const runs = dmlTextRuns(element, options.fallbackFill, options.fallbackStroke).filter((run) => run.text);
     if (!runs.length)
         return "";
     const layout = dmlTextLayout(element, box, runs, options);
@@ -2270,7 +2286,7 @@ function dmlTextLayoutFontSize(runs) {
     }
     return null;
 }
-function dmlTextRuns(element, fallbackFill = null) {
+function dmlTextRuns(element, fallbackFill = null, fallbackStroke = null) {
     const txBody = childByLocal(element, "txBody");
     const paragraphs = directChildrenByLocal(txBody, "p");
     const runs = [];
@@ -2284,7 +2300,7 @@ function dmlTextRuns(element, fallbackFill = null) {
         if (bullet) {
             paragraphRuns.push({
                 text: `${bullet} `,
-                attrs: dmlTextRunAttrsFromProperties([firstRPr, defRPr, endParaRPr], fallbackFill),
+                attrs: dmlTextRunAttrsFromProperties([firstRPr, defRPr, endParaRPr], fallbackFill, fallbackStroke),
                 breakBefore: pendingBreak,
             });
             pendingBreak = false;
@@ -2296,7 +2312,7 @@ function dmlTextRuns(element, fallbackFill = null) {
                 const rPr = childByLocal(child, "rPr");
                 paragraphRuns.push({
                     text: childByLocal(child, "t")?.textContent || "",
-                    attrs: dmlTextRunAttrsFromProperties([rPr, defRPr, endParaRPr], fallbackFill),
+                    attrs: dmlTextRunAttrsFromProperties([rPr, defRPr, endParaRPr], fallbackFill, fallbackStroke),
                     breakBefore: pendingBreak,
                 });
                 pendingBreak = false;
@@ -2308,7 +2324,7 @@ function dmlTextRuns(element, fallbackFill = null) {
             else if (name === "tab") {
                 paragraphRuns.push({
                     text: "\t",
-                    attrs: dmlTextRunAttrsFromProperties([previousRPr, defRPr, endParaRPr], fallbackFill),
+                    attrs: dmlTextRunAttrsFromProperties([previousRPr, defRPr, endParaRPr], fallbackFill, fallbackStroke),
                     breakBefore: pendingBreak,
                 });
                 pendingBreak = false;
@@ -2443,15 +2459,15 @@ function romanNumber(value) {
 }
 function dmlTextRunAttrs(...properties) {
     const candidates = properties.filter((item) => Boolean(item));
-    return dmlTextRunAttrsFromCandidates(candidates, null);
+    return dmlTextRunAttrsFromCandidates(candidates, null, null);
 }
-function dmlTextRunAttrsFromProperties(properties, fallbackFill) {
+function dmlTextRunAttrsFromProperties(properties, fallbackFill, fallbackStroke) {
     const candidates = properties.filter((item) => Boolean(item));
-    return dmlTextRunAttrsFromCandidates(candidates, fallbackFill);
+    return dmlTextRunAttrsFromCandidates(candidates, fallbackFill, fallbackStroke);
 }
-function dmlTextRunAttrsFromCandidates(candidates, fallbackFill) {
+function dmlTextRunAttrsFromCandidates(candidates, fallbackFill, fallbackStroke) {
     if (!candidates.length)
-        return dmlPaintFillAttrs(fallbackFill);
+        return [...dmlPaintFillAttrs(fallbackFill), ...dmlStrokeAttrs(fallbackStroke)];
     const attrs = [];
     const fontSize = optionalInt(dmlFirstTextAttr(candidates, "sz"));
     if (fontSize > 0)
@@ -2466,7 +2482,7 @@ function dmlTextRunAttrsFromCandidates(candidates, fallbackFill) {
     if (typeface)
         attrs.push(`font-family="${xml(typeface)}"`);
     attrs.push(...dmlTextFillAttrs(candidates, fallbackFill));
-    attrs.push(...dmlTextOutlineAttrs(dmlFirstTextChild(candidates, "ln")));
+    attrs.push(...dmlTextOutlineAttrs(dmlFirstTextChild(candidates, "ln"), fallbackStroke));
     const decoration = dmlTextDecoration(candidates);
     if (decoration)
         attrs.push(`text-decoration="${decoration}"`);
@@ -2524,19 +2540,34 @@ function dmlPaintFillAttrs(paint) {
         paint.alpha != null && paint.alpha < 1 ? `fill-opacity="${formatNumber(paint.alpha)}"` : "",
     ].filter(Boolean);
 }
-function dmlTextOutlineAttrs(ln) {
-    if (!ln || childByLocal(ln, "noFill"))
+function dmlTextOutlineAttrs(ln, fallbackStroke = null) {
+    if (!ln)
+        return dmlStrokeAttrs(fallbackStroke);
+    if (childByLocal(ln, "noFill"))
         return [];
     const paint = dmlFillPaint(ln);
     const strokeWidth = emuToPx(ln.getAttribute("w"));
+    return dmlStrokeAttrs({
+        color: paint?.color ?? null,
+        alpha: paint?.alpha ?? null,
+        width: strokeWidth,
+        lineCap: dmlLineCap(ln.getAttribute("cap")),
+        lineJoin: dmlLineJoin(ln),
+        dasharray: dmlDasharray(ln, strokeWidth),
+        miterlimit: dmlMiterlimit(ln),
+    });
+}
+function dmlStrokeAttrs(paint) {
+    if (!paint?.color)
+        return [];
     return [
-        paint?.color ? `stroke="${paint.color}"` : "",
-        paint?.alpha != null && paint.alpha < 1 ? `stroke-opacity="${formatNumber(paint.alpha)}"` : "",
-        strokeWidth ? `stroke-width="${formatNumber(strokeWidth)}"` : "",
-        dmlLineCap(ln.getAttribute("cap")) ? `stroke-linecap="${dmlLineCap(ln.getAttribute("cap"))}"` : "",
-        dmlLineJoin(ln) ? `stroke-linejoin="${dmlLineJoin(ln)}"` : "",
-        dmlDasharray(ln, strokeWidth) ? `stroke-dasharray="${dmlDasharray(ln, strokeWidth)}"` : "",
-        dmlMiterlimit(ln) != null ? `stroke-miterlimit="${formatNumber(dmlMiterlimit(ln) ?? 0)}"` : "",
+        `stroke="${paint.color}"`,
+        paint.alpha != null && paint.alpha < 1 ? `stroke-opacity="${formatNumber(paint.alpha)}"` : "",
+        paint.width ? `stroke-width="${formatNumber(paint.width)}"` : "",
+        paint.lineCap ? `stroke-linecap="${paint.lineCap}"` : "",
+        paint.lineJoin ? `stroke-linejoin="${paint.lineJoin}"` : "",
+        paint.dasharray ? `stroke-dasharray="${paint.dasharray}"` : "",
+        paint.miterlimit != null ? `stroke-miterlimit="${formatNumber(paint.miterlimit)}"` : "",
     ].filter(Boolean);
 }
 function dmlTextDecoration(candidates) {

@@ -1876,7 +1876,10 @@ function dmlShapeToSvg(element: Element): DmlSvgItem | null {
   const idAttr = name ? ` id="${xml(dmlSvgId(name))}"` : "";
   const transform = dmlXfrmTransformAttr(spPr, box);
   const bounds = dmlXfrmTransformBounds(spPr, box);
-  const body = dmlTextSvg(element, box, { fallbackFill: dmlStylePaint(element, "fontRef") });
+  const body = dmlTextSvg(element, box, {
+    fallbackFill: dmlStylePaint(element, "fontRef") ?? { color: paint.fill, alpha: paint.fillAlpha },
+    fallbackStroke: dmlTextFallbackStroke(paint),
+  });
   const custom = childByLocal(spPr, "custGeom");
   if (custom) {
     const customShape = dmlCustomGeometryToSvg(custom, box, idAttr, textAttrs, style, body, transform, bounds);
@@ -2307,6 +2310,7 @@ function dmlXfrmBox(spPr: Element): Box | null {
 }
 
 type DmlPaint = { color: string | null; alpha: number | null };
+type DmlStrokePaint = { color: string | null; alpha: number | null; width: number | null; lineCap: string | null; lineJoin: string | null; dasharray: string | null; miterlimit: number | null };
 
 function dmlSvgPaint(spPr: Element, element: Element | null = null): { fill: string | null; fillAlpha: number | null; stroke: string | null; strokeAlpha: number | null; strokeWidth: number | null; strokeLineCap: string | null; strokeLineJoin: string | null; strokeDasharray: string | null; strokeMiterlimit: number | null } {
   const fillPaint = childByLocal(spPr, "noFill") ? { color: null, alpha: null } : dmlFillPaint(spPr) ?? dmlStylePaint(element, "fillRef") ?? { color: "#000000", alpha: null };
@@ -2340,6 +2344,19 @@ function dmlSvgStyle(paint: { fill: string | null; fillAlpha?: number | null; st
     paint.stroke && paint.strokeMiterlimit != null ? `stroke-miterlimit="${formatNumber(paint.strokeMiterlimit)}"` : "",
   ].filter(Boolean);
   return attrs.length ? ` ${attrs.join(" ")}` : "";
+}
+
+function dmlTextFallbackStroke(paint: { stroke: string | null; strokeAlpha?: number | null; strokeWidth: number | null; strokeLineCap?: string | null; strokeLineJoin?: string | null; strokeDasharray?: string | null; strokeMiterlimit?: number | null }): DmlStrokePaint | null {
+  if (!paint.stroke) return null;
+  return {
+    color: paint.stroke,
+    alpha: paint.strokeAlpha ?? null,
+    width: paint.strokeWidth,
+    lineCap: paint.strokeLineCap ?? null,
+    lineJoin: paint.strokeLineJoin ?? null,
+    dasharray: paint.strokeDasharray ?? null,
+    miterlimit: paint.strokeMiterlimit ?? null,
+  };
 }
 
 function dmlStylePaint(element: Element | null | undefined, name: string): DmlPaint | null {
@@ -2592,10 +2609,10 @@ function dmlText(element: Element): string {
 
 type DmlTextRun = { text: string; attrs: string[]; breakBefore?: boolean };
 type DmlTextLayout = { x: number; y: number; anchor: string | null; baseline: string | null; direction: string | null };
-type DmlTextSvgOptions = { defaultBaseline?: string | null; defaultFill?: string | null; defaultStroke?: string | null; fallbackFill?: DmlPaint | null };
+type DmlTextSvgOptions = { defaultBaseline?: string | null; defaultFill?: string | null; defaultStroke?: string | null; fallbackFill?: DmlPaint | null; fallbackStroke?: DmlStrokePaint | null };
 
 function dmlTextSvg(element: Element, box: Box, options: DmlTextSvgOptions = {}): string {
-  const runs = dmlTextRuns(element, options.fallbackFill).filter((run) => run.text);
+  const runs = dmlTextRuns(element, options.fallbackFill, options.fallbackStroke).filter((run) => run.text);
   if (!runs.length) return "";
   const layout = dmlTextLayout(element, box, runs, options);
   const singleRunAttrs = runs.length === 1 ? runs[0]?.attrs ?? [] : [];
@@ -2674,7 +2691,7 @@ function dmlTextLayoutFontSize(runs: DmlTextRun[]): number | null {
   return null;
 }
 
-function dmlTextRuns(element: Element, fallbackFill: DmlPaint | null | undefined = null): DmlTextRun[] {
+function dmlTextRuns(element: Element, fallbackFill: DmlPaint | null | undefined = null, fallbackStroke: DmlStrokePaint | null | undefined = null): DmlTextRun[] {
   const txBody = childByLocal(element, "txBody");
   const paragraphs = directChildrenByLocal(txBody, "p");
   const runs: DmlTextRun[] = [];
@@ -2688,7 +2705,7 @@ function dmlTextRuns(element: Element, fallbackFill: DmlPaint | null | undefined
     if (bullet) {
       paragraphRuns.push({
         text: `${bullet} `,
-        attrs: dmlTextRunAttrsFromProperties([firstRPr, defRPr, endParaRPr], fallbackFill),
+        attrs: dmlTextRunAttrsFromProperties([firstRPr, defRPr, endParaRPr], fallbackFill, fallbackStroke),
         breakBefore: pendingBreak,
       });
       pendingBreak = false;
@@ -2700,7 +2717,7 @@ function dmlTextRuns(element: Element, fallbackFill: DmlPaint | null | undefined
         const rPr = childByLocal(child, "rPr");
         paragraphRuns.push({
           text: childByLocal(child, "t")?.textContent || "",
-          attrs: dmlTextRunAttrsFromProperties([rPr, defRPr, endParaRPr], fallbackFill),
+          attrs: dmlTextRunAttrsFromProperties([rPr, defRPr, endParaRPr], fallbackFill, fallbackStroke),
           breakBefore: pendingBreak,
         });
         pendingBreak = false;
@@ -2710,7 +2727,7 @@ function dmlTextRuns(element: Element, fallbackFill: DmlPaint | null | undefined
       } else if (name === "tab") {
         paragraphRuns.push({
           text: "\t",
-          attrs: dmlTextRunAttrsFromProperties([previousRPr, defRPr, endParaRPr], fallbackFill),
+          attrs: dmlTextRunAttrsFromProperties([previousRPr, defRPr, endParaRPr], fallbackFill, fallbackStroke),
           breakBefore: pendingBreak,
         });
         pendingBreak = false;
@@ -2846,16 +2863,16 @@ function romanNumber(value: number): string {
 
 function dmlTextRunAttrs(...properties: Array<Element | null>): string[] {
   const candidates = properties.filter((item): item is Element => Boolean(item));
-  return dmlTextRunAttrsFromCandidates(candidates, null);
+  return dmlTextRunAttrsFromCandidates(candidates, null, null);
 }
 
-function dmlTextRunAttrsFromProperties(properties: Array<Element | null>, fallbackFill: DmlPaint | null | undefined): string[] {
+function dmlTextRunAttrsFromProperties(properties: Array<Element | null>, fallbackFill: DmlPaint | null | undefined, fallbackStroke: DmlStrokePaint | null | undefined): string[] {
   const candidates = properties.filter((item): item is Element => Boolean(item));
-  return dmlTextRunAttrsFromCandidates(candidates, fallbackFill);
+  return dmlTextRunAttrsFromCandidates(candidates, fallbackFill, fallbackStroke);
 }
 
-function dmlTextRunAttrsFromCandidates(candidates: Element[], fallbackFill: DmlPaint | null | undefined): string[] {
-  if (!candidates.length) return dmlPaintFillAttrs(fallbackFill);
+function dmlTextRunAttrsFromCandidates(candidates: Element[], fallbackFill: DmlPaint | null | undefined, fallbackStroke: DmlStrokePaint | null | undefined): string[] {
+  if (!candidates.length) return [...dmlPaintFillAttrs(fallbackFill), ...dmlStrokeAttrs(fallbackStroke)];
   const attrs: string[] = [];
   const fontSize = optionalInt(dmlFirstTextAttr(candidates, "sz"));
   if (fontSize > 0) attrs.push(`font-size="${formatNumber(fontSize / 100)}"`);
@@ -2865,7 +2882,7 @@ function dmlTextRunAttrsFromCandidates(candidates: Element[], fallbackFill: DmlP
   const typeface = dmlTextTypeface(candidates);
   if (typeface) attrs.push(`font-family="${xml(typeface)}"`);
   attrs.push(...dmlTextFillAttrs(candidates, fallbackFill));
-  attrs.push(...dmlTextOutlineAttrs(dmlFirstTextChild(candidates, "ln")));
+  attrs.push(...dmlTextOutlineAttrs(dmlFirstTextChild(candidates, "ln"), fallbackStroke));
   const decoration = dmlTextDecoration(candidates);
   if (decoration) attrs.push(`text-decoration="${decoration}"`);
   attrs.push(...dmlTextDecorationDetailAttrs(candidates, decoration));
@@ -2919,18 +2936,32 @@ function dmlPaintFillAttrs(paint: DmlPaint | null | undefined): string[] {
   ].filter(Boolean);
 }
 
-function dmlTextOutlineAttrs(ln: Element | null): string[] {
-  if (!ln || childByLocal(ln, "noFill")) return [];
+function dmlTextOutlineAttrs(ln: Element | null, fallbackStroke: DmlStrokePaint | null | undefined = null): string[] {
+  if (!ln) return dmlStrokeAttrs(fallbackStroke);
+  if (childByLocal(ln, "noFill")) return [];
   const paint = dmlFillPaint(ln);
   const strokeWidth = emuToPx(ln.getAttribute("w"));
+  return dmlStrokeAttrs({
+    color: paint?.color ?? null,
+    alpha: paint?.alpha ?? null,
+    width: strokeWidth,
+    lineCap: dmlLineCap(ln.getAttribute("cap")),
+    lineJoin: dmlLineJoin(ln),
+    dasharray: dmlDasharray(ln, strokeWidth),
+    miterlimit: dmlMiterlimit(ln),
+  });
+}
+
+function dmlStrokeAttrs(paint: DmlStrokePaint | null | undefined): string[] {
+  if (!paint?.color) return [];
   return [
-    paint?.color ? `stroke="${paint.color}"` : "",
-    paint?.alpha != null && paint.alpha < 1 ? `stroke-opacity="${formatNumber(paint.alpha)}"` : "",
-    strokeWidth ? `stroke-width="${formatNumber(strokeWidth)}"` : "",
-    dmlLineCap(ln.getAttribute("cap")) ? `stroke-linecap="${dmlLineCap(ln.getAttribute("cap"))}"` : "",
-    dmlLineJoin(ln) ? `stroke-linejoin="${dmlLineJoin(ln)}"` : "",
-    dmlDasharray(ln, strokeWidth) ? `stroke-dasharray="${dmlDasharray(ln, strokeWidth)}"` : "",
-    dmlMiterlimit(ln) != null ? `stroke-miterlimit="${formatNumber(dmlMiterlimit(ln) ?? 0)}"` : "",
+    `stroke="${paint.color}"`,
+    paint.alpha != null && paint.alpha < 1 ? `stroke-opacity="${formatNumber(paint.alpha)}"` : "",
+    paint.width ? `stroke-width="${formatNumber(paint.width)}"` : "",
+    paint.lineCap ? `stroke-linecap="${paint.lineCap}"` : "",
+    paint.lineJoin ? `stroke-linejoin="${paint.lineJoin}"` : "",
+    paint.dasharray ? `stroke-dasharray="${paint.dasharray}"` : "",
+    paint.miterlimit != null ? `stroke-miterlimit="${formatNumber(paint.miterlimit)}"` : "",
   ].filter(Boolean);
 }
 
