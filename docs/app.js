@@ -1750,16 +1750,22 @@ function dmlXfrmBox(spPr) {
     };
 }
 function dmlSvgPaint(spPr) {
-    const fill = childByLocal(spPr, "noFill") ? null : dmlColor(childByLocal(spPr, "solidFill")) ?? "#000000";
+    const fillElement = childByLocal(spPr, "solidFill");
+    const fill = childByLocal(spPr, "noFill") ? null : dmlColor(fillElement) ?? "#000000";
+    const fillAlpha = fillElement ? dmlAlpha(fillElement) : null;
     const ln = childByLocal(spPr, "ln");
-    const stroke = ln && !childByLocal(ln, "noFill") ? dmlColor(childByLocal(ln, "solidFill")) : null;
+    const strokeElement = childByLocal(ln, "solidFill");
+    const stroke = ln && !childByLocal(ln, "noFill") ? dmlColor(strokeElement) : null;
+    const strokeAlpha = strokeElement ? dmlAlpha(strokeElement) : null;
     const strokeWidth = ln ? emuToPx(ln.getAttribute("w")) : null;
-    return { fill, stroke, strokeWidth };
+    return { fill, fillAlpha, stroke, strokeAlpha, strokeWidth };
 }
 function dmlSvgStyle(paint) {
     const attrs = [
         `fill="${paint.fill ?? "none"}"`,
+        paint.fillAlpha != null && paint.fillAlpha < 1 ? `fill-opacity="${formatNumber(paint.fillAlpha)}"` : "",
         paint.stroke ? `stroke="${paint.stroke}"` : "",
+        paint.stroke && paint.strokeAlpha != null && paint.strokeAlpha < 1 ? `stroke-opacity="${formatNumber(paint.strokeAlpha)}"` : "",
         paint.stroke && paint.strokeWidth != null ? `stroke-width="${formatNumber(paint.strokeWidth)}"` : "",
     ].filter(Boolean);
     return attrs.length ? ` ${attrs.join(" ")}` : "";
@@ -1789,6 +1795,18 @@ function dmlSchemeColor(value) {
         tx2: "#ffffff",
     };
     return colors[value] ?? "#000000";
+}
+function dmlAlpha(parent) {
+    if (!parent)
+        return null;
+    let result = null;
+    const alpha = descendantsByLocal(parent, "alpha")[0];
+    if (alpha?.getAttribute("val") != null)
+        result = optionalInt(alpha.getAttribute("val")) / 100000;
+    const alphaMod = descendantsByLocal(parent, "alphaMod")[0];
+    if (alphaMod?.getAttribute("amt") != null)
+        result = (result ?? 1) * (optionalInt(alphaMod.getAttribute("amt")) / 100000);
+    return result;
 }
 function dmlText(element) {
     return descendantsByLocal(element, "t").map((node) => node.textContent || "").join("\n").trim();
