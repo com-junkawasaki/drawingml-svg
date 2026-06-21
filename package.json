@@ -1,6 +1,6 @@
 {
   "name": "@com-junkawasaki/svgraph",
-  "version": "0.1.51",
+  "version": "0.1.52",
   "description": "Browser-only SVGraph editor and SVG to PresentationML/PPTX converter.",
   "keywords": [
     "svg",

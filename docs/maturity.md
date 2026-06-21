@@ -19,11 +19,11 @@ SVGraph is currently an alpha TypeScript/browser implementation. The strongest p
 | TypeScript package API | Stable | `npm run check:web`, `npm run check:package` |
 | Browser editor and GitHub Pages artifact | Alpha | `npm run build:web`, committed `docs/app.js` |
 | Node CLI shim | Stable | `npm run check:package` |
-| SVG to SVGraph IR | Alpha | `npm run test:maturity` |
+| SVG to SVGraph IR | Alpha | `npm run test:maturity`; feature fixtures cover metadata, data semantics, dependencies, and diagnostics. |
 | SVGraph sidecar JSON with `source_svg` | Alpha | `npm run test:maturity` |
 | Office Causal JSON/JSONL projection | Alpha | `npm run test:maturity` |
-| SVG to DrawingML fragment | Alpha | `npm run check:package`, `npm run test:maturity` |
-| DrawingML fragment to SVG | Alpha | `npm run check:package`, `npm run test:maturity` |
+| SVG to DrawingML fragment | Alpha | `npm run check:package`, `npm run test:maturity`; fixture tests cover editable geometry, connectors, rich text runs, and diagnostics. |
+| DrawingML fragment to SVG | Alpha | `npm run check:package`, `npm run test:maturity`; fixture tests cover line arrows, rich text styles, and table semantics. |
 | SVG to complete PPTX package | Alpha | `npm run test:maturity` |
 | Complete PPTX import | Not implemented | No package reader yet |
 
@@ -38,7 +38,7 @@ SVGraph is currently an alpha TypeScript/browser implementation. The strongest p
 | Advanced text layout | Experimental | Complex typography and layout fidelity remain approximate. |
 | Embedded data URI images | Alpha | PNG/JPEG/GIF/WebP validation and PPTX media embedding are supported. |
 | `defs`/local `use`/`symbol` | Alpha | Local references and viewBox scaling are supported for common cases. |
-| Paint servers | Alpha | Linear/radial gradient and pattern fallback colors are supported, not full native paint fidelity. |
+| Paint servers | Alpha | Linear/radial gradient and pattern fallback colors are supported, not full native paint fidelity. SVGraph records local paint-server dependencies. |
 | CSS cascade | Alpha | Inline style, presentation attributes, simple selectors, variables, and common units are supported. |
 | Transforms | Alpha | Matrix, translate, scale, rotate, skew, and common origins are supported. |
 | Rectangular clipping | Alpha | Rectangular clip paths and nested SVG viewport clipping are supported. |
@@ -74,4 +74,4 @@ git diff --exit-code docs/app.d.ts
 npm pack --dry-run --json
 ```
 
-The next maturity step is to split the large package smoke script into focused fixture tests and add fixture snapshots for SVG feature groups, DrawingML import groups, and PPTX package XML parts.
+The maturity suite now separates reusable test helpers from fixture-level conversion assertions. The next maturity step is to keep shrinking the large package smoke script and add fixture snapshots for PPTX package XML parts, slide-master/layout parts, and richer SVGraph causal edges.
