@@ -89,7 +89,7 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@xmldom/xmldom": "^0.9.10",
+    "@xmldom/xmldom": "^0.9.11",
     "nbb": "^1.5.211"
   }
 }
