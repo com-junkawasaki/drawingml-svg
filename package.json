@@ -90,6 +90,6 @@
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.12",
-    "nbb": "^1.5.211"
+    "nbb": "^1.5.212"
   }
 }
