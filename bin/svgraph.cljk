@@ -94,7 +94,7 @@
 (defn script-path []
   (or (some #(when (str/ends-with? (str %) "svgraph.cljs") %) (arr argv))
       (aget argv 1)
-      "bin/svgraph.cljs"))
+      "bin/svgraph.cljk"))
 
 (defn cli-args []
   (let [items (vec (arr argv))

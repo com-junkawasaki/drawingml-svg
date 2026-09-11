@@ -37,7 +37,7 @@
      :stderr (or (.-stderr result) "")}))
 
 (defn dml->svg [path]
-  (sh ["nbb" "./bin/svgraph.cljs" "dml2svg" path]))
+  (sh ["nbb" "./bin/svgraph.cljk" "dml2svg" path]))
 
 (defn mkdirp [path]
   (.mkdirSync fs path #js {:recursive true}))

@@ -21,8 +21,8 @@
     "./web/app.ts": "./web/app.ts"
   },
   "bin": {
-    "svgraph-browser": "bin/svgraph.cljs",
-    "svgraph": "bin/svgraph.cljs"
+    "svgraph-browser": "bin/svgraph.cljk",
+    "svgraph": "bin/svgraph.cljk"
   },
   "homepage": "https://kotoba-lang.github.io/svgraph/",
   "repository": {
@@ -82,8 +82,8 @@
   "scripts": {
     "build:web": "tsc -p tsconfig.web.json",
     "check:web": "tsc -p tsconfig.web.json --noEmit",
-    "test:maturity": "nbb tests/maturity_test.cljs",
-    "check:package": "nbb --classpath tests tests/package_api_smoke.cljs && nbb --classpath tests tests/package_svg_smoke.cljs && nbb --classpath tests tests/package_text_smoke.cljs && nbb --classpath tests tests/package_table_smoke.cljs"
+    "test:maturity": "nbb tests/maturity_test.cljk",
+    "check:package": "nbb --classpath tests tests/package_api_smoke.cljk && nbb --classpath tests tests/package_svg_smoke.cljk && nbb --classpath tests tests/package_text_smoke.cljk && nbb --classpath tests tests/package_table_smoke.cljk"
   },
   "devDependencies": {
     "typescript": "^7.0.2"

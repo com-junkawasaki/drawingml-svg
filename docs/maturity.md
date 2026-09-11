@@ -18,7 +18,7 @@ SVGraph is currently an alpha TypeScript/browser implementation. The strongest p
 | --- | --- | --- |
 | TypeScript package API | Stable | `npm run check:web`, `npm run check:package` |
 | Browser editor and GitHub Pages artifact | Alpha | `npm run build:web`, committed `docs/app.js` |
-| ClojureScript CLI shim | Stable | `npm run check:package`; package smoke runs through `bin/svgraph.cljs`. |
+| ClojureScript CLI shim | Stable | `npm run check:package`; package smoke runs through `bin/svgraph.cljk`. |
 | SVG to SVGraph IR | Alpha | `npm run test:maturity`; feature fixtures cover metadata, data semantics, dependencies, and diagnostics. |
 | SVGraph sidecar JSON with `source_svg` | Alpha | `npm run test:maturity` |
 | Office Causal JSON/JSONL projection | Alpha | `npm run test:maturity`; fixtures cover deterministic ids, containment/reference edges, and causal hypothesis edges from semantic relation nodes. |
