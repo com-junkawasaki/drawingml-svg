@@ -72,7 +72,7 @@ npm install @com-junkawasaki/svgraph --registry=https://npm.pkg.github.com
 
 - Implementation: TypeScript (`web/app.ts`) compiled to `docs/app.js` and `docs/app.d.ts`.
 - Runtime: browser or Node.js 18+ plus `nbb` for the ClojureScript CLI.
-- Required dependencies: `@xmldom/xmldom` for the CLI DOM shim and `nbb` for `bin/svgraph.cljs`.
+- Required dependencies: `@xmldom/xmldom` for the CLI DOM shim and `nbb` for `bin/svgraph.cljk`.
 - Dev dependency: `typescript`.
 - Python is not a runtime, build, CLI, or package dependency. The published package runs through TypeScript-compiled JavaScript, ClojureScript CLI/test harnesses, and Node/browser APIs.
 

@@ -14,10 +14,10 @@
   (support/ok (js/Array.isArray (aget app "assistantAllowedOps")) "assistantAllowedOps must be an array"))
 
 (defn assert-cli-and-office-causal! []
-  (let [version (support/sh ["nbb" "./bin/svgraph.cljs" "--version"])
-        svgraph-json (support/sh ["nbb" "./bin/svgraph.cljs" "svgraph" "examples/sample.svg"])
-        payload (js/JSON.parse (support/sh ["nbb" "./bin/svgraph.cljs" "office-causal" "examples/svgraph.svg"]))
-        jsonl (support/sh ["nbb" "./bin/svgraph.cljs" "office-causal-jsonl" "examples/svgraph.svg"])]
+  (let [version (support/sh ["nbb" "./bin/svgraph.cljk" "--version"])
+        svgraph-json (support/sh ["nbb" "./bin/svgraph.cljk" "svgraph" "examples/sample.svg"])
+        payload (js/JSON.parse (support/sh ["nbb" "./bin/svgraph.cljk" "office-causal" "examples/svgraph.svg"]))
+        jsonl (support/sh ["nbb" "./bin/svgraph.cljk" "office-causal-jsonl" "examples/svgraph.svg"])]
     (support/ok (boolean (re-find #"^svgraph 0\.1\.\d+\n$" version)) (str "bad version output: " version))
     (support/ok (= "svgraph" (.-kind (js/JSON.parse svgraph-json))) "svgraph CLI output kind mismatch")
     (support/ok (= "office-causal" (.-generator payload)) "office causal generator mismatch")
@@ -27,9 +27,9 @@
 
 (defn assert-cli-office-causal-causal-edge-fixture! []
   (let [svg "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 360 160\"><g id=\"slide-1\" data-kind=\"slide\"><rect id=\"cause\" data-kind=\"entity\" data-label=\"Cause\" x=\"20\" y=\"20\" width=\"80\" height=\"40\"/><rect id=\"effect\" data-kind=\"claim\" data-label=\"Effect\" x=\"240\" y=\"20\" width=\"80\" height=\"40\"/><text id=\"causal-edge\" data-kind=\"causal\" data-from=\"cause\" data-to=\"effect\" data-polarity=\"+\" data-confidence=\"0.8\" data-mechanism=\"Raises likelihood\" x=\"120\" y=\"45\">Evidence quote</text></g></svg>"
-        payload (js/JSON.parse (support/sh-in ["nbb" "./bin/svgraph.cljs" "office-causal" "-"] svg))
+        payload (js/JSON.parse (support/sh-in ["nbb" "./bin/svgraph.cljk" "office-causal" "-"] svg))
         payload-cause (some #(when (= "causes" (.-kind %)) %) (array-seq (.-edges payload)))
-        jsonl (support/sh-in ["nbb" "./bin/svgraph.cljs" "office-causal-jsonl" "-"] svg)
+        jsonl (support/sh-in ["nbb" "./bin/svgraph.cljk" "office-causal-jsonl" "-"] svg)
         lines (map js/JSON.parse (remove empty? (.split jsonl "\n")))
         cause (some #(when (= "causes" (.-kind %)) %) lines)]
     (support/ok payload-cause "office causal JSON should include a causes edge")
@@ -51,11 +51,11 @@
     (support/includes-all "office causal causal-edge jsonl" jsonl ["\"nodeId\":\"ocz1:svgraph-causal-edge\"" "\"quote\":\"Evidence quote\""])))
 
 (defn assert-cli-negative-fixtures! []
-  (let [unsupported (support/sh-fails ["nbb" "./bin/svgraph.cljs" "no-such-command" "examples/sample.svg"])
-        malformed (support/sh-fails ["nbb" "./bin/svgraph.cljs" "svgraph" "examples/does-not-exist.svg"])
-        missing-output (support/sh-fails ["nbb" "./bin/svgraph.cljs" "svgraph" "examples/sample.svg" "-o"])
+  (let [unsupported (support/sh-fails ["nbb" "./bin/svgraph.cljk" "no-such-command" "examples/sample.svg"])
+        malformed (support/sh-fails ["nbb" "./bin/svgraph.cljk" "svgraph" "examples/does-not-exist.svg"])
+        missing-output (support/sh-fails ["nbb" "./bin/svgraph.cljk" "svgraph" "examples/sample.svg" "-o"])
         _ (support/mkdirp "tmp/package-api-output-dir")
-        output-dir (support/sh-fails ["nbb" "./bin/svgraph.cljs" "svgraph" "examples/sample.svg" "-o" "tmp/package-api-output-dir"])]
+        output-dir (support/sh-fails ["nbb" "./bin/svgraph.cljk" "svgraph" "examples/sample.svg" "-o" "tmp/package-api-output-dir"])]
     (support/ok (= 1 (:status unsupported)) "unsupported command should exit 1")
     (support/includes-all "unsupported command stderr" (:stderr unsupported) ["unknown command: no-such-command" "Usage:" "svgraph analyze"])
     (support/excludes-all "unsupported command stderr" (:stderr unsupported) ["Stack trace" "Location:" "Context"])
@@ -71,11 +71,11 @@
 
 (defn assert-cli-stdin-stdout-fixtures! []
   (let [svg "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 40 20\"><rect id=\"box\" x=\"1\" y=\"2\" width=\"10\" height=\"8\" fill=\"#112233\"/></svg>"
-        dml (support/sh-in ["nbb" "./bin/svgraph.cljs" "svg2dml" "-"] svg)
-        svg-roundtrip (support/sh-in ["nbb" "./bin/svgraph.cljs" "dml2svg" "-"] dml)
-        coverage (js/JSON.parse (support/sh-in ["nbb" "./bin/svgraph.cljs" "analyze" "-"] svg))
-        svgraph (js/JSON.parse (support/sh-in ["nbb" "./bin/svgraph.cljs" "svgraph" "-"] svg))
-        bad-stdin (support/sh-in-fails ["nbb" "./bin/svgraph.cljs" "svgraph" "-"] "<svg><g></svg>")]
+        dml (support/sh-in ["nbb" "./bin/svgraph.cljk" "svg2dml" "-"] svg)
+        svg-roundtrip (support/sh-in ["nbb" "./bin/svgraph.cljk" "dml2svg" "-"] dml)
+        coverage (js/JSON.parse (support/sh-in ["nbb" "./bin/svgraph.cljk" "analyze" "-"] svg))
+        svgraph (js/JSON.parse (support/sh-in ["nbb" "./bin/svgraph.cljk" "svgraph" "-"] svg))
+        bad-stdin (support/sh-in-fails ["nbb" "./bin/svgraph.cljk" "svgraph" "-"] "<svg><g></svg>")]
     (support/includes-all "stdin svg2dml" dml ["name=\"box\"" "<a:srgbClr val=\"112233\""])
     (support/includes-all "stdin dml2svg" svg-roundtrip ["id=\"box\"" "fill=\"#112233\""])
     (support/ok (> (.-total_elements coverage) 0) "stdin analyze should report elements")
@@ -93,17 +93,17 @@
         jsonl-out "tmp/package-api-office-causal.jsonl"
         pptx-out "tmp/package-api-file-box.pptx"]
     (support/mkdirp "tmp")
-    (support/sh-in ["nbb" "./bin/svgraph.cljs" "svg2dml" "-" "-o" dml-out] svg)
+    (support/sh-in ["nbb" "./bin/svgraph.cljk" "svg2dml" "-" "-o" dml-out] svg)
     (support/ok (support/exists? dml-out) "svg2dml -o should create output file")
     (support/includes-all "svg2dml output file" (support/read-text dml-out) ["name=\"file-box\"" "<a:srgbClr val=\"445566\""])
-    (support/sh ["nbb" "./bin/svgraph.cljs" "dml2svg" dml-out "-o" svg-out])
+    (support/sh ["nbb" "./bin/svgraph.cljk" "dml2svg" dml-out "-o" svg-out])
     (support/ok (support/exists? svg-out) "dml2svg -o should create output file")
     (support/includes-all "dml2svg output file" (support/read-text svg-out) ["id=\"file-box\"" "fill=\"#445566\""])
-    (support/sh-in ["nbb" "./bin/svgraph.cljs" "svgraph" "-" "-o" json-out] svg)
+    (support/sh-in ["nbb" "./bin/svgraph.cljk" "svgraph" "-" "-o" json-out] svg)
     (support/ok (= "svgraph" (.-kind (js/JSON.parse (support/read-text json-out)))) "svgraph -o JSON kind mismatch")
-    (support/sh ["nbb" "./bin/svgraph.cljs" "office-causal-jsonl" "examples/svgraph.svg" "-o" jsonl-out])
+    (support/sh ["nbb" "./bin/svgraph.cljk" "office-causal-jsonl" "examples/svgraph.svg" "-o" jsonl-out])
     (support/includes-all "office causal jsonl output file" (support/read-text jsonl-out) ["\"t\":\"node\"" "\"t\":\"edge\""])
-    (support/sh-in ["nbb" "./bin/svgraph.cljs" "svg2pptx" "-" "-o" pptx-out] svg)
+    (support/sh-in ["nbb" "./bin/svgraph.cljk" "svg2pptx" "-" "-o" pptx-out] svg)
     (let [pptx (support/read-buffer pptx-out)]
       (support/ok (support/zip-file? pptx) "svg2pptx -o should write a ZIP/PPTX file")
       (support/buffer-includes-all "pptx output file" pptx ["[Content_Types].xml" "ppt/presentation.xml" "ppt/slides/slide1.xml" "customXml/item1.xml" "ocz/causal.jsonl"])

@@ -194,10 +194,10 @@
                    (match table-rich pattern)))))))
 
 (deftest cli-fixture-exposes-package-api-paths-used-by-browser-only-deployments
-  (let [version (exec-file "nbb" #js ["./bin/svgraph.cljs" "--version"])
-        analysis (exec-file "nbb" #js ["./bin/svgraph.cljs" "analyze" "examples/coverage.svg"] #js {:maxBuffer (* 1024 1024)})
+  (let [version (exec-file "nbb" #js ["./bin/svgraph.cljk" "--version"])
+        analysis (exec-file "nbb" #js ["./bin/svgraph.cljk" "analyze" "examples/coverage.svg"] #js {:maxBuffer (* 1024 1024)})
         coverage (parse-json analysis)
-        jsonl (exec-file "nbb" #js ["./bin/svgraph.cljs" "office-causal-jsonl" "examples/svgraph.svg"] #js {:maxBuffer (* 1024 1024)})]
+        jsonl (exec-file "nbb" #js ["./bin/svgraph.cljk" "office-causal-jsonl" "examples/svgraph.svg"] #js {:maxBuffer (* 1024 1024)})]
     (match version #"^svgraph 0\.1\.\d+\n$")
     (ok (number? (.-estimated_element_coverage coverage)))
     (ok (> (.-total_elements coverage) 0))
